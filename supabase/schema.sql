@@ -118,3 +118,6 @@ grant select on public.cards, public.card_prices, public.fx_rates to authenticat
 grant select, insert, update, delete on public.holdings to authenticated;
 revoke all on public.job_state from authenticated;
 grant all on public.cards, public.card_prices, public.fx_rates, public.holdings, public.job_state to service_role;
+
+-- Tabloların API'de hemen görünmesi için
+notify pgrst, 'reload schema';
