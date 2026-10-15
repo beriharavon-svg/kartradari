@@ -485,7 +485,7 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
       file.addEventListener('change',function(){if(file.files[0])read(file.files[0]);});
       p.appendChild(drop);p.appendChild(body);
       function read(f){body.innerHTML='';if(!window.XLSX){body.appendChild(el('div',{class:'msg err',text:'Excel okuyucu yüklenemedi. Sayfayı yenileyip tekrar dene.'}));return;}
-        var fr=new FileReader();fr.onload=function(){try{var wb=XLSX.read(fr.result,{type:'array',cellDates:true}),ws=wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null}),det=detect(rows);
+        var fr=new FileReader();fr.onload=function(){try{var wb=XLSX.read(fr.result,{type:'array',cellDates:false}),ws=wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null}),det=detect(rows);
           if(!det){body.appendChild(el('div',{class:'msg err',text:'Kart adı sütunu bulunamadı. İlk satırda "Kart adı" ya da "Card name" gibi bir başlık olduğundan emin ol.'}));return;}
           var res=parseRows(rows,det),existing={};S.holdings.forEach(function(h){if(h.cert)existing[h.cert]=1;});
           var fresh=res.rows.filter(function(r){return !(r.cert&&existing[r.cert])}),dup=res.rows.length-fresh.length;state.rows=fresh;
