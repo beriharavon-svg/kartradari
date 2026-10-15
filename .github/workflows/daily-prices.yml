@@ -1,15 +1,8 @@
-name: Günlük fiyat kaydı
+name: Eski örnek panel (TCGCSV)
 
 on:
-  schedule:
-    # Her gün 06:23 UTC (09:23 Türkiye saati)
-    - cron: "23 6 * * *"
+  # Eski örnek panel için TCGCSV ham fiyat görevi. Artık yalnızca elle çalıştırılır.
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "pipeline/**"
-      - ".github/workflows/daily-prices.yml"
 
 permissions:
   contents: write

@@ -1,0 +1,32 @@
+name: PSA fiyat ve eşleştirme görevi
+
+on:
+  schedule:
+    # İki saatte bir; günlük kredi bütçesi aşılmaz, kalan iş sonraki çalışmaya kalır.
+    - cron: "17 */2 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "pipeline/sync_psa.py"
+      - ".github/workflows/psa-sync.yml"
+
+concurrency:
+  group: psa-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Eşleştir, fiyatla, kurları güncelle
+        env:
+          SUPABASE_URL: https://bsifvfcnktofugaspsls.supabase.co
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          PPT_KEY: ${{ secrets.POKEMONPRICETRACKER_API_KEY }}
+        run: python pipeline/sync_psa.py
