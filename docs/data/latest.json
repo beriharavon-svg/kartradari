@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-15T13:45:11+00:00",
+  "generated_at": "2026-10-15T13:45:59+00:00",
   "source": "TCGplayer piyasa fiyatı (TCGCSV aracılığıyla)",
   "source_updated": "2026-10-14T20:05:55+0000",
   "price_date": "2026-10-14",
@@ -150,9 +150,29 @@
       "qty": 1,
       "cost_usd": 68,
       "bought": "2024-06-01",
-      "buy_fx": null,
-      "status": "unresolved",
-      "note": "Kart bulunamadı: The One Ring 246"
+      "buy_fx": {
+        "TRY": 32.224,
+        "EUR": 0.92149,
+        "GBP": 0.78663,
+        "JPY": 157.13,
+        "CNY": 7.2408
+      },
+      "status": "ok",
+      "product_id": 487805,
+      "name": "The One Ring",
+      "set": "Universes Beyond: The Lord of the Rings: Tales of Middle-earth",
+      "category": "Magic: The Gathering",
+      "number": "246",
+      "rarity": "M",
+      "image": "https://tcgplayer-cdn.tcgplayer.com/product/487805_400w.jpg",
+      "url": "https://www.tcgplayer.com/product/487805/magic-universes-beyond-the-lord-of-the-rings-tales-of-middle-earth-the-one-ring",
+      "variant": "Normal",
+      "price": {
+        "market": 113.59,
+        "low": 105.0,
+        "mid": 119.27,
+        "direct_low": 119.99
+      }
     },
     {
       "id": "luffy-op05-119",
@@ -170,19 +190,19 @@
         "CNY": 7.2405
       },
       "status": "ok",
-      "product_id": 527024,
-      "name": "Monkey.D.Luffy (119)",
+      "product_id": 530122,
+      "name": "Monkey.D.Luffy (119) (Alternate Art)",
       "set": "Awakening of the New Era",
       "category": "One Piece Card Game",
       "number": "OP05-119",
       "rarity": "SEC",
-      "image": "https://tcgplayer-cdn.tcgplayer.com/product/527024_400w.jpg",
-      "url": "https://www.tcgplayer.com/product/527024/one-piece-card-game-awakening-of-the-new-era-monkeydluffy-119",
+      "image": "https://tcgplayer-cdn.tcgplayer.com/product/530122_400w.jpg",
+      "url": "https://www.tcgplayer.com/product/530122/one-piece-card-game-awakening-of-the-new-era-monkeydluffy-119-alternate-art",
       "variant": "Foil",
       "price": {
-        "market": 16.39,
-        "low": 15.5,
-        "mid": 20.0,
+        "market": 160.82,
+        "low": 150.0,
+        "mid": 200.0,
         "direct_low": null
       }
     }

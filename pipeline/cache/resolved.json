@@ -80,21 +80,37 @@
     }
   },
   "one-ring-ltr": {
-    "sig": "{\"game\": \"Magic\", \"name\": \"The One Ring\", \"number\": \"246\", \"product_id\": null, \"set\": \"The Lord of the Rings: Tales of Middle-earth\"}",
-    "error": "Kart bulunamadı: The One Ring 246"
+    "sig": "{\"game\": \"Magic\", \"name\": \"The One Ring\", \"number\": null, \"product_id\": null, \"set\": \"The Lord of the Rings: Tales of Middle-earth\"}",
+    "category_id": 1,
+    "category_name": "Magic: The Gathering",
+    "group_id": 23019,
+    "group_name": "Universes Beyond: The Lord of the Rings: Tales of Middle-earth",
+    "product_id": 487805,
+    "product_name": "The One Ring",
+    "number": "246",
+    "rarity": "M",
+    "image": "https://tcgplayer-cdn.tcgplayer.com/product/487805_400w.jpg",
+    "url": "https://www.tcgplayer.com/product/487805/magic-universes-beyond-the-lord-of-the-rings-tales-of-middle-earth-the-one-ring",
+    "buy_fx": {
+      "TRY": 32.224,
+      "EUR": 0.92149,
+      "GBP": 0.78663,
+      "JPY": 157.13,
+      "CNY": 7.2408
+    }
   },
   "luffy-op05-119": {
-    "sig": "{\"game\": \"One Piece\", \"name\": \"Monkey.D.Luffy\", \"number\": \"OP05-119\", \"product_id\": null, \"set\": \"Awakening of the New Era\"}",
+    "sig": "{\"game\": \"One Piece\", \"name\": \"Monkey.D.Luffy\", \"number\": \"OP05-119\", \"product_id\": 530122, \"set\": \"Awakening of the New Era\"}",
     "category_id": 68,
     "category_name": "One Piece Card Game",
     "group_id": 23213,
     "group_name": "Awakening of the New Era",
-    "product_id": 527024,
-    "product_name": "Monkey.D.Luffy (119)",
+    "product_id": 530122,
+    "product_name": "Monkey.D.Luffy (119) (Alternate Art)",
     "number": "OP05-119",
     "rarity": "SEC",
-    "image": "https://tcgplayer-cdn.tcgplayer.com/product/527024_400w.jpg",
-    "url": "https://www.tcgplayer.com/product/527024/one-piece-card-game-awakening-of-the-new-era-monkeydluffy-119",
+    "image": "https://tcgplayer-cdn.tcgplayer.com/product/530122_400w.jpg",
+    "url": "https://www.tcgplayer.com/product/530122/one-piece-card-game-awakening-of-the-new-era-monkeydluffy-119-alternate-art",
     "buy_fx": {
       "TRY": 38.749,
       "EUR": 0.88873,

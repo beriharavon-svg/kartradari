@@ -1,6 +1,9 @@
 {
   "charizard-ex-151": {
     "group": "SV: Scarlet & Violet 151",
+    "group_options": [
+      "SV: Scarlet & Violet 151"
+    ],
     "candidates": [
       {
         "product_id": 502558,
@@ -33,6 +36,9 @@
   },
   "umbreon-vmax-evs": {
     "group": "SWSH07: Evolving Skies",
+    "group_options": [
+      "SWSH07: Evolving Skies"
+    ],
     "candidates": [
       {
         "product_id": 246720,
@@ -65,6 +71,15 @@
   },
   "charizard-base": {
     "group": "Base Set",
+    "group_options": [
+      "SV01: Scarlet & Violet Base Set",
+      "SWSH01: Sword & Shield Base Set",
+      "SM Base Set",
+      "XY Base Set",
+      "Base Set 2",
+      "Base Set",
+      "Base Set (Shadowless)"
+    ],
     "candidates": [
       {
         "product_id": 42382,
@@ -88,6 +103,12 @@
   },
   "sheoldred-dmu": {
     "group": "Dominaria United",
+    "group_options": [
+      "Commander: Dominaria United",
+      "Dominaria United",
+      "Promo Pack: Dominaria United",
+      "Art Series: Dominaria United"
+    ],
     "candidates": [
       {
         "product_id": 282739,
@@ -131,11 +152,85 @@
     ]
   },
   "one-ring-ltr": {
-    "group": "Commander: The Lord of the Rings: Tales of Middle-earth",
-    "candidates": []
+    "group": "Universes Beyond: The Lord of the Rings: Tales of Middle-earth",
+    "group_options": [
+      "Commander: The Lord of the Rings: Tales of Middle-earth",
+      "Universes Beyond: The Lord of the Rings: Tales of Middle-earth",
+      "Art Series: Universes Beyond: The Lord of the Rings: Tales of Middle-earth"
+    ],
+    "candidates": [
+      {
+        "product_id": 487805,
+        "name": "The One Ring",
+        "number": "246",
+        "rarity": "M",
+        "prices": {
+          "Foil": 140.88,
+          "Normal": 113.59
+        }
+      },
+      {
+        "product_id": 488276,
+        "name": "The One Ring (Extended Art)",
+        "number": "380",
+        "rarity": "M",
+        "prices": {
+          "Foil": 351.88,
+          "Normal": 140.92
+        }
+      },
+      {
+        "product_id": 514876,
+        "name": "The Lord of the Rings: Tales of Middle-earth Retail Tin - The One Ring",
+        "number": null,
+        "rarity": null,
+        "prices": {
+          "Normal": 74.99
+        }
+      },
+      {
+        "product_id": 517451,
+        "name": "The One Ring (Borderless Poster)",
+        "number": "748",
+        "rarity": "M",
+        "prices": {
+          "Normal": 947.46,
+          "Foil": 1787.66
+        }
+      },
+      {
+        "product_id": 517966,
+        "name": "The One Ring (Extended Art) (Surge Foil)",
+        "number": "791",
+        "rarity": "M",
+        "prices": {
+          "Foil": 295.79
+        }
+      },
+      {
+        "product_id": 517987,
+        "name": "The One Ring (Showcase Scrolls)",
+        "number": "697",
+        "rarity": "M",
+        "prices": {
+          "Foil": 735.15,
+          "Normal": 320.0
+        }
+      },
+      {
+        "product_id": 518184,
+        "name": "The One Ring (Borderless Poster) (Serial Numbered)",
+        "number": "748",
+        "rarity": "M"
+      }
+    ]
   },
   "luffy-op05-119": {
     "group": "Awakening of the New Era",
+    "group_options": [
+      "Awakening of the New Era",
+      "Awakening of the New Era: 1st Anniversary Tournament Cards"
+    ],
     "candidates": [
       {
         "product_id": 527014,
