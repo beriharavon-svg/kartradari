@@ -2,7 +2,7 @@ name: PSA fiyat ve eşleştirme görevi
 
 on:
   schedule:
-    # İki saatte bir; günlük kredi bütçesi aşılmaz, kalan iş sonraki çalışmaya kalır.
+    # İki saatte bir (GitHub zamanlamayı birkaç dakika geciktirebilir); günlük kredi bütçesi aşılmaz.
     - cron: "17 */2 * * *"
   workflow_dispatch:
   push:
