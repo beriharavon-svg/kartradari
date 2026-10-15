@@ -57,6 +57,11 @@ create table if not exists public.holdings (
   card_id bigint references public.cards(id),
   match_status text not null default 'pending',
   match_note text,
+  psa jsonb,
+  psa_front text,
+  psa_back text,
+  psa_checked date,
+  psa_status text,
   created_at timestamptz not null default now()
 );
 create index if not exists holdings_user_idx on public.holdings(user_id);
@@ -81,6 +86,9 @@ begin
   end if;
   if new.bought is distinct from old.bought then
     new.buy_fx := null;
+  end if;
+  if new.cert is distinct from old.cert then
+    new.psa := null; new.psa_front := null; new.psa_back := null; new.psa_checked := null; new.psa_status := null;
   end if;
   return new;
 end $$;

@@ -22,6 +22,9 @@ from datetime import datetime, timezone
 SUPA = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SKEY = os.environ.get("SUPABASE_SECRET_KEY", "")
 PKEY = os.environ.get("PPT_KEY", "")
+PSA_TOKEN = os.environ.get("PSA_TOKEN", "")
+PSA_DAILY_BUDGET = int(os.environ.get("PSA_DAILY_BUDGET", "90"))
+PSA_API = "https://api.psacard.com/publicapi"
 DAILY_BUDGET = int(os.environ.get("PPT_DAILY_BUDGET", "95"))
 PPT = "https://www.pokemonpricetracker.com/api/v2"
 UA = "KartRadari/0.2 (+https://github.com/beriharavon-svg/kartradari)"
@@ -151,9 +154,11 @@ def upsert_card(c, game, language):
 
 
 def match_pending(budget):
-    pending = sb("GET", "holdings", {
-        "select": "id,game,set_input,name_input,number_input,language",
-        "match_status": "eq.pending", "order": "created_at.asc", "limit": "200"}) or []
+    params = {"match_status": "eq.pending", "order": "created_at.asc", "limit": "200"}
+    try:
+        pending = sb("GET", "holdings", {**params, "select": "id,game,set_input,name_input,number_input,language,psa"}) or []
+    except RuntimeError:
+        pending = sb("GET", "holdings", {**params, "select": "id,game,set_input,name_input,number_input,language"}) or []
     if not pending:
         return 0
     log(f"Eşleşme bekleyen kart: {len(pending)}")
@@ -167,7 +172,11 @@ def match_pending(budget):
                {"match_status": "unsupported", "match_note": f"{game} için PSA fiyat kaynağı henüz bağlı değil."})
             continue
         lang = lang_of(h.get("language"))
-        key = (norm(h.get("name_input")), norm(clean_set(h.get("set_input"))), num_key(h.get("number_input")), lang)
+        pinfo = psa_hint(h.get("psa"))
+        if pinfo.get("japanese"):
+            lang = "japanese"
+        number = pinfo.get("number") or h.get("number_input")
+        key = (norm(h.get("name_input")), norm(clean_set(h.get("set_input"))), num_key(number), lang)
         if key in memo:
             card_id, note = memo[key]
         else:
@@ -175,31 +184,41 @@ def match_pending(budget):
             prev = sb("GET", "holdings", {
                 "select": "card_id,match_note", "match_status": "eq.matched", "card_id": "not.is.null",
                 "name_input": f"eq.{h.get('name_input')}", "number_input": f"eq.{h.get('number_input')}",
-                "language": f"eq.{h.get('language')}", "limit": "1"}) if h.get("number_input") else []
+                "language": f"eq.{h.get('language')}", "limit": "1"}) if h.get("number_input") and not pinfo else []
             if prev:
                 card_id, note = prev[0]["card_id"], prev[0]["match_note"]
             else:
                 if budget.used >= cap_used:
                     break
                 card_id, note = None, None
-                queries = [f"{h.get('name_input', '')} {clean_set(h.get('set_input'))}".strip()]
-                if h.get("number_input"):
+                queries = []
+                if pinfo.get("subject"):
+                    if pinfo.get("number"):
+                        queries.append(f"{pinfo['subject']} {pinfo['number']}")
+                    if pinfo.get("set"):
+                        queries.append(f"{pinfo['subject']} {pinfo['set']}")
+                queries.append(f"{h.get('name_input', '')} {clean_set(h.get('set_input'))}".strip())
+                if h.get("number_input") and not pinfo.get("number"):
                     queries.append(f"{h.get('name_input', '')} {h.get('number_input')}".strip())
+                queries = list(dict.fromkeys(q for q in queries if q))[:3]
                 seen = []
                 try:
                     for q in queries:
                         body = ppt({"search": q, "language": lang, "limit": SEARCH_LIMIT}, budget, SEARCH_LIMIT)
                         cands = [c for c in (body.get("data") or []) if isinstance(c, dict)]
                         seen += cands
-                        best, n_hits = pick(cands, h.get("number_input"), h.get("set_input"))
+                        best, n_hits = pick(cands, number, pinfo.get("set") or h.get("set_input"))
                         if best:
                             card_id = upsert_card(best, game, lang)
                             note = f"{best.get('setName')} · {best.get('cardNumber')}"
-                            has_words = any(w for w in clean_set(h.get("set_input")).split() if len(w) > 2 and norm(w) not in GENERIC_SET_WORDS)
-                            if has_words and set_overlap(h.get("set_input"), best.get("setName")) == 0:
+                            set_ref = pinfo.get("set") or h.get("set_input")
+                            has_words = any(w for w in clean_set(set_ref).split() if len(w) > 2 and norm(w) not in GENERIC_SET_WORDS)
+                            if has_words and set_overlap(set_ref, best.get("setName")) == 0:
                                 note += " · set adı tutmadı, kontrol et"
                             elif n_hits > 1:
                                 note += " · birden fazla aday vardı"
+                            if pinfo:
+                                note += " · PSA kaydıyla eşleşti"
                             break
                 except BudgetExhausted:
                     break
@@ -261,6 +280,125 @@ def price_cards(budget, cap=None):
     return done
 
 
+# ---------- PSA sertifika verisi ----------
+
+class PsaStop(Exception):
+    pass
+
+
+def psa_hint(psa):
+    """PSA kaydından eşleştirme ipuçları: ad, numara, set, dil."""
+    if not isinstance(psa, dict) or not psa.get("Subject"):
+        return {}
+    brand = str(psa.get("Brand") or "")
+    subject = re.sub(r"\s+", " ", str(psa.get("Subject") or "")).strip().title()
+    variety = str(psa.get("Variety") or "").strip()
+    set_hint = re.sub(r"\b(POKEMON|JAPANESE|ENGLISH)\b", " ", brand, flags=re.I)
+    set_hint = re.sub(r"\s+", " ", set_hint).strip().title()
+    return {"subject": subject, "number": str(psa.get("CardNumber") or "").strip() or None,
+            "set": set_hint or None, "variety": variety or None, "japanese": "JAPANESE" in brand.upper()}
+
+
+def grade_from_psa(psa):
+    g = str((psa or {}).get("CardGrade") or "")
+    m = re.search(r"(\d+(?:\.\d)?)\s*$", g)
+    return f"PSA {m.group(1).rstrip('0').rstrip('.') if '.' in m.group(1) else m.group(1)}" if m else None
+
+
+def psa_get(path, budget):
+    if budget["used"] >= PSA_DAILY_BUDGET:
+        raise PsaStop("günlük PSA bütçesi doldu")
+    time.sleep(0.6)
+    budget["used"] += 1
+    try:
+        return http("GET", f"{PSA_API}/{path}", {"Authorization": f"bearer {PSA_TOKEN}"})
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", "replace")[:200]
+        if e.code in (401, 403):
+            raise PsaStop(f"PSA anahtarı reddedildi ({e.code}). GitHub'daki PSA_API_TOKEN'ı kontrol et. {detail}") from None
+        if e.code == 429 or "limit" in detail.lower():
+            budget["used"] = PSA_DAILY_BUDGET
+            raise PsaStop(f"PSA günlük sınırı doldu ({e.code}).") from None
+        if e.code == 404:
+            return None
+        raise RuntimeError(f"PSA {e.code}: {detail}") from None
+
+
+def find_images(obj):
+    """Görsel yanıtının şekli belgelenmemiş; içindeki görsel adreslerini ön/arka olarak ayıkla."""
+    front = back = None
+    items = obj if isinstance(obj, list) else (obj.get("Images") or obj.get("images") or [obj]) if isinstance(obj, dict) else []
+    for it in items if isinstance(items, list) else []:
+        if not isinstance(it, dict):
+            continue
+        url = next((v for v in it.values() if isinstance(v, str) and v.startswith("http")), None)
+        if not url:
+            continue
+        is_front = it.get("IsFrontImage")
+        if is_front is True and not front:
+            front = url
+        elif is_front is False and not back:
+            back = url
+        elif not front:
+            front = url
+        elif not back:
+            back = url
+    return front, back
+
+
+def sync_psa_certs():
+    if not PSA_TOKEN:
+        log("PSA_API_TOKEN tanımlı değil, PSA adımı atlandı.")
+        return 0
+    try:
+        rows = sb("GET", "holdings", {"select": "id,cert,grade,match_status", "cert": "not.is.null",
+                                      "psa_checked": "is.null", "order": "created_at.asc", "limit": "60"}) or []
+    except RuntimeError as e:
+        log("PSA alanları veritabanında yok (supabase/migrations/002_psa.sql çalıştırılmalı). PSA adımı atlandı.", str(e)[:120])
+        return 0
+    if not rows:
+        return 0
+    st = sb("GET", "job_state", {"key": f"eq.psa:{TODAY}", "select": "value"}) or []
+    budget = {"used": int(st[0]["value"].get("used", 0)) if st else 0}
+    log(f"PSA kontrolü bekleyen kart: {len(rows)} · bugünkü PSA isteği: {budget['used']}/{PSA_DAILY_BUDGET}")
+    done = 0
+    try:
+        for h in rows:
+            cert = re.sub(r"\D", "", str(h["cert"]))
+            if not cert:
+                sb("PATCH", "holdings", {"id": f"eq.{h['id']}"}, {"psa_checked": TODAY, "psa_status": "invalid"})
+                continue
+            body = psa_get(f"cert/GetByCertNumber/{cert}", budget)
+            cert_data = (body or {}).get("PSACert") if isinstance(body, dict) else None
+            if not cert_data:
+                sb("PATCH", "holdings", {"id": f"eq.{h['id']}"}, {"psa_checked": TODAY, "psa_status": "not_found"})
+                log("PSA kaydı yok:", cert)
+                continue
+            front = back = None
+            try:
+                imgs = psa_get(f"cert/GetImagesByCertNumber/{cert}", budget)
+                front, back = find_images(imgs)
+            except PsaStop:
+                raise
+            except Exception as e:  # noqa: BLE001
+                log("PSA görseli alınamadı:", cert, e)
+            patch = {"psa": cert_data, "psa_front": front, "psa_back": back, "psa_checked": TODAY, "psa_status": "ok"}
+            if h.get("match_status") == "failed":
+                patch.update({"match_status": "pending", "match_note": None})
+            sb("PATCH", "holdings", {"id": f"eq.{h['id']}"}, patch)
+            g = grade_from_psa(cert_data)
+            log("PSA OK", cert, "·", cert_data.get("Subject"), cert_data.get("CardNumber"), "·", cert_data.get("CardGrade"),
+                "· görsel", "var" if front else "yok", "· derece farkı!" if g and h.get("grade") and g != h["grade"] else "")
+            done += 1
+    except PsaStop as e:
+        log("PSA adımı durdu:", e)
+    finally:
+        sb("POST", "job_state", {"on_conflict": "key"},
+           [{"key": f"psa:{TODAY}", "value": budget, "updated_at": datetime.now(timezone.utc).isoformat()}],
+           prefer="resolution=merge-duplicates,return=minimal")
+    return done
+
+
 # ---------- Kurlar ----------
 
 def fetch_fx(date=None):
@@ -307,6 +445,12 @@ def main():
         sync_fx()
     except Exception as e:  # noqa: BLE001
         log("Kur güncellemesi atlandı:", e)
+    try:
+        n = sync_psa_certs()
+        if n:
+            log(f"PSA verisi alınan kart: {n}")
+    except Exception as e:  # noqa: BLE001
+        log("PSA adımı hata verdi:", e)
     m = p = 0
     try:
         # Önce eşleşmiş kartların fiyatı (bütçenin en fazla %60'ı), sonra yeni eşleştirmeler,

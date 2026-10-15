@@ -317,7 +317,7 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
     function hide(){tip.classList.remove('on');guide.setAttribute('opacity',0);dot.setAttribute('opacity',0);}
     svg.addEventListener('mousemove',show);svg.addEventListener('touchmove',show,{passive:true});svg.addEventListener('mouseleave',hide);svg.addEventListener('touchend',hide);
   }
-  function thumb(h){var t=el('div',{class:'thumb'+(/PSA|BGS|CGC/.test(h.grade)?' slab':'')}),img=h.cards&&h.cards.image;if(img){var i=el('img',{src:img,alt:'',loading:'lazy',decoding:'async'});i.onerror=function(){i.replaceWith(el('div',{class:'ph'}))};t.appendChild(i);}else t.appendChild(el('div',{class:'ph'}));return t;}
+  function thumb(h,src){var t=el('div',{class:'thumb'+(/PSA|BGS|CGC/.test(h.grade)?' slab':'')}),img=src||(h.cards&&h.cards.image)||h.psa_front;if(img){var i=el('img',{src:img,alt:'',loading:'lazy',decoding:'async'});i.onerror=function(){i.replaceWith(el('div',{class:'ph'}))};t.appendChild(i);}else t.appendChild(el('div',{class:'ph'}));return t;}
 
   function renderCcy(){var seg=document.getElementById('ccySeg');seg.innerHTML='';CCY.forEach(function(m){seg.appendChild(el('button',{type:'button','aria-pressed':String(S.ccy===m.c),text:m.c,onclick:function(){S.ccy=m.c;store.set('kr-ccy',m.c);render();}}));});}
 
@@ -374,7 +374,10 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
     var card=h.cards||{},p=price(h),r=rateNow(),row=latest(h);
     var info=el('div',{style:'min-width:0'},[el('h3',{text:card.name||h.name_input}),el('div',{class:'sub',style:'white-space:normal',text:(card.set_name||h.set_input||'—')+(card.number?' · '+card.number:'')}),el('div',{class:'chips'},[el('span',{class:'chip grade',text:h.grade}),statusChip(h)]),el('div',{class:'d-price num',text:usd(p)}),el('div',{class:'muted num',style:'font-size:.85rem',text:p==null?'':'≈ '+sec(p*r)+' · 30G '+pct(changeOver(h,30))})]);
     if(card.url)info.appendChild(el('a',{href:card.url,target:'_blank',rel:'noopener',style:'font-size:.82rem',text:'TCGplayer’da gör'}));
-    d.appendChild(el('div',{class:'d-top'},[thumb(h),info]));
+    var pics=[];if(h.cards&&h.cards.image)pics.push(['Katalog',h.cards.image]);if(h.psa_front)pics.push(['PSA ön',h.psa_front]);if(h.psa_back)pics.push(['PSA arka',h.psa_back]);
+    var picBox=el('div',{style:'display:flex;flex-direction:column;gap:6px;align-items:flex-start'}),cur=thumb(h,pics.length?pics[0][1]:null);picBox.appendChild(cur);
+    if(pics.length>1){var ps=el('div',{class:'seg',role:'group','aria-label':'Görsel'});pics.forEach(function(p,i){var b=el('button',{type:'button','aria-pressed':String(i===0),text:p[0],onclick:function(){var n=thumb(h,p[1]);cur.replaceWith(n);cur=n;Array.from(ps.children).forEach(function(x){x.setAttribute('aria-pressed',String(x===b))});}});ps.appendChild(b);});picBox.appendChild(ps);}
+    d.appendChild(el('div',{class:'d-top'},[picBox,info]));
     if(h.match_status!=='matched'){d.appendChild(el('div',{class:'msg '+(h.match_status==='pending'?'info':'err'),text:h.match_status==='pending'?'Bu kart katalogla eşleştirilmeyi bekliyor. Görev iki saatte bir çalışır.':(h.match_note||'Kart eşleştirilemedi.')}));}
     else if(h.match_note&&/birden fazla|kontrol et/.test(h.match_note))d.appendChild(el('div',{class:'msg info',text:'Eşleşme: '+h.match_note+'. Yanlışsa Düzenle ile set adını ya da numarayı düzelt; kart yeniden eşleştirilir.'}));
     if(row){var g=el('div',{class:'grades'});
@@ -384,6 +387,12 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
     var f=el('div',{class:'facts'});
     [['Adet',String(h.qty)],['Alış (adet)',usd(Number(h.cost_usd))],['Alış tarihi',dfmt(h.bought)],['PSA no',h.cert||'—']].forEach(function(x){f.appendChild(el('span',{text:x[0]}));f.appendChild(el('span',{class:'num',text:x[1]}));});
     d.appendChild(f);
+    if(h.psa&&h.psa.Subject){var P=h.psa,label=[P.Year,P.Brand,P.Subject,P.CardNumber?'#'+P.CardNumber:null,P.Variety].filter(Boolean).join(' · '),pg=el('div',{class:'facts'});
+      var g=(P.CardGrade||'').match(/(\d+(?:\.\d)?)\s*$/),pgr=g?'PSA '+g[1]:null;
+      [['PSA etiketi',label],['PSA derecesi',P.CardGrade||'—'],['Bu derecede popülasyon',P.TotalPopulation!=null?String(P.TotalPopulation):'—'],['Üst derecede',P.PopulationHigher!=null?String(P.PopulationHigher):'—']].forEach(function(x){pg.appendChild(el('span',{text:x[0]}));pg.appendChild(el('span',{class:x[0]==='PSA etiketi'?null:'num',style:'white-space:normal',text:x[1]}));});
+      d.appendChild(el('div',null,[el('div',{class:'label',style:'margin-bottom:6px',text:'PSA kaydı'}),pg]));
+      if(pgr&&pgr!==h.grade)d.appendChild(el('div',{class:'msg err',text:'PSA kaydında derece '+P.CardGrade+' görünüyor, portföyde '+h.grade+' girilmiş. Düzenle ile kontrol et.'}));}
+    else if(h.cert&&h.psa_status==='not_found')d.appendChild(el('div',{class:'msg info',text:'Bu PSA numarası için PSA kaydı bulunamadı. Numarayı kontrol et.'}));
     if(h.cert)d.appendChild(el('div',{class:'note',text:'PSA numarası ve alış bilgileri yalnızca sana görünür.'}));
     if(series(h).length)d.appendChild(el('div',null,[el('div',{class:'label',style:'margin-bottom:4px',text:h.grade+' fiyat geçmişi, USD'}),el('div',{class:'mini-chart',id:'miniChart'})]));
     if(row&&h.grade==='Ham'&&row.raw!=null)d.appendChild(desk(h,row));
