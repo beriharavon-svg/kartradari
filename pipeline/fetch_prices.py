@@ -160,14 +160,20 @@ class Catalog:
         if exact:
             return exact[0]
         # "SV: Scarlet & Violet 151" gibi önekli adları da yakala
+        # Yalnızca büyük harfli set kodu önekini at: "SV: Scarlet & Violet 151", "SWSH07: Evolving Skies"
         def stripped(name):
-            return norm(re.sub(r"^[A-Za-z0-9]{1,8}:\s*", "", name or ""))
+            return norm(re.sub(r"^[A-Z0-9]{1,8}:\s*", "", name or ""))
         exact2 = [g for g in groups if stripped(g.get("name")) == s]
         if exact2:
             return exact2[0]
+        side = re.compile(r"commander|art series|tokens?|promos?|jumpstart|minigames|alchemy|front cards|oversized", re.I)
         hits = [g for g in groups if s and s in norm(g.get("name"))]
-        hits.sort(key=lambda g: len(g.get("name") or ""))
+        hits.sort(key=lambda g: (bool(side.search(g.get("name") or "")), len(g.get("name") or "")))
         return hits[0] if hits else None
+
+    def group_candidates(self, cat_id, set_name):
+        s = norm(set_name)
+        return [g.get("name") for g in self.groups(cat_id) if s and s in norm(g.get("name"))][:15]
 
     def find_product(self, cat_id, group_id, name, number):
         n = norm(name)
@@ -289,7 +295,8 @@ def main():
                     ext = {e.get("name"): e.get("value") for e in (p.get("extendedData") or [])}
                     cands.append({"product_id": p["productId"], "name": p.get("name"),
                                   "number": ext.get("Number"), "rarity": ext.get("Rarity")})
-            debug[h["id"]] = {"group": grp.get("name"), "candidates": cands[:15]}
+            debug[h["id"]] = {"group": grp.get("name"), "group_options": catalog.group_candidates(cat["categoryId"], h["set"]),
+                              "candidates": cands[:15]}
         except Exception as e:  # noqa: BLE001
             debug[h["id"]] = {"error": str(e)}
 

@@ -47,7 +47,6 @@
       "game": "Magic",
       "set": "The Lord of the Rings: Tales of Middle-earth",
       "name": "The One Ring",
-      "number": "246",
       "variant": "Normal",
       "qty": 1,
       "cost_usd": 68,
@@ -59,6 +58,7 @@
       "set": "Awakening of the New Era",
       "name": "Monkey.D.Luffy",
       "number": "OP05-119",
+      "product_id": 530122,
       "qty": 1,
       "cost_usd": 210,
       "bought": "2025-05-10"
