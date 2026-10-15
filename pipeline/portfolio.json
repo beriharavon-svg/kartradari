@@ -1,0 +1,67 @@
+{
+  "_aciklama": "ÖRNEK PORTFÖY. Kendi kartlarını eklemek için bir satırı kopyalayıp değiştir. game: Pokemon, Magic, Yu-Gi-Oh!, One Piece, Digimon, Dragon Ball, Lorcana... set: setin adı. name: kartın adı. number: kartın üzerindeki numara (ör. 199/165). variant: isteğe bağlı (Normal, Holofoil, Reverse Holofoil, Foil). cost_usd: adet başına alış fiyatı (USD). bought: alış tarihi. product_id: isteğe bağlı, TCGplayer ürün numarası (eşleşme yanlışsa sabitlemek için).",
+  "holdings": [
+    {
+      "id": "charizard-ex-151",
+      "game": "Pokemon",
+      "set": "Scarlet & Violet 151",
+      "name": "Charizard ex",
+      "number": "199/165",
+      "qty": 1,
+      "cost_usd": 95,
+      "bought": "2024-03-12"
+    },
+    {
+      "id": "umbreon-vmax-evs",
+      "game": "Pokemon",
+      "set": "Evolving Skies",
+      "name": "Umbreon VMAX",
+      "number": "215/203",
+      "qty": 1,
+      "cost_usd": 1300,
+      "bought": "2023-11-04"
+    },
+    {
+      "id": "charizard-base",
+      "game": "Pokemon",
+      "set": "Base Set",
+      "name": "Charizard",
+      "number": "4/102",
+      "qty": 1,
+      "cost_usd": 310,
+      "bought": "2025-01-20"
+    },
+    {
+      "id": "sheoldred-dmu",
+      "game": "Magic",
+      "set": "Dominaria United",
+      "name": "Sheoldred, the Apocalypse",
+      "number": "107",
+      "variant": "Normal",
+      "qty": 4,
+      "cost_usd": 82,
+      "bought": "2023-02-15"
+    },
+    {
+      "id": "one-ring-ltr",
+      "game": "Magic",
+      "set": "The Lord of the Rings: Tales of Middle-earth",
+      "name": "The One Ring",
+      "number": "246",
+      "variant": "Normal",
+      "qty": 1,
+      "cost_usd": 68,
+      "bought": "2024-06-01"
+    },
+    {
+      "id": "luffy-op05-119",
+      "game": "One Piece",
+      "set": "Awakening of the New Era",
+      "name": "Monkey.D.Luffy",
+      "number": "OP05-119",
+      "qty": 1,
+      "cost_usd": 210,
+      "bought": "2025-05-10"
+    }
+  ]
+}
