@@ -234,6 +234,7 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
     if(h.match_status==='unsupported')return el('span',{class:'chip warn',text:'Desteklenmiyor'});
     if(!gradeKey(h.grade))return el('span',{class:'chip warn',text:'Derece desteklenmiyor'});
     if(price(h)==null)return el('span',{class:'chip info',text:'Fiyat bekleniyor'});
+    if(h.match_note&&/kontrol et/.test(h.match_note))return el('span',{class:'chip warn',text:'Kontrol et'});
     var r=latest(h),c=h.grade==='PSA 10'?r.psa10_conf:(h.grade==='PSA 9'?r.psa9_conf:null);
     if(c==='low')return el('span',{class:'chip warn',text:'Düşük güven'});
     return null;
@@ -375,7 +376,7 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
     if(card.url)info.appendChild(el('a',{href:card.url,target:'_blank',rel:'noopener',style:'font-size:.82rem',text:'TCGplayer’da gör'}));
     d.appendChild(el('div',{class:'d-top'},[thumb(h),info]));
     if(h.match_status!=='matched'){d.appendChild(el('div',{class:'msg '+(h.match_status==='pending'?'info':'err'),text:h.match_status==='pending'?'Bu kart katalogla eşleştirilmeyi bekliyor. Görev iki saatte bir çalışır.':(h.match_note||'Kart eşleştirilemedi.')}));}
-    else if(h.match_note&&/birden fazla/.test(h.match_note))d.appendChild(el('div',{class:'msg info',text:'Eşleşme: '+h.match_note+'. Yanlışsa set adını düzeltip yeniden ekle.'}));
+    else if(h.match_note&&/birden fazla|kontrol et/.test(h.match_note))d.appendChild(el('div',{class:'msg info',text:'Eşleşme: '+h.match_note+'. Yanlışsa Düzenle ile set adını ya da numarayı düzelt; kart yeniden eşleştirilir.'}));
     if(row){var g=el('div',{class:'grades'});
       [['Ham','raw',null,null],['PSA 9','psa9','psa9_conf','psa9_n'],['PSA 10','psa10','psa10_conf','psa10_n']].forEach(function(x){var v=row[x[1]],c=x[2]?row[x[2]]:null,n=x[3]?row[x[3]]:null;
         g.appendChild(el('div',{class:h.grade===x[0]?'mine':null},[el('div',{class:'label',text:x[0]}),el('div',{class:'v num',text:v==null?'—':(Number(v)>=1000?'$'+Math.round(Number(v)).toLocaleString('en-US'):usd(Number(v)))}),el('div',{class:'c',text:x[2]?(c?CONF[c]+' güven'+(n?' · '+n+' satış':''):'satış yok'):'TCGplayer'})]));});

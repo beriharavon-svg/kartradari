@@ -27,7 +27,8 @@ PPT = "https://www.pokemonpricetracker.com/api/v2"
 UA = "KartRadari/0.2 (+https://github.com/beriharavon-svg/kartradari)"
 CURRENCIES = ["TRY", "EUR", "GBP", "JPY", "CNY"]
 SEARCH_LIMIT = 3
-MATCH_SHARE = 0.6  # kalan bütçenin en fazla bu kadarı eşleştirmeye
+MATCH_SHARE = 0.7  # fiyatlamadan kalan bütçenin bu kadarı eşleştirmeye, gerisi yeni eşleşenlerin fiyatına
+PRICE_SHARE = 0.6  # bütçenin önce bu kadarı eşleşmiş kartların fiyatına
 
 TODAY = datetime.now(timezone.utc).date().isoformat()
 
@@ -124,9 +125,18 @@ def pick(cands, number, set_name):
     hits = [c for c in cands if want and num_key(c.get("cardNumber")) == want] if want else list(cands)
     if not hits:
         return None, len(cands)
-    sw = set(norm(w) for w in clean_set(set_name).split() if len(w) > 2)
-    hits.sort(key=lambda c: -sum(1 for w in sw if w and w in norm(c.get("setName"))))
+    hits.sort(key=lambda c: -set_overlap(set_name, c.get("setName")))
     return hits[0], len(hits)
+
+
+GENERIC_SET_WORDS = {"promo", "promos", "pokemon", "japanese", "set", "special", "collection", "the", "and"}
+
+
+def set_overlap(set_name, cand_set):
+    words = [norm(w) for w in clean_set(set_name).split() if len(w) > 2]
+    words = [w for w in words if w and w not in GENERIC_SET_WORDS]
+    target = norm(cand_set)
+    return sum(1 for w in words if w in target)
 
 
 def upsert_card(c, game, language):
@@ -184,7 +194,12 @@ def match_pending(budget):
                         best, n_hits = pick(cands, h.get("number_input"), h.get("set_input"))
                         if best:
                             card_id = upsert_card(best, game, lang)
-                            note = f"{best.get('setName')} · {best.get('cardNumber')}" + (" · birden fazla aday vardı" if n_hits > 1 else "")
+                            note = f"{best.get('setName')} · {best.get('cardNumber')}"
+                            has_words = any(w for w in clean_set(h.get("set_input")).split() if len(w) > 2 and norm(w) not in GENERIC_SET_WORDS)
+                            if has_words and set_overlap(h.get("set_input"), best.get("setName")) == 0:
+                                note += " · set adı tutmadı, kontrol et"
+                            elif n_hits > 1:
+                                note += " · birden fazla aday vardı"
                             break
                 except BudgetExhausted:
                     break
@@ -209,7 +224,7 @@ def grade_price(g):
     return (round(float(price), 2) if price else None), sm.get("confidence"), g.get("count")
 
 
-def price_cards(budget):
+def price_cards(budget, cap=None):
     matched = sb("GET", "holdings", {"select": "card_id", "match_status": "eq.matched", "card_id": "not.is.null"}) or []
     ids = sorted({r["card_id"] for r in matched})
     if not ids:
@@ -220,6 +235,8 @@ def price_cards(budget):
     log(f"Takip edilen kart: {len(cards)} · bugün fiyatlanacak: {len(todo)}")
     done = 0
     for c in todo:
+        if cap is not None and budget.used + 2 > cap:
+            break
         try:
             body = ppt({"tcgPlayerId": c["ext_id"], "language": c.get("language") or "english",
                         "includeEbay": "true", "limit": 1}, budget, 2)
@@ -292,8 +309,11 @@ def main():
         log("Kur güncellemesi atlandı:", e)
     m = p = 0
     try:
+        # Önce eşleşmiş kartların fiyatı (bütçenin en fazla %60'ı), sonra yeni eşleştirmeler,
+        # en son kalan krediyle bugün fiyatlanmamış kartlar.
+        p = price_cards(budget, cap=budget.used + int(budget.left * PRICE_SHARE))
         m = match_pending(budget)
-        p = price_cards(budget)
+        p += price_cards(budget)
     finally:
         budget.save()
     log(f"Eşleştirilen: {m} · fiyatlanan: {p} · kalan kredi: {budget.left}")
