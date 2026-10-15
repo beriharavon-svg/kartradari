@@ -1,0 +1,205 @@
+{
+  "charizard-ex-151": {
+    "group": "SV: Scarlet & Violet 151",
+    "candidates": [
+      {
+        "product_id": 502558,
+        "name": "Charizard ex - 006/165",
+        "number": "006/165",
+        "rarity": "Double Rare",
+        "prices": {
+          "Holofoil": 7.83
+        }
+      },
+      {
+        "product_id": 517017,
+        "name": "Charizard ex - 183/165",
+        "number": "183/165",
+        "rarity": "Ultra Rare",
+        "prices": {
+          "Holofoil": 38.25
+        }
+      },
+      {
+        "product_id": 517045,
+        "name": "Charizard ex - 199/165",
+        "number": "199/165",
+        "rarity": "Special Illustration Rare",
+        "prices": {
+          "Holofoil": 325.39
+        }
+      }
+    ]
+  },
+  "umbreon-vmax-evs": {
+    "group": "SWSH07: Evolving Skies",
+    "candidates": [
+      {
+        "product_id": 246720,
+        "name": "Umbreon VMAX",
+        "number": "095/203",
+        "rarity": "Ultra Rare",
+        "prices": {
+          "Holofoil": 28.2
+        }
+      },
+      {
+        "product_id": 246722,
+        "name": "Umbreon VMAX (Secret)",
+        "number": "214/203",
+        "rarity": "Secret Rare",
+        "prices": {
+          "Holofoil": 84.03
+        }
+      },
+      {
+        "product_id": 246723,
+        "name": "Umbreon VMAX (Alternate Art Secret)",
+        "number": "215/203",
+        "rarity": "Secret Rare",
+        "prices": {
+          "Holofoil": 2264.7
+        }
+      }
+    ]
+  },
+  "charizard-base": {
+    "group": "Base Set",
+    "candidates": [
+      {
+        "product_id": 42382,
+        "name": "Charizard",
+        "number": "004/102",
+        "rarity": "Holo Rare",
+        "prices": {
+          "Holofoil": 954.65
+        }
+      },
+      {
+        "product_id": 657516,
+        "name": "Charizard (Black Dot Error)",
+        "number": "004/102",
+        "rarity": "Holo Rare",
+        "prices": {
+          "Holofoil": null
+        }
+      }
+    ]
+  },
+  "sheoldred-dmu": {
+    "group": "Dominaria United",
+    "candidates": [
+      {
+        "product_id": 282739,
+        "name": "Sheoldred, the Apocalypse (Textured Foil)",
+        "number": "331",
+        "rarity": "M",
+        "prices": {
+          "Foil": 143.55
+        }
+      },
+      {
+        "product_id": 282740,
+        "name": "Sheoldred, the Apocalypse (Showcase)",
+        "number": "290",
+        "rarity": "M",
+        "prices": {
+          "Normal": 103.9,
+          "Foil": 111.28
+        }
+      },
+      {
+        "product_id": 282741,
+        "name": "Sheoldred, the Apocalypse (Phyrexian)",
+        "number": "369",
+        "rarity": "M",
+        "prices": {
+          "Foil": 98.63,
+          "Normal": 82.19
+        }
+      },
+      {
+        "product_id": 282800,
+        "name": "Sheoldred, the Apocalypse",
+        "number": "107",
+        "rarity": "M",
+        "prices": {
+          "Normal": 99.4,
+          "Foil": 106.85
+        }
+      }
+    ]
+  },
+  "one-ring-ltr": {
+    "group": "Commander: The Lord of the Rings: Tales of Middle-earth",
+    "candidates": []
+  },
+  "luffy-op05-119": {
+    "group": "Awakening of the New Era",
+    "candidates": [
+      {
+        "product_id": 527014,
+        "name": "Monkey.D.Luffy (060) (Alternate Art)",
+        "number": "OP05-060",
+        "rarity": "L",
+        "prices": {
+          "Foil": 81.04
+        }
+      },
+      {
+        "product_id": 527024,
+        "name": "Monkey.D.Luffy (119)",
+        "number": "OP05-119",
+        "rarity": "SEC",
+        "prices": {
+          "Foil": 16.39
+        }
+      },
+      {
+        "product_id": 527026,
+        "name": "Monkey.D.Luffy (119) (Alternate Art) (Manga)",
+        "number": "OP05-119",
+        "rarity": "SEC",
+        "prices": {
+          "Foil": null
+        }
+      },
+      {
+        "product_id": 527027,
+        "name": "Monkey.D.Luffy (012) (Alternate Art)",
+        "number": "ST01-012",
+        "rarity": "SR",
+        "prices": {
+          "Foil": 44.56
+        }
+      },
+      {
+        "product_id": 528616,
+        "name": "Monkey.D.Luffy (060)",
+        "number": "OP05-060",
+        "rarity": "L",
+        "prices": {
+          "Normal": 0.42
+        }
+      },
+      {
+        "product_id": 529850,
+        "name": "Monkey.D.Luffy (012) (Alternate Art) (Gold-Stamped Signature)",
+        "number": "ST01-012",
+        "rarity": "SR",
+        "prices": {
+          "Foil": 4999.99
+        }
+      },
+      {
+        "product_id": 530122,
+        "name": "Monkey.D.Luffy (119) (Alternate Art)",
+        "number": "OP05-119",
+        "rarity": "SEC",
+        "prices": {
+          "Foil": 160.82
+        }
+      }
+    ]
+  }
+}
