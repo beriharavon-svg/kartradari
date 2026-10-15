@@ -385,7 +385,10 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
         g.appendChild(el('div',{class:h.grade===x[0]?'mine':null},[el('div',{class:'label',text:x[0]}),el('div',{class:'v num',text:v==null?'—':(Number(v)>=1000?'$'+Math.round(Number(v)).toLocaleString('en-US'):usd(Number(v)))}),el('div',{class:'c',text:x[2]?(c?CONF[c]+' güven'+(n?' · '+n+' satış':''):'satış yok'):'TCGplayer'})]));});
       d.appendChild(g);}
     var f=el('div',{class:'facts'});
-    [['Adet',String(h.qty)],['Alış (adet)',usd(Number(h.cost_usd))],['Alış tarihi',dfmt(h.bought)],['PSA no',h.cert||'—']].forEach(function(x){f.appendChild(el('span',{text:x[0]}));f.appendChild(el('span',{class:'num',text:x[1]}));});
+    [['Adet',String(h.qty)],['Alış (adet)',usd(Number(h.cost_usd))],['Alış tarihi',dfmt(h.bought)]].forEach(function(x){f.appendChild(el('span',{text:x[0]}));f.appendChild(el('span',{class:'num',text:x[1]}));});
+    f.appendChild(el('span',{text:'PSA no'}));
+    var certNum=String(h.cert||'').replace(/\D/g,'');
+    f.appendChild(certNum?el('span',{class:'num'},[certNum+' · ',el('a',{href:'https://www.psacard.com/cert/'+certNum,target:'_blank',rel:'noopener',text:'PSA’da doğrula'})]):el('span',{class:'num',text:'—'}));
     d.appendChild(f);
     if(h.psa&&h.psa.Subject){var P=h.psa,label=[P.Year,P.Brand,P.Subject,P.CardNumber?'#'+P.CardNumber:null,P.Variety].filter(Boolean).join(' · '),pg=el('div',{class:'facts'});
       var g=(P.CardGrade||'').match(/(\d+(?:\.\d)?)\s*$/),pgr=g?'PSA '+g[1]:null;
@@ -393,7 +396,7 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
       d.appendChild(el('div',null,[el('div',{class:'label',style:'margin-bottom:6px',text:'PSA kaydı'}),pg]));
       if(pgr&&pgr!==h.grade)d.appendChild(el('div',{class:'msg err',text:'PSA kaydında derece '+P.CardGrade+' görünüyor, portföyde '+h.grade+' girilmiş. Düzenle ile kontrol et.'}));}
     else if(h.cert&&h.psa_status==='not_found')d.appendChild(el('div',{class:'msg info',text:'Bu PSA numarası için PSA kaydı bulunamadı. Numarayı kontrol et.'}));
-    if(h.cert)d.appendChild(el('div',{class:'note',text:'PSA numarası ve alış bilgileri yalnızca sana görünür.'}));
+    if(h.cert)d.appendChild(el('div',{class:'note',text:'PSA numarası ve alış bilgileri yalnızca sana görünür. “PSA’da doğrula” kartın PSA kaydını, görsellerini ve popülasyonunu PSA’nın kendi sitesinde açar.'}));
     if(series(h).length)d.appendChild(el('div',null,[el('div',{class:'label',style:'margin-bottom:4px',text:h.grade+' fiyat geçmişi, USD'}),el('div',{class:'mini-chart',id:'miniChart'})]));
     if(row&&h.grade==='Ham'&&row.raw!=null)d.appendChild(desk(h,row));
     var acts=el('div',{class:'actions'}),del=el('button',{class:'btn danger',type:'button',text:'Kartı sil'});

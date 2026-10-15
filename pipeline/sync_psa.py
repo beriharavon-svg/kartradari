@@ -350,6 +350,13 @@ def sync_psa_certs():
     if not PSA_TOKEN:
         log("PSA_API_TOKEN tanımlı değil, PSA adımı atlandı.")
         return 0
+    blocked = sb("GET", "job_state", {"key": "eq.psa:blocked", "select": "value"}) or []
+    if blocked:
+        since = blocked[0]["value"].get("since", "")
+        days = (datetime.fromisoformat(TODAY) - datetime.fromisoformat(since)).days if since else 99
+        if days < 7:
+            log(f"PSA erişimi onay bekliyor ({since}'den beri). PSA adımı atlandı; haftada bir yeniden denenir.")
+            return 0
     try:
         rows = sb("GET", "holdings", {"select": "id,cert,grade,match_status", "cert": "not.is.null",
                                       "psa_checked": "is.null", "order": "created_at.asc", "limit": "60"}) or []
@@ -392,6 +399,10 @@ def sync_psa_certs():
             done += 1
     except PsaStop as e:
         log("PSA adımı durdu:", e)
+        if "approved customers" in str(e):
+            sb("POST", "job_state", {"on_conflict": "key"},
+               [{"key": "psa:blocked", "value": {"since": TODAY}, "updated_at": datetime.now(timezone.utc).isoformat()}],
+               prefer="resolution=merge-duplicates,return=minimal")
     finally:
         sb("POST", "job_state", {"on_conflict": "key"},
            [{"key": f"psa:{TODAY}", "value": budget, "updated_at": datetime.now(timezone.utc).isoformat()}],
