@@ -274,6 +274,25 @@ def main():
         resolved[h["id"]] = r
         log(("OK  " if r.get("product_id") else "HATA"), h["id"], r.get("product_name") or r.get("error"))
 
+    # Eşleşme kontrolü için aday listesi: aynı set içinde adı tutan tüm ürünler
+    debug = {}
+    for h in portfolio.get("holdings", []):
+        try:
+            cat = catalog.find_category(h["game"])
+            grp = catalog.find_group(cat["categoryId"], h["set"]) if cat else None
+            if not grp:
+                continue
+            n = norm(h["name"])
+            cands = []
+            for p in catalog.products(cat["categoryId"], grp["groupId"]):
+                if n in norm(p.get("cleanName") or p.get("name")):
+                    ext = {e.get("name"): e.get("value") for e in (p.get("extendedData") or [])}
+                    cands.append({"product_id": p["productId"], "name": p.get("name"),
+                                  "number": ext.get("Number"), "rarity": ext.get("Rarity")})
+            debug[h["id"]] = {"group": grp.get("name"), "candidates": cands[:15]}
+        except Exception as e:  # noqa: BLE001
+            debug[h["id"]] = {"error": str(e)}
+
     prices_by_group = {}
     for r in resolved.values():
         if r.get("product_id"):
@@ -333,6 +352,13 @@ def main():
     save_json(LATEST, latest)
     save_json(HISTORY, history, compact=True)
     save_json(CACHE, cache)
+    for hid, d in debug.items():
+        for c in d.get("candidates", []):
+            for (cid, gid), idx in prices_by_group.items():
+                rows = idx.get(int(c["product_id"]))
+                if rows:
+                    c["prices"] = {r.get("subTypeName"): r.get("marketPrice") for r in rows}
+    save_json(os.path.join(ROOT, "pipeline", "cache", "candidates.json"), debug)
 
     ok = sum(1 for h in out_holdings if h.get("status") == "ok")
     log(f"{ok}/{len(out_holdings)} kart fiyatlandı · tarih {price_date} · kur {'var' if fx_today else 'yok'}")
