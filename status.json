@@ -1,0 +1,18 @@
+{
+ "errors": [],
+ "price_samples": [],
+ "run_at": "2026-10-17T18:33:06+00:00",
+ "credits_before": 910,
+ "history_backfilled": 0,
+ "holdings": {
+  "pending": 0,
+  "matched": 66,
+  "failed": 0,
+  "unsupported": 0
+ },
+ "cards_priced_ever": 34,
+ "price_rows_today": 62,
+ "matched_this_run": 0,
+ "priced_this_run": 0,
+ "credits_after": 910
+}
