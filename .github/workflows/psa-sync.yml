@@ -34,6 +34,7 @@ jobs:
           PPT_KEY: ${{ secrets.POKEMONPRICETRACKER_API_KEY }}
           PSA_TOKEN: ${{ secrets.PSA_API_TOKEN }}
           STATUS_FILE: ${{ runner.temp }}/status.json
+          PPT_DAILY_BUDGET: "99"
         run: python pipeline/sync_psa.py
 
       - name: Çalışma özetini 'status' dalına yaz (yalnızca sayılar ve hata mesajları)

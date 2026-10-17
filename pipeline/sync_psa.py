@@ -273,7 +273,11 @@ def price_cards(budget, cap=None):
             note_error(f"fiyat isteği (kart {c['id']})", e)
             continue
         try:
-            data = [x for x in (body.get("data") or []) if isinstance(x, dict)]
+            raw_data = body.get("data")
+            # Tek kart sorgusunda API listeyi değil tek bir kaydı döndürebiliyor.
+            if isinstance(raw_data, dict):
+                raw_data = [raw_data]
+            data = [x for x in (raw_data or []) if isinstance(x, dict)]
             meta = body.get("metadata") or {}
             if len(STATUS["price_samples"]) < 3:
                 d0 = data[0] if data else {}
@@ -282,7 +286,8 @@ def price_cards(budget, cap=None):
                     "keys": sorted(d0.keys())[:40], "has_ebay": bool(d0.get("ebay")),
                     "grades": sorted(((d0.get("ebay") or {}).get("salesByGrade") or {}).keys())[:12],
                     "has_market": bool((d0.get("prices") or {}).get("market")),
-                    "meta_total": meta.get("total"), "error": body.get("error") or body.get("message")})
+                    "meta_total": meta.get("total"), "data_type": type(body.get("data")).__name__,
+                    "body_keys": sorted(body.keys())[:10], "error": body.get("error") or body.get("message")})
             if not data:
                 log("Fiyat yok:", c["ext_id"])
                 sb("PATCH", "cards", {"id": f"eq.{c['id']}"}, {"last_priced": TODAY})
