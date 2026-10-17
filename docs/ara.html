@@ -132,24 +132,6 @@ a{color:var(--accent)}
 .sethead span{font-size:.78rem;color:var(--muted)}
 .sethead button{margin-left:auto}
 .more{display:flex;justify-content:center;margin:18px 0 4px}
-.scanrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.scanbtn{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--accent);color:var(--accent);background:var(--surface);border-radius:999px;padding:8px 14px;font-weight:700;font-size:.9rem;cursor:pointer}
-.scanbtn svg{flex:none}
-.scaninfo{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;background:var(--accent-soft);color:var(--ink);border-radius:12px;padding:12px 14px;margin:0 0 14px;font-size:.88rem}
-.scaninfo b{font-weight:700}
-.scaninfo .acts{display:flex;gap:10px;flex:none;align-items:center}
-.sheet .panel.scanp{display:flex;flex-direction:column;gap:14px;max-width:560px}
-.scanp h3{font-size:1.25rem;padding-right:36px}
-.modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.mode{display:flex;flex-direction:column;gap:6px;text-align:left;border:1.5px solid var(--line);background:var(--surface-2);border-radius:12px;padding:14px;cursor:pointer;color:var(--ink)}
-.mode:hover{border-color:var(--accent)}
-.mode strong{font-size:1rem}
-.mode span{font-size:.8rem;color:var(--muted)}
-.scanprev{display:flex;gap:14px;align-items:center}
-.scanprev img{width:96px;max-height:134px;object-fit:contain;border-radius:8px;background:var(--surface-2)}
-.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
-.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
-@media (max-width:480px){.modes{grid-template-columns:1fr}}
 .empty{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:30px;text-align:center;color:var(--muted)}
 .empty h3{color:var(--ink);margin-bottom:6px}
 
@@ -193,10 +175,6 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Kart adı, set ya da numara" aria-label="Kart ara">
     </label>
-    <div class="scanrow">
-      <button type="button" class="scanbtn" id="scanBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3.2"/></svg>Kartı tara</button>
-      <span class="hint">Fotoğraf çek, kartı bulalım. PSA'lı kartlarda barkod da okunur.</span>
-    </div>
     <div class="chips" id="games" role="group" aria-label="Oyun"></div>
     <div class="tools">
       <div class="setpick">
@@ -225,7 +203,6 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
     <div class="strip" id="strip"></div>
   </section>
   <div class="meta"><span id="metaText" aria-live="polite">Yükleniyor</span><span id="dateText"></span></div>
-  <div class="scaninfo" id="scanInfo" hidden></div>
   <div class="facets" id="facets" hidden></div>
   <section class="grid" id="grid" aria-label="Sonuçlar"></section>
   <div class="more" id="more" hidden><button type="button" class="btn ghost" id="moreBtn">Daha fazla göster</button></div>
@@ -233,7 +210,6 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
     <span>Ham fiyatlar: TCGplayer piyasa fiyatı (TCGCSV aracılığıyla), günlük. PSA fiyatları: eBay satışları (PokemonPriceTracker), yalnızca KartRadarı portföylerinde takip edilen kartlar için. Yatırım tavsiyesi değildir.</span>
   </footer>
 </main>
-<script src="scan.js"></script>
 <script>
 (function(){
   'use strict';
@@ -421,75 +397,10 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
       sb.rpc('card_history',{pid:r.product_id}).then(function(res){var rows=(res.data||[]),k=r.psa10!=null?'psa10':'raw';lineChart(mini,rows.filter(function(x){return x[k]!=null}).map(function(x){return [x.date,Number(x[k])]}));});}
     else info.appendChild(el('p',{class:'note',style:'margin:0',text:'PSA fiyatları ve fiyat geçmişi, kart bir KartRadarı portföyüne eklendiğinde takip edilmeye başlar.'}));
     var lang=r.game==='Pokemon JP'?'japanese':'english',game=r.game==='Pokemon JP'?'Pokemon':r.game;
-    var pre=Object.assign({},S.scanPre||{},{game:game,set_input:r.set_name,name_input:(r.name||'').replace(/\s*-\s*[\w\/-]+$/,'').replace(/\s*\(\d+\)\s*$/,''),number_input:r.number?String(r.number).split('/')[0]:null,language:lang});
+    var pre=Object.assign({},{game:game,set_input:r.set_name,name_input:(r.name||'').replace(/\s*-\s*[\w\/-]+$/,'').replace(/\s*\(\d+\)\s*$/,''),number_input:r.number?String(r.number).split('/')[0]:null,language:lang});
     info.appendChild(el('div',{class:'actions'},[el('a',{class:'btn',href:'./?ekle='+encodeURIComponent(JSON.stringify(pre)),text:'Portföyüme ekle'}),r.url?el('a',{class:'btn ghost',href:r.url,target:'_blank',rel:'noopener',text:'TCGplayer’da gör'}):null]));
     p.appendChild(info);ov.appendChild(p);ov.addEventListener('click',function(e){if(e.target===ov)close();});document.addEventListener('keydown',esc);document.body.appendChild(ov);p.querySelector('.x').focus();
   }
-
-  // ---------- Kart tarayıcı ----------
-  var scanInfo=document.getElementById('scanInfo');
-  function hideScanInfo(){scanInfo.hidden=true;scanInfo.innerHTML='';S.scanPre=null;}
-  function showScanInfo(parts,found){
-    scanInfo.innerHTML='';scanInfo.hidden=false;
-    scanInfo.appendChild(el('div',null,[el('b',{text:found?'Fotoğraftan okunan: ':'Kart tanınamadı. '}),parts.join(' · '),
-      el('div',{class:'note',style:'margin-top:4px',text:found?'Doğru kartı seç; “Portföyüme ekle” bilgileri doldurur.'+(S.scanPre&&S.scanPre.grade?' Derece ve PSA numarası da forma gelir.':''):'Okunanı arama kutusuna yazdım; düzeltip aratabilir ya da daha net bir fotoğrafla tekrar deneyebilirsin.'})]));
-    scanInfo.appendChild(el('div',{class:'acts'},[el('button',{type:'button',class:'linkbtn',text:'Tekrar tara',onclick:openScan}),el('button',{type:'button',class:'linkbtn','aria-label':'Kapat',text:'×',onclick:hideScanInfo})]));
-  }
-  function tryQueries(qs,g){
-    var i=0;
-    function next(){if(i>=qs.length)return Promise.resolve(null);var q=qs[i++];
-      var p=S.v2?sb.rpc('search_cards',{q:q,g:g||null,gid:null,sort:'relevance',lim:1,off:0}):sb.rpc('search_catalog',{q:q,g:g||null,lim:1});
-      return p.then(function(r){return r.data&&r.data.length?q:next();},function(){return next();});}
-    return next();
-  }
-  function openScan(){
-    var ov=el('div',{class:'sheet',role:'dialog','aria-modal':'true','aria-label':'Kartı tara'}),p=el('div',{class:'panel scanp'});
-    function close(){ov.remove();document.removeEventListener('keydown',esc);}function esc(e){if(e.key==='Escape')close();}
-    p.appendChild(el('button',{class:'x',type:'button','aria-label':'Kapat',text:'×',onclick:close}));
-    p.appendChild(el('h3',{text:'Kartı tara'}));
-    p.appendChild(el('p',{class:'note',style:'margin:0',text:'Oyun: '+gameLabel(S.g)+(S.g?'':' · Üstten oyun seçersen sonuç daha isabetli olur.')+' Fotoğraf telefonunda işlenir, hiçbir yere yüklenmez.'}));
-    var input=el('input',{type:'file',accept:'image/*',capture:'environment',hidden:true}),mode='raw';
-    var modes=el('div',{class:'modes'},[
-      el('button',{type:'button',class:'mode',onclick:function(){mode='raw';input.click();}},[el('strong',{text:'Ham kart'}),el('span',{text:'Kartın önünü düz ve iyi ışıkta, kart kadrajı dolduracak şekilde çek. Alt köşedeki numara net görünsün.'})]),
-      el('button',{type:'button',class:'mode',onclick:function(){mode='slab';input.click();}},[el('strong',{text:'PSA’lı kart (slab)'}),el('span',{text:'Slabın önünü çek; üstteki etiket ve barkod net ve parlamasız görünsün.'})])]);
-    var stage=el('div',{hidden:true}),bar=el('div',{class:'bar'},[el('i')]),stxt=el('div',{class:'note','aria-live':'polite'});
-    p.appendChild(modes);p.appendChild(input);p.appendChild(stage);
-    input.addEventListener('change',function(){var f=input.files&&input.files[0];if(!f)return;
-      modes.hidden=true;stage.hidden=false;stage.innerHTML='';
-      var prev=el('img',{alt:''});prev.src=URL.createObjectURL(f);
-      stage.appendChild(el('div',{class:'scanprev'},[prev,el('div',{style:'flex:1;display:flex;flex-direction:column;gap:8px'},[el('strong',{text:mode==='raw'?'Kart okunuyor…':'PSA etiketi okunuyor…'}),bar,stxt])]));
-      function prog(t,v){stxt.textContent=({'loading tesseract core':'Okuyucu yükleniyor (ilk seferde biraz sürer)','initializing tesseract':'Okuyucu hazırlanıyor','loading language traineddata':'Dil verisi yükleniyor','initializing api':'Okuyucu hazırlanıyor','recognizing text':'Yazılar okunuyor'})[t]||t;if(v!=null)bar.firstChild.style.width=Math.round(v*100)+'%';}
-      prog('Fotoğraf hazırlanıyor',0.05);
-      window.KRScan.fileToImage(f).then(function(img){return mode==='raw'?window.KRScan.scanRaw(img,prog):window.KRScan.scanSlab(img,prog);}).then(function(r){
-        prog('Katalogda aranıyor',0.95);
-        var g=S.g,qs,parts=[];
-        if(mode==='raw'){qs=window.KRScan.rawQueries(r);if(r.name)parts.push(r.name);if(r.num)parts.push(r.num.full||r.num.code);S.scanPre=null;}
-        else{qs=window.KRScan.slabQueries(r);if(g==='Pokemon'&&r.japanese)g='Pokemon JP';
-          [r.name,r.number?'#'+r.number:null,r.set,r.grade].forEach(function(x){if(x)parts.push(x)});
-          if(r.cert)parts.push('sertifika …'+String(r.cert).slice(-4)+(r.certFrom==='barcode'?' (barkoddan)':''));
-          S.scanPre={grade:r.grade||null,cert:r.cert||null};}
-        var guessName=mode==='raw'?r.name:(r.name||(r.cands||[])[0]),numPart=mode==='raw'?(r.num&&(r.num.full||r.num.code)):r.number;
-        return tryQueries(qs,g).then(function(q){
-          // Adı yanlış okunduysa ("Chaizand") katalogdaki en yakın adla tekrar dene
-          if(q||!S.v2||!window.KRScan.plausible(guessName))return q;
-          return sb.rpc('search_fuzzy',{q:guessName,g:g||null,lim:8}).then(function(fz){
-            var words=window.KRScan.fuzzyPick(guessName,fz.data);
-            if(!words)return null;parts.push('ad tahmini: '+words);
-            return tryQueries((numPart?[words+' '+numPart]:[]).concat([words]),g);
-          },function(){return null;});
-        }).then(function(q){
-          close();
-          if(g!==S.g){S.g=g;setSet(null,'');renderGames();}
-          if(q){S.q=q;qi.value=q;setSet(null,'');renderShelf();search();showScanInfo(parts,true);}
-          else{var guess=qs[0]||'';S.q=guess;qi.value=guess;renderShelf();search();showScanInfo(parts.length?parts:['yazı okunamadı'],false);}
-          window.scrollTo({top:scanInfo.getBoundingClientRect().top+window.scrollY-80,behavior:'smooth'});
-        });
-      }).catch(function(e){stxt.textContent='Okunamadı: '+(e.message||e)+'. İnternet bağlantını kontrol edip tekrar dene.';bar.firstChild.style.width='0';
-        stage.appendChild(el('button',{type:'button',class:'btn ghost',style:'margin-top:10px',text:'Tekrar dene',onclick:function(){stage.hidden=true;modes.hidden=false;input.value='';}}));});
-    });
-    ov.appendChild(p);ov.addEventListener('click',function(e){if(e.target===ov)close();});document.addEventListener('keydown',esc);document.body.appendChild(ov);
-  }
-  document.getElementById('scanBtn').addEventListener('click',openScan);
 
   qi.value=S.q;qi.addEventListener('input',function(){var had=!!S.q;S.q=qi.value.trim();if(had!==!!S.q)renderShelf();search();});
   renderCcy();renderGames();setSet(S.gid,'');renderRecentQ();renderShelf();search();
