@@ -103,6 +103,35 @@ a{color:var(--accent)}
 .strip .card{scroll-snap-align:start;padding:8px;gap:6px}
 .strip .cname{font-size:.82rem}
 .strip .price{font-size:.88rem}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.setpick{position:relative;display:flex;gap:4px;min-width:0;max-width:100%}
+.setbtn{max-width:min(420px,calc(100vw - 90px));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.setbtn[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.chip.x2{padding:6px 10px}
+.pop{position:absolute;top:calc(100% + 6px);left:0;z-index:15;width:min(420px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(10,14,22,.18);padding:8px}
+.pop input{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);padding:9px 10px;font-size:.95rem;outline:none}
+.pop input:focus{border-color:var(--accent)}
+.setlist{max-height:min(360px,55vh);overflow:auto;margin-top:6px;display:flex;flex-direction:column}
+.setlist button{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;text-align:left;border:0;background:transparent;border-radius:8px;padding:8px;cursor:pointer;color:var(--ink)}
+.setlist button:hover,.setlist button:focus-visible{background:var(--surface-2)}
+.setlist .sn{font-weight:600;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.setlist .sm{grid-column:1;font-size:.74rem;color:var(--muted)}
+.setlist .sc{grid-row:1/3;grid-column:2;align-self:center;font:500 .76rem var(--f-mono);color:var(--faint)}
+.sortsel{display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--muted)}
+.sortsel select{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 10px;font:600 .84rem var(--f-body,inherit)}
+.hint{font-size:.78rem;color:var(--faint)}
+.facets{display:flex;gap:6px;flex-wrap:nowrap;align-items:center;margin:-4px 0 12px;font-size:.82rem;overflow-x:auto;padding-bottom:6px;overscroll-behavior-x:contain}
+.facets>*{flex:none}
+.facets .lbl{color:var(--faint);font-weight:600;margin-right:2px}
+.facet{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 11px;cursor:pointer;color:var(--ink);font-size:.82rem;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.facet b{font:500 .76rem var(--f-mono);color:var(--faint);margin-left:4px}
+.facet:hover{border-color:var(--accent)}
+.sethead{grid-column:1/-1;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:10px 0 -2px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.sethead:first-child{margin-top:0}
+.sethead h4{font-size:1rem}
+.sethead span{font-size:.78rem;color:var(--muted)}
+.sethead button{margin-left:auto}
+.more{display:flex;justify-content:center;margin:18px 0 4px}
 .empty{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:30px;text-align:center;color:var(--muted)}
 .empty h3{color:var(--ink);margin-bottom:6px}
 
@@ -144,9 +173,29 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
     <p>Pokemon, Japon Pokemon, One Piece ve Lorcana kartlarını adıyla, setiyle ya da numarasıyla ara. Fiyatlar her gün güncellenir, üyelik gerekmez.</p>
     <label class="qbox" for="q">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="ör. charizard 199, umbreon ex terastal, luffy op05" aria-label="Kart ara">
+      <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Kart adı, set ya da numara" aria-label="Kart ara">
     </label>
     <div class="chips" id="games" role="group" aria-label="Oyun"></div>
+    <div class="tools">
+      <div class="setpick">
+        <button type="button" class="chip setbtn" id="setBtn" aria-haspopup="listbox" aria-expanded="false" aria-pressed="false">Set / seri: tümü ▾</button>
+        <button type="button" class="chip x2" id="setClear" hidden aria-label="Set filtresini kaldır">×</button>
+        <div class="pop" id="setPop" hidden>
+          <input id="setQ" type="search" placeholder="Set adı, kodu ya da yılı" autocomplete="off" aria-label="Set ara">
+          <div class="setlist" id="setList" role="listbox" aria-label="Setler"></div>
+        </div>
+      </div>
+      <label class="sortsel">Sırala
+        <select id="sort">
+          <option value="relevance">En uygun</option>
+          <option value="value">En değerli</option>
+          <option value="value_asc">En ucuz</option>
+          <option value="new">Yeni setler önce</option>
+          <option value="number">Set ve kart numarası</option>
+        </select>
+      </label>
+    </div>
+    <div class="hint">İpucu: ad + numara <b>charizard 4/102</b> · ad + set <b>umbreon evolving</b> · numara <b>OP05-119</b> · set kodu <b>sv8a</b></div>
     <div class="recent" id="recentQ" hidden></div>
   </section>
   <section class="shelf" id="shelf" hidden aria-labelledby="shelfH">
@@ -154,7 +203,9 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
     <div class="strip" id="strip"></div>
   </section>
   <div class="meta"><span id="metaText" aria-live="polite">Yükleniyor</span><span id="dateText"></span></div>
+  <div class="facets" id="facets" hidden></div>
   <section class="grid" id="grid" aria-label="Sonuçlar"></section>
+  <div class="more" id="more" hidden><button type="button" class="btn ghost" id="moreBtn">Daha fazla göster</button></div>
   <footer>
     <span>Ham fiyatlar: TCGplayer piyasa fiyatı (TCGCSV aracılığıyla), günlük. PSA fiyatları: eBay satışları (PokemonPriceTracker), yalnızca KartRadarı portföylerinde takip edilen kartlar için. Yatırım tavsiyesi değildir.</span>
   </footer>
@@ -168,7 +219,7 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
   var CONF={high:'yüksek',medium:'orta',low:'düşük'},MONTHS=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
   var store={get:function(k){try{return localStorage.getItem(k)}catch(e){return null}},set:function(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
   var qs=new URLSearchParams(location.search);
-  var S={q:qs.get('q')||'',g:qs.get('g')||'',ccy:store.get('kr-ccy')||'TRY',fx:null,rows:[],seq:0};
+  var S={q:qs.get('q')||'',g:qs.get('g')||'',gid:Number(qs.get('set'))||null,gname:'',sort:qs.get('sort')||'relevance',off:0,total:0,ccy:store.get('kr-ccy')||'TRY',fx:null,rows:[],seq:0,v2:true,sets:{}};
   if(!CCY.some(function(m){return m.c===S.ccy}))S.ccy='TRY';
   var sb=window.supabase?window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true}}):null;
   function el(tag,attrs,kids){var e=document.createElement(tag);if(attrs)for(var k in attrs){var v=attrs[k];if(v==null||v===false)continue;if(k==='text')e.textContent=v;else if(k==='class')e.className=v;else if(k.slice(0,2)==='on')e.addEventListener(k.slice(2),v);else e.setAttribute(k,v===true?'':v);}(kids||[]).forEach(function(c){if(c!=null)e.appendChild(typeof c==='string'?document.createTextNode(c):c)});return e;}
@@ -179,14 +230,14 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
   function jget(k){try{var v=JSON.parse(store.get(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return []}}
   function jset(k,v){store.set(k,JSON.stringify(v))}
   var RQ='kr-recent-q',RV='kr-recent-v',RQ_MAX=8,RV_MAX=16;
-  var VIEW_KEYS=['product_id','game','name','set_name','number','rarity','image','url','sub_type','market','low','price_date','psa9','psa9_conf','psa9_n','psa10','psa10_conf','psa10_n','tracked'];
-  function rememberQuery(q,g){q=(q||'').trim();if(q.length<2)return;var a=jget(RQ).filter(function(x){return !(x.q.toLowerCase()===q.toLowerCase()&&(x.g||'')===(g||''))});a.unshift({q:q,g:g||''});jset(RQ,a.slice(0,RQ_MAX));renderRecentQ();}
+  var VIEW_KEYS=['product_id','game','group_id','set_code','released','name','set_name','number','rarity','image','url','sub_type','market','low','price_date','psa9','psa9_conf','psa9_n','psa10','psa10_conf','psa10_n','tracked'];
+  function rememberQuery(q,g){q=(q||'').trim();if(q.length<2)return;var gid=S.gid||null,gname=S.gid?S.gname:'';var a=jget(RQ).filter(function(x){return !(x.q.toLowerCase()===q.toLowerCase()&&(x.g||'')===(g||'')&&(x.gid||null)===gid)});a.unshift({q:q,g:g||'',gid:gid,gname:gname});jset(RQ,a.slice(0,RQ_MAX));renderRecentQ();}
   function rememberView(r){var o={};VIEW_KEYS.forEach(function(k){if(r[k]!=null)o[k]=r[k]});o.seen=new Date().toISOString();var a=jget(RV).filter(function(x){return x.product_id!==r.product_id});a.unshift(o);jset(RV,a.slice(0,RV_MAX));renderShelf();}
   function gameLabel(g){var f=GAMES.find(function(x){return x[0]===g});return f?f[1]:g;}
   var grid=document.getElementById('grid'),metaText=document.getElementById('metaText'),dateText=document.getElementById('dateText'),qi=document.getElementById('q');
 
   function renderCcy(){var seg=document.getElementById('ccySeg');seg.innerHTML='';CCY.forEach(function(m){seg.appendChild(el('button',{type:'button','aria-pressed':String(S.ccy===m.c),text:m.c,onclick:function(){S.ccy=m.c;store.set('kr-ccy',m.c);renderCcy();renderGrid();renderShelf();}}));});}
-  function renderGames(){var box=document.getElementById('games');box.innerHTML='';GAMES.forEach(function(g){box.appendChild(el('button',{type:'button',class:'chip','aria-pressed':String(S.g===g[0]),text:g[1],onclick:function(){S.g=g[0];renderGames();renderRecentQ();renderShelf();search();}}));});}
+  function renderGames(){var box=document.getElementById('games');box.innerHTML='';GAMES.forEach(function(g){box.appendChild(el('button',{type:'button',class:'chip','aria-pressed':String(S.g===g[0]),text:g[1],onclick:function(){S.g=g[0];setSet(null,'');renderGames();renderRecentQ();renderShelf();search();}}));});}
   function art(r){var a=el('div',{class:'art'});if(r.image){var i=el('img',{src:r.image,alt:r.name,loading:'lazy',decoding:'async'});i.onerror=function(){i.replaceWith(el('div',{class:'ph',text:'Görsel yok'}))};a.appendChild(i);}else a.appendChild(el('div',{class:'ph',text:'Görsel yok'}));return a;}
 
   function renderRecentQ(){
@@ -195,8 +246,8 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
     if(!a.length){box.hidden=true;return;}box.hidden=false;
     box.appendChild(el('span',{class:'lbl',text:'Son aramalar'}));
     a.forEach(function(x){box.appendChild(el('span',{class:'rq'},[
-      el('button',{type:'button',title:x.g?gameLabel(x.g)+' içinde':null,text:x.q+(x.g&&!S.g?' · '+gameLabel(x.g):''),onclick:function(){S.q=x.q;qi.value=x.q;if(x.g)S.g=x.g;renderGames();renderRecentQ();renderShelf();search();}}),
-      el('button',{type:'button','aria-label':x.q+' aramasını sil',text:'×',onclick:function(){jset(RQ,jget(RQ).filter(function(y){return !(y.q===x.q&&y.g===x.g)}));renderRecentQ();}})]));});
+      el('button',{type:'button',title:x.g?gameLabel(x.g)+' içinde':null,text:x.q+(x.gname?' · '+x.gname:(x.g&&!S.g?' · '+gameLabel(x.g):'')),onclick:function(){S.q=x.q;qi.value=x.q;if(x.g)S.g=x.g;setSet(x.gid||null,x.gname||'');renderGames();renderRecentQ();renderShelf();search();}}),
+      el('button',{type:'button','aria-label':x.q+' aramasını sil',text:'×',onclick:function(){jset(RQ,jget(RQ).filter(function(y){return !(y.q===x.q&&y.g===x.g&&(y.gid||null)===(x.gid||null))}));renderRecentQ();}})]));});
     box.appendChild(el('button',{type:'button',class:'linkbtn',text:'Temizle',onclick:function(){jset(RQ,[]);renderRecentQ();}}));
   }
   function miniCard(r){return el('button',{type:'button',class:'card',onclick:function(){openCard(r)}},[art(r),el('div',{class:'cname',text:r.name}),el('div',{class:'cset',text:(r.number?r.number+' · ':'')+(r.set_name||'')}),el('div',{class:'price',text:usd(r.market)})]);}
@@ -210,36 +261,104 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
   }
   document.getElementById('shelfClear').addEventListener('click',function(){var g=S.g;jset(RV,g?jget(RV).filter(function(x){return x.game!==g}):[]);renderShelf();});
 
+  function yr(d){return d?String(d).slice(0,4):'';}
+  function card(r){
+    return el('button',{type:'button',class:'card',onclick:function(){openCard(r)}},[
+      art(r),
+      el('div',{class:'cname',text:r.name}),
+      el('div',{class:'cset',text:(r.number?r.number+' · ':'')+(r.set_name||'')}),
+      el('div',{class:'prow'},[el('div',null,[el('div',{class:'price',text:usd(r.market)}),el('div',{class:'sec',text:sec(r.market)})]),r.psa10!=null?el('span',{class:'tag',text:'PSA 10 '+usd(r.psa10)}):null])
+    ]);
+  }
+  function effSort(){return S.sort==='relevance'&&S.gid&&!S.q?'number':S.sort;}
   function renderGrid(){
     grid.innerHTML='';
-    if(!S.rows.length){grid.appendChild(el('div',{class:'empty',style:'grid-column:1/-1'},[el('h3',{text:S.q?'Sonuç bulunamadı':'Katalog hazırlanıyor'}),el('p',{style:'margin:0',text:S.q?'Daha kısa bir arama dene: yalnızca kart adı ya da kart adı + numara.':'Kart listesi her gece güncellenir. Biraz sonra tekrar dene.'})]));return;}
+    if(!S.rows.length){
+      var msg=S.q||S.gid?['Sonuç bulunamadı',S.gid?'Bu sette aramana uyan kart yok. Set filtresini kaldırıp tekrar dene.':'Daha az kelimeyle dene: yalnızca kart adı, ya da ad + numara (ör. charizard 4).']:['Katalog hazırlanıyor','Kart listesi her gece güncellenir. Biraz sonra tekrar dene.'];
+      grid.appendChild(el('div',{class:'empty',style:'grid-column:1/-1'},[el('h3',{text:msg[0]}),el('p',{style:'margin:0',text:msg[1]})]));
+      document.getElementById('more').hidden=true;return;}
+    var heads=(effSort()==='new'||effSort()==='number')&&!S.gid,last=null;
     S.rows.forEach(function(r){
-      grid.appendChild(el('button',{type:'button',class:'card',onclick:function(){openCard(r)}},[
-        art(r),
-        el('div',{class:'cname',text:r.name}),
-        el('div',{class:'cset',text:(r.set_name||'')+(r.number?' · '+r.number:'')}),
-        el('div',{class:'prow'},[el('div',null,[el('div',{class:'price',text:usd(r.market)}),el('div',{class:'sec',text:sec(r.market)})]),r.psa10!=null?el('span',{class:'tag',text:'PSA 10 '+usd(r.psa10)}):null])
-      ]));});
+      if(heads&&r.group_id!==last){last=r.group_id;
+        grid.appendChild(el('div',{class:'sethead'},[el('h4',{text:r.set_name||'—'}),el('span',{text:[r.set_code,yr(r.released),S.g?'':r.game].filter(Boolean).join(' · ')}),
+          r.group_id?el('button',{type:'button',class:'linkbtn',text:'Bu sette ara',onclick:function(){setSet(r.group_id,r.set_name);search();}}):null]));}
+      grid.appendChild(card(r));});
+    document.getElementById('more').hidden=!(S.v2&&S.rows.length<S.total&&S.rows.length<5000);
+  }
+
+  function renderFacets(list){
+    var box=document.getElementById('facets');box.innerHTML='';
+    if(!list||list.length<2||S.gid){box.hidden=true;return;}
+    box.hidden=false;box.appendChild(el('span',{class:'lbl',text:'Sete göre daralt'}));
+    list.slice(0,20).forEach(function(x){box.appendChild(el('button',{type:'button',class:'facet',title:[x.set_name,x.set_code,yr(x.released)].filter(Boolean).join(' · '),onclick:function(){setSet(x.group_id,x.set_name);search();}},[x.set_name+(S.g?'':' ('+gameLabel(x.game).replace('Pokemon (Japonca)','JP')+')'),el('b',{text:String(x.n)})]));});
+    if(list.length>20)box.appendChild(el('button',{type:'button',class:'linkbtn',text:'Tüm setler',onclick:openSets}));
+  }
+
+  function setSet(gid,name){
+    S.gid=gid||null;S.gname=gid?(name||S.gname||''):'';
+    var b=document.getElementById('setBtn');b.textContent=S.gid?('Set: '+(S.gname||'seçili')):'Set / seri: tümü ▾';b.setAttribute('aria-pressed',String(!!S.gid));
+    document.getElementById('setClear').hidden=!S.gid;
   }
 
   var timer;
+  function syncUrl(){var url=new URL(location.href);url.search='';if(S.q)url.searchParams.set('q',S.q);if(S.g)url.searchParams.set('g',S.g);if(S.gid)url.searchParams.set('set',S.gid);if(S.sort!=='relevance')url.searchParams.set('sort',S.sort);history.replaceState(null,'',url);}
+  function fetchPage(off){
+    var p=S.v2?sb.rpc('search_cards',{q:S.q,g:S.g||null,gid:S.gid,sort:effSort(),lim:48,off:off}):sb.rpc('search_catalog',{q:S.q,g:S.g||null,lim:48});
+    return p.then(function(res){
+      if(res.error&&S.v2&&/search_cards|PGRST202|function/i.test((res.error.code||'')+' '+(res.error.message||''))){S.v2=false;return fetchPage(0);}
+      return res;});
+  }
   function search(){
     clearTimeout(timer);
     timer=setTimeout(function(){
-      var url=new URL(location.href);url.search='';if(S.q)url.searchParams.set('q',S.q);if(S.g)url.searchParams.set('g',S.g);history.replaceState(null,'',url);
+      syncUrl();
       if(!sb){metaText.textContent='Bağlantı kurulamadı. Sayfayı yenile.';return;}
       var my=++S.seq;metaText.textContent='Aranıyor…';
-      sb.rpc('search_catalog',{q:S.q,g:S.g||null,lim:48}).then(function(res){
+      fetchPage(0).then(function(res){
         if(my!==S.seq)return;
-        if(res.error){metaText.textContent='Katalog henüz hazır değil.';S.rows=[];renderGrid();return;}
-        S.rows=res.data||[];
+        if(res.error){metaText.textContent='Katalog henüz hazır değil.';S.rows=[];renderGrid();renderFacets(null);return;}
+        S.rows=res.data||[];S.total=S.rows.length?Number(S.rows[0].total||S.rows.length):0;
+        if(S.gid&&!S.gname&&S.rows[0]){setSet(S.gid,S.rows[0].set_name);}
         clearTimeout(S.rqT);if(S.q&&S.rows.length){var q=S.q,g=S.g;S.rqT=setTimeout(function(){if(S.q===q)rememberQuery(q,g)},1500);}
-        metaText.textContent=S.q?(S.rows.length+' sonuç'+(S.rows.length>=48?' (ilk 48)':'')):'En değerli kartlar'+(S.g?' · '+GAMES.find(function(g){return g[0]===S.g})[1]:'');
+        var n=S.total.toLocaleString('tr-TR');
+        metaText.textContent=S.q||S.gid?(n+' kart'+(S.gid?' · '+S.gname:'')+(S.total>S.rows.length?' · ilk '+S.rows.length+' gösteriliyor':'')):'En değerli kartlar'+(S.g?' · '+gameLabel(S.g):'');
         var d=S.rows.map(function(r){return r.price_date}).filter(Boolean).sort().pop();dateText.textContent=d?'Fiyatlar '+dfmt(d):'';
         renderGrid();
+        if(S.v2&&S.q&&!S.gid&&S.total>12){sb.rpc('search_sets',{q:S.q,g:S.g||null,lim:40}).then(function(r2){if(my===S.seq)renderFacets(r2.data||[]);});}else renderFacets(null);
       });
     },S.q?250:0);
   }
+  document.getElementById('moreBtn').addEventListener('click',function(){
+    var my=S.seq,btn=this;btn.disabled=true;btn.textContent='Yükleniyor…';
+    fetchPage(S.rows.length).then(function(res){btn.disabled=false;btn.textContent='Daha fazla göster';if(my!==S.seq||res.error)return;
+      S.rows=S.rows.concat(res.data||[]);metaText.textContent=metaText.textContent.replace(/ilk [\d.]+ gösteriliyor/,'ilk '+S.rows.length+' gösteriliyor');if(S.rows.length>=S.total)metaText.textContent=metaText.textContent.replace(/ · ilk [\d.]+ gösteriliyor/,'');renderGrid();});
+  });
+
+  // Set seçici
+  var pop=document.getElementById('setPop'),setQ=document.getElementById('setQ'),setList=document.getElementById('setList'),setBtn=document.getElementById('setBtn');
+  function norm(x){return String(x||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
+  function drawSets(){
+    var all=S.sets[S.g||'*'];setList.innerHTML='';
+    if(!all){setList.appendChild(el('div',{class:'note',style:'padding:8px',text:'Setler yükleniyor…'}));return;}
+    var t=norm(setQ.value).split(/\s+/).filter(Boolean);
+    var hits=all.filter(function(x){var h=norm([x.set_name,x.set_code,yr(x.released),x.game].join(' '));return t.every(function(w){return h.indexOf(w)>=0});});
+    if(!hits.length){setList.appendChild(el('div',{class:'note',style:'padding:8px',text:'Set bulunamadı.'}));return;}
+    hits.slice(0,200).forEach(function(x){setList.appendChild(el('button',{type:'button',role:'option',onclick:function(){closeSets();setSet(x.group_id,x.set_name);search();}},[
+      el('span',{class:'sn',text:x.set_name}),el('span',{class:'sc',text:x.n+' kart'}),el('span',{class:'sm',text:[x.set_code,yr(x.released),S.g?'':gameLabel(x.game)].filter(Boolean).join(' · ')})]));});
+  }
+  function openSets(){
+    if(!S.v2){metaText.textContent='Set filtresi yakında.';return;}
+    pop.hidden=false;setBtn.setAttribute('aria-expanded','true');setQ.value='';drawSets();setQ.focus();
+    var k=S.g||'*';if(!S.sets[k])sb.rpc('search_sets',{q:'',g:S.g||null,lim:2000}).then(function(r){if(!r.error){S.sets[k]=r.data||[];drawSets();}else{setList.innerHTML='';setList.appendChild(el('div',{class:'note',style:'padding:8px',text:'Setler alınamadı.'}));}});
+  }
+  function closeSets(){pop.hidden=true;setBtn.setAttribute('aria-expanded','false');}
+  setBtn.addEventListener('click',function(){pop.hidden?openSets():closeSets();});
+  setQ.addEventListener('input',drawSets);
+  setQ.addEventListener('keydown',function(e){if(e.key==='Escape'){closeSets();setBtn.focus();}if(e.key==='Enter'){var f=setList.querySelector('button');if(f)f.click();}});
+  document.addEventListener('click',function(e){if(!pop.hidden&&!e.target.closest('.setpick'))closeSets();});
+  document.getElementById('setClear').addEventListener('click',function(){setSet(null,'');search();});
+  var sortSel=document.getElementById('sort');sortSel.value=S.sort;if(sortSel.value!==S.sort){S.sort='relevance';sortSel.value='relevance';}
+  sortSel.addEventListener('change',function(){S.sort=sortSel.value;search();});
 
   function lineChart(box,data){
     box.innerHTML='';if(data.length<2){box.appendChild(el('div',{class:'note',text:data.length?'Fiyat geçmişi birikiyor.':'Fiyat geçmişi yok.'}));return;}
@@ -284,7 +403,7 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
   }
 
   qi.value=S.q;qi.addEventListener('input',function(){var had=!!S.q;S.q=qi.value.trim();if(had!==!!S.q)renderShelf();search();});
-  renderCcy();renderGames();renderRecentQ();renderShelf();search();
+  renderCcy();renderGames();setSet(S.gid,'');renderRecentQ();renderShelf();search();
   if(sb)sb.rpc('latest_fx').then(function(res){if(res.data&&res.data[0]){S.fx=res.data[0];renderGrid();}});
 })();
 </script>

@@ -25,6 +25,9 @@ TCG = "https://tcgcsv.com/tcgplayer"
 UA = "KartRadari/0.3 (+https://github.com/beriharavon-svg/kartradari)"
 FORCE = os.environ.get("CATALOG_FORCE") == "1"
 BATCH = 500
+# Katalog satır biçimi değişince artırılır; böylece kaynak aynı olsa bile bir kez yeniden yüklenir.
+SYNC_VERSION = 2
+EXTRA_COLS = {"ok": True}
 
 # Oyun adı (sitede görünen) -> TCGCSV kategori adı adayları
 GAMES = [
@@ -143,6 +146,8 @@ def sync_game(label, aliases, cats, price_date):
                 "sub_type": pr.get("subTypeName") if pr else None,
                 "market": (pr.get("marketPrice") or pr.get("midPrice")) if pr else None,
                 "low": pr.get("lowPrice") if pr else None,
+                **({"set_code": g.get("abbreviation") or None,
+                    "released": (g.get("publishedOn") or "")[:10] or None} if EXTRA_COLS["ok"] else {}),
                 "price_date": price_date, "updated_at": datetime.now(timezone.utc).isoformat(),
             })
         if len(buffer) >= BATCH * 4:
@@ -178,7 +183,15 @@ def main():
         log("Katalog tablosu henüz yok (supabase/migrations/003_catalog.sql çalıştırılmalı).", e)
         STATUS["errors"].append("catalog tablosu yok: " + str(e)[:150])
         return
-    if prev and last and prev[0]["value"].get("source_updated") == last and not FORCE:
+    try:
+        sb("GET", "catalog", {"select": "set_code,released", "limit": "1"})
+    except RuntimeError:
+        EXTRA_COLS["ok"] = False
+        STATUS["note"] = "004_search_v2.sql henüz çalıştırılmamış; set kodu ve çıkış tarihi yüklenmedi."
+        log(STATUS["note"])
+    version = SYNC_VERSION if EXTRA_COLS["ok"] else 1
+    pv = prev[0]["value"] if prev else {}
+    if pv.get("source_updated") == last and last and pv.get("version", 1) >= version and not FORCE:
         log("TCGCSV verisi son senkrondan beri değişmemiş; atlandı.")
         STATUS["skipped"] = True
         return
@@ -193,7 +206,7 @@ def main():
     STATUS["requests"] = REQUESTS["n"]
     if any(STATUS["games"].values()):
         sb("POST", "job_state", {"on_conflict": "key"},
-           [{"key": "catalog:last", "value": {"source_updated": last, "games": STATUS["games"]},
+           [{"key": "catalog:last", "value": {"source_updated": last, "games": STATUS["games"], "version": version},
              "updated_at": datetime.now(timezone.utc).isoformat()}],
            prefer="resolution=merge-duplicates,return=minimal")
     log(f"Bitti · istek: {REQUESTS['n']} · {STATUS['games']}")
