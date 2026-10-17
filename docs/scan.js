@@ -248,6 +248,32 @@
     return q.filter(function (x, i) { return x && q.indexOf(x) === i; }).slice(0, 12);
   }
 
-  window.KRScan = { scanRaw: scanRaw, scanSlab: scanSlab, fileToImage: fileToImage, urlToImage: urlToImage,
+  // Bulanık arama sonuçlarından, okunan ada en yakın kelimeyi seç ("Chaizand" → "Charizard").
+  function lev(a, b) {
+    a = a.toLowerCase(); b = b.toLowerCase(); var d = [], i, j;
+    for (i = 0; i <= a.length; i++) d[i] = [i];
+    for (j = 0; j <= b.length; j++) d[0][j] = j;
+    for (i = 1; i <= a.length; i++) for (j = 1; j <= b.length; j++)
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    return d[a.length][b.length];
+  }
+  var SUFFIX = /^(ex|gx|v|vmax|vstar|break|lv|prime|star)$/i;
+  function fuzzyPick(readName, rows) {
+    var tokens = tidy(readName).split(' ').filter(function (t) { return t.length >= 4; }), best = null;
+    (rows || []).forEach(function (r) {
+      if (/^code card/i.test(r.name || '')) return;
+      var words = String(r.clean_name || r.name || '').split(/\s+/);
+      words.forEach(function (w, i) {
+        if (!/^[A-Za-z][A-Za-z'-]{2,}$/.test(w)) return;
+        tokens.forEach(function (t) {
+          var score = lev(t, w) / Math.max(t.length, w.length);
+          if (score <= 0.45 && (!best || score < best.score)) best = { score: score, word: w + (words[i + 1] && SUFFIX.test(words[i + 1]) ? ' ' + words[i + 1] : '') };
+        });
+      });
+    });
+    return best && best.word;
+  }
+
+  window.KRScan = { fuzzyPick: fuzzyPick, scanRaw: scanRaw, scanSlab: scanSlab, fileToImage: fileToImage, urlToImage: urlToImage,
     rawQueries: rawQueries, plausible: plausible, slabQueries: slabQueries, findNumber: findNumber, findName: findName, parseSlab: parseSlab, readBarcode: readBarcode };
 })();

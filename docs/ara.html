@@ -471,10 +471,9 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
         var guessName=mode==='raw'?r.name:(r.name||(r.cands||[])[0]),numPart=mode==='raw'?(r.num&&(r.num.full||r.num.code)):r.number;
         return tryQueries(qs,g).then(function(q){
           // Adı yanlış okunduysa ("Chaizand") katalogdaki en yakın adla tekrar dene
-          if(q||!S.v2||!guessName||guessName.replace(/[^A-Za-z]/g,'').length<4)return q;
-          return sb.rpc('search_fuzzy',{q:guessName,g:g||null,lim:3}).then(function(fz){
-            var best=fz.data&&fz.data[0];if(!best||best.sim<0.3)return null;
-            var words=String(best.clean_name||best.name).split(/\s+/).filter(function(w){return /^[A-Za-z][A-Za-z'-]*$/.test(w)}).slice(0,2).join(' ');
+          if(q||!S.v2||!window.KRScan.plausible(guessName))return q;
+          return sb.rpc('search_fuzzy',{q:guessName,g:g||null,lim:8}).then(function(fz){
+            var words=window.KRScan.fuzzyPick(guessName,fz.data);
             if(!words)return null;parts.push('ad tahmini: '+words);
             return tryQueries((numPart?[words+' '+numPart]:[]).concat([words]),g);
           },function(){return null;});

@@ -61,8 +61,8 @@ for (const [url, q, g] of HIRES) {
     let hit = null, got = [];
     for (const q of qs) { const x = await sb.rpc('search_cards', { q, g, lim: 6, off: 0 }); if (x.data && x.data.length) { hit = q; got = x.data.map(d => d.product_id); break; } }
     let fuzzy = null;
-    if (!hit && r.name) { const fz = await sb.rpc('search_fuzzy', { q: r.name, g, lim: 3 }); const b = fz.data && fz.data[0]; fuzzy = fz.error ? fz.error.message : (b ? b.name + ' ' + b.sim : null);
-      if (b && b.sim >= 0.3) { const w = String(b.clean_name || b.name).split(/\s+/).filter(x => /^[A-Za-z][A-Za-z'-]*$/.test(x)).slice(0, 2).join(' ');
+    if (!hit && KRScan.plausible(r.name)) { const fz = await sb.rpc('search_fuzzy', { q: r.name, g, lim: 8 }); const w = KRScan.fuzzyPick(r.name, fz.data); fuzzy = fz.error ? fz.error.message : w;
+      if (w) {
         const n = r.num && (r.num.full || r.num.code); for (const q of (n ? [w + ' ' + n] : []).concat([w])) { const x = await sb.rpc('search_cards', { q, g, lim: 6, off: 0 }); if (x.data && x.data.length) { hit = 'fuzzy:' + q; got = x.data.map(d => d.product_id); break; } } } }
     return { w: img.naturalWidth, name: r.name, num: r.num, qs, hit, fuzzy, ids: got, text: r.text.slice(0, 300) };
   }, { url: '/' + file.replace('docs/', ''), g });
