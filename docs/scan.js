@@ -138,16 +138,26 @@
     }
     function viaZxing() {
       return loadScript(ZX).then(function () {
-        var Z = window.ZXing, hints = new Map();
+        var Z = window.ZXing, hints = new Map(), F = Z.BarcodeFormat;
         hints.set(Z.DecodeHintType.TRY_HARDER, true);
+        hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [F.CODE_128, F.CODE_39, F.QR_CODE, F.DATA_MATRIX, F.ITF, F.EAN_13]);
         var reader = new Z.MultiFormatReader(); reader.setHints(hints);
+        function plain(t, scale) {   // ham piksel (kontrast germe olmadan) kesit
+          var iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+          var c = document.createElement('canvas'); c.width = Math.round(iw * t[2] * scale); c.height = Math.round(ih * t[3] * scale);
+          var g = c.getContext('2d', { willReadFrequently: true }); g.imageSmoothingEnabled = scale > 1;
+          g.drawImage(img, iw * t[0], ih * t[1], iw * t[2], ih * t[3], 0, 0, c.width, c.height); return c;
+        }
         for (var i = 0; i < tries.length; i++) {
-          var t = tries[i];
-          try {
-            var cv = crop(img, t[0], t[1], t[2], t[3], 1400), src = new Z.HTMLCanvasElementLuminanceSource(cv);
-            var res = reader.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(src)));
-            if (res && /\d{7,}/.test(res.getText())) return res.getText();
-          } catch (e) { KRScan.lastBarcodeError = String(e && (e.name || e.message) || e); }
+          var t = tries[i], canvases = [plain(t, 1), plain(t, 2), crop(img, t[0], t[1], t[2], t[3], 1400)];
+          for (var k = 0; k < canvases.length; k++) {
+            try {
+              var src = new Z.HTMLCanvasElementLuminanceSource(canvases[k]);
+              var res = reader.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(src)));
+              if (res && /\d{7,}/.test(res.getText())) return res.getText();
+            } catch (e) { KRScan.lastBarcodeError = String(e && (e.message || e.name) || e).slice(0, 120); }
+            reader.reset && reader.reset();
+          }
         }
         return null;
       }, function (e) { KRScan.lastBarcodeError = 'yükleme: ' + (e && e.message); return null; });

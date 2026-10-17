@@ -40,3 +40,22 @@ language sql stable set search_path = public, extensions as $$
 $$;
 
 notify pgrst, 'reload schema';
+
+-- Kart tarayıcı için hataya toleranslı ad araması: "Chaizand" → Charizard
+create or replace function public.search_fuzzy(q text, g text default null, lim integer default 8)
+returns table (product_id bigint, name text, clean_name text, set_name text, number text, sim real)
+language sql stable security definer set search_path = public, extensions
+set pg_trgm.word_similarity_threshold = 0.3
+as $$
+  select c.product_id, c.name, c.clean_name, c.set_name, c.number, word_similarity(lower(btrim(q)), c.search) as sim
+  from public.catalog c
+  where length(btrim(coalesce(q, ''))) >= 3
+    and (coalesce(g, '') = '' or c.game = g)
+    and (c.number is not null or c.rarity is not null)
+    and c.search %> lower(btrim(q))
+  order by sim desc, c.market desc nulls last
+  limit least(greatest(coalesce(lim, 8), 1), 20);
+$$;
+revoke all on function public.search_fuzzy(text, text, integer) from public;
+grant execute on function public.search_fuzzy(text, text, integer) to anon, authenticated;
+notify pgrst, 'reload schema';

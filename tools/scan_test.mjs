@@ -60,7 +60,11 @@ for (const [url, q, g] of HIRES) {
     const sb = window.supabase.createClient('https://bsifvfcnktofugaspsls.supabase.co', 'sb_publishable_IFtbpaxlRhYiB7kjJydiIA_ilx0aRI1');
     let hit = null, got = [];
     for (const q of qs) { const x = await sb.rpc('search_cards', { q, g, lim: 6, off: 0 }); if (x.data && x.data.length) { hit = q; got = x.data.map(d => d.product_id); break; } }
-    return { w: img.naturalWidth, name: r.name, num: r.num, qs, hit, ids: got, text: r.text.slice(0, 300) };
+    let fuzzy = null;
+    if (!hit && r.name) { const fz = await sb.rpc('search_fuzzy', { q: r.name, g, lim: 3 }); const b = fz.data && fz.data[0]; fuzzy = fz.error ? fz.error.message : (b ? b.name + ' ' + b.sim : null);
+      if (b && b.sim >= 0.3) { const w = String(b.clean_name || b.name).split(/\s+/).filter(x => /^[A-Za-z][A-Za-z'-]*$/.test(x)).slice(0, 2).join(' ');
+        const n = r.num && (r.num.full || r.num.code); for (const q of (n ? [w + ' ' + n] : []).concat([w])) { const x = await sb.rpc('search_cards', { q, g, lim: 6, off: 0 }); if (x.data && x.data.length) { hit = 'fuzzy:' + q; got = x.data.map(d => d.product_id); break; } } } }
+    return { w: img.naturalWidth, name: r.name, num: r.num, qs, hit, fuzzy, ids: got, text: r.text.slice(0, 300) };
   }, { url: '/' + file.replace('docs/', ''), g });
   out.raw.push({ q, hires: true, expect: ids[0], ...res, found: ids.some(i => res.ids.includes(i)), rank: res.ids.indexOf(ids[0]) });
 }
