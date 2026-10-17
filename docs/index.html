@@ -588,7 +588,7 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
           fName=el('input',{id:'aName',required:true,value:x.name_input||'',placeholder:'ör. Umbreon ex'}),
           fNum=el('input',{id:'aNum',value:x.number_input||'',placeholder:'ör. 217'}),
           fLang=sel('aLang',[['english','İngilizce'],['japanese','Japonca']],x.language),
-          fGrade=sel('aGrade',[['PSA 10','PSA 10'],['PSA 9','PSA 9'],['Ham','Ham (derecesiz)']],x.grade),
+          fGrade=sel('aGrade',[['PSA 10','PSA 10'],['PSA 9','PSA 9'],['PSA 8','PSA 8'],['PSA 7','PSA 7'],['PSA 6','PSA 6'],['Ham','Ham (derecesiz)']].concat(['PSA 10','PSA 9','PSA 8','PSA 7','PSA 6','Ham'].indexOf(x.grade)<0&&x.grade?[[x.grade,x.grade]]:[]),x.grade),
           fCert=el('input',{id:'aCert',value:x.cert||'',placeholder:'isteğe bağlı'}),
           fQty=el('input',{id:'aQty',type:'number',min:'1',value:String(x.qty||1)}),
           fCost=el('input',{id:'aCost',type:'number',min:'0',step:'0.01',required:true,value:x.cost_usd!=null?String(x.cost_usd):''}),
