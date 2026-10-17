@@ -5,6 +5,12 @@ import fs from 'node:fs';
 import { spawn } from 'node:child_process';
 
 const SB_URL = 'https://bsifvfcnktofugaspsls.supabase.co', SB_KEY = 'sb_publishable_IFtbpaxlRhYiB7kjJydiIA_ilx0aRI1';
+// Yüksek çözünürlüklü görseller (gerçek telefon fotoğrafına daha yakın)
+const HIRES = [['https://images.pokemontcg.io/sv3pt5/199_hires.png', 'charizard ex 199/165', 'Pokemon'],
+  ['https://images.pokemontcg.io/swsh7/215_hires.png', 'umbreon vmax 215/203', 'Pokemon'],
+  ['https://images.pokemontcg.io/base1/4_hires.png', 'charizard 4/102', 'Pokemon'],
+  ['https://images.pokemontcg.io/sv4pt5/234_hires.png', 'charizard ex 234/091', 'Pokemon'],
+  ['https://images.pokemontcg.io/swsh12pt5/GG70_hires.png', 'charizard vstar gg70', 'Pokemon']];
 const CASES = [['charizard ex 199/165', 'Pokemon'], ['umbreon vmax 215/203', 'Pokemon'], ['charizard 4/102', 'Pokemon'],
   ['pikachu ex', 'Pokemon'], ['op05-119', 'One Piece'], ['op01-120', 'One Piece'], ['elsa 207/204', 'Lorcana'],
   ['umbreon 217/187', 'Pokemon JP'], ['magmar vending', 'Pokemon JP']];
@@ -43,6 +49,22 @@ for (const [q, g] of CASES) {
   out.raw.push({ q, g, expect: c.product_id, expect_name: c.name, ...res, found: res.ids.includes(c.product_id), rank: res.ids.indexOf(c.product_id) });
 }
 
+for (const [url, q, g] of HIRES) {
+  const rows = await rpc('search_cards', { q, g, lim: 3, off: 0 });
+  const ids = Array.isArray(rows) ? rows.map(r => r.product_id) : [];
+  let ok = false; const file = `docs/_t/h${out.raw.length}.png`;
+  try { const r = await fetch(url); if (r.ok) { fs.writeFileSync(file, Buffer.from(await r.arrayBuffer())); ok = true; } } catch {}
+  if (!ok) { out.raw.push({ q, hires: true, error: 'görsel indirilemedi' }); continue; }
+  const res = await page.evaluate(async ({ url, g }) => {
+    const img = await KRScan.urlToImage(url); const r = await KRScan.scanRaw(img); const qs = KRScan.rawQueries(r);
+    const sb = window.supabase.createClient('https://bsifvfcnktofugaspsls.supabase.co', 'sb_publishable_IFtbpaxlRhYiB7kjJydiIA_ilx0aRI1');
+    let hit = null, got = [];
+    for (const q of qs) { const x = await sb.rpc('search_cards', { q, g, lim: 6, off: 0 }); if (x.data && x.data.length) { hit = q; got = x.data.map(d => d.product_id); break; } }
+    return { w: img.naturalWidth, name: r.name, num: r.num, qs, hit, ids: got, text: r.text.slice(0, 300) };
+  }, { url: '/' + file.replace('docs/', ''), g });
+  out.raw.push({ q, hires: true, expect: ids[0], ...res, found: ids.some(i => res.ids.includes(i)), rank: res.ids.indexOf(ids[0]) });
+}
+
 // Örnek PSA etiketi: barkod + yazılar
 await page.setContent(`<html><body style="margin:0;background:#ddd">
 <div id="slab" style="width:900px;padding:30px;background:#c9ccd1">
@@ -59,7 +81,7 @@ await (await page.$('#slab')).screenshot({ path: 'docs/_t/slab.png' });
 await page.goto('http://localhost:8799/ara.html'); await page.waitForTimeout(1200);
 out.slab = await page.evaluate(async () => {
   const img = await KRScan.urlToImage('/_t/slab.png');
-  const s = await KRScan.scanSlab(img); delete s.raw;
+  const s = await KRScan.scanSlab(img); s.label = s.raw; delete s.raw; s.zxingType = typeof window.ZXing; s.barcodeError = KRScan.lastBarcodeError || null;
   const qs = KRScan.slabQueries(s);
   const sb = window.supabase.createClient('https://bsifvfcnktofugaspsls.supabase.co', 'sb_publishable_IFtbpaxlRhYiB7kjJydiIA_ilx0aRI1');
   let hit = null, names = [];

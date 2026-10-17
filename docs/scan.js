@@ -96,7 +96,7 @@
   }
 
   // PSA derece kelimeleri; sayı etiketin başka bir satırında olabilir.
-  var GRADES = [[/GEM\s*-?\s*M(?:IN)?T|PRISTINE/i, 10], [/NM\s*-?\s*MT/i, 8], [/VG\s*-?\s*EX/i, 4], [/EX\s*-?\s*MT/i, 6], [/\bMINT\b/i, 9],
+  var GRADES = [[/\bGEM\b|GEM\s*-?\s*M(?:IN)?T|PRISTINE/i, 10], [/NM\s*-?\s*MT/i, 8], [/VG\s*-?\s*EX/i, 4], [/EX\s*-?\s*MT/i, 6], [/\bMINT\b/i, 9],
     [/\bNM\b|NEAR\s*MINT/i, 7], [/\bEX\b/i, 5], [/\bVG\b/i, 3], [/\bGOOD\b/i, 2], [/\bPOOR\b|\bPR\b/i, 1]];
   var GRADE_WORDS = /GEM\s*-?\s*M(?:IN)?T|PRISTINE|NM\s*-?\s*MT\+?|VG\s*-?\s*EX|EX\s*-?\s*MT|\bMINT\b|\bNM\b|\bVG\b|\bGOOD\b|\bPOOR\b|\bAUTHENTIC\b/gi;
   function parseSlab(text) {
@@ -121,6 +121,9 @@
     var brand = lines.find(function (l) { return /POKEMON|ONE PIECE|LORCANA|BANDAI|DISNEY/i.test(l); }) || '';
     out.set = brand.replace(GRADE_WORDS, ' ').replace(/\b(19|20)\d{2}\b/, '').replace(/POKEMON|JAPANESE|ENGLISH|ONE PIECE|BANDAI|DISNEY|LORCANA|#\S+|\b[A-Z]{2,3}\d{2}-\d{3}\b/gi, ' ').replace(/[^A-Za-z0-9 &'-]/g, ' ').replace(/\s+/g, ' ').trim();
     var nameLine = lines.find(function (l) { var bare = l.replace(GRADE_WORDS, ' ').replace(/#\S+|\b\d+(\.\d)?\b/g, '').trim(); return l !== brand && bare.length > 2 && /^[A-Z][A-Z .'\-]{2,}$/.test(bare) && !/PSA|CERT/i.test(l); });
+    out.cands = lines.filter(function (l) { return l !== brand && !/\b(19|20)\d{2}\b/.test(l) && !/PSA|CERT/i.test(l); })
+      .map(function (l) { return l.replace(GRADE_WORDS, ' ').replace(/#\S+|\b\d+(\.\d)?\b|[^A-Za-z .'&-]/g, ' ').replace(/\b(ALT|ART|SECRET|HOLO|REV|FOIL|FULL|SPECIAL|RARE|ILLUSTRATION|1ST|EDITION|SHADOWLESS|GLOSSY|PROMO|MT)\b\.?/gi, ' ').replace(/\s+/g, ' ').trim(); })
+      .filter(function (l) { return l.replace(/[^A-Za-z]/g, '').length >= 3; });
     if (nameLine) out.name = nameLine.replace(GRADE_WORDS, ' ').replace(/#\S+|\b\d+\b|-HOLO|HOLO|REV\.?FOIL|1ST EDITION|FULL ART|SPECIAL ART RARE|ILLUSTRATION RARE/gi, ' ').replace(/\s+/g, ' ').trim();
     return out;
   }
@@ -147,7 +150,7 @@
           } catch (e) { KRScan.lastBarcodeError = String(e && (e.name || e.message) || e); }
         }
         return null;
-      });
+      }, function (e) { KRScan.lastBarcodeError = 'yükleme: ' + (e && e.message); return null; });
     }
     return viaNative().then(function (v) { return v || viaZxing(); }).then(function (v) {
       if (!v) return null;
@@ -212,12 +215,14 @@
   }
   function slabQueries(s) {
     var q = [], n = tidy(s.name), num = s.number || '', setw = (s.set || '').split(' ').filter(function (w) { return w.length > 2; }).slice(0, 2).join(' ');
+    var cands = [n].concat((s.cands || []).map(tidy)).filter(Boolean);
     if (n && num && setw) q.push(n + ' ' + num + ' ' + setw);
-    if (n && num) q.push(n + ' ' + num);
-    if (n && setw) q.push(n + ' ' + setw);
+    // Etiket satırları kaydığında (set adı ikinci satıra taştığında) her satırı numarayla dene
+    cands.forEach(function (c) { if (num) q.push(c + ' ' + num); });
     if (num && /-/.test(num)) q.push(num);
-    if (n) { q.push(n); var first = n.split(' ')[0]; if (first !== n && first.length > 2) q.push(first); }
-    return q.filter(function (x, i) { return x && q.indexOf(x) === i; });
+    if (n && setw) q.push(n + ' ' + setw);
+    cands.forEach(function (c) { q.push(c); var first = c.split(' ')[0]; if (first !== c && first.length > 3) q.push(first); });
+    return q.filter(function (x, i) { return x && q.indexOf(x) === i; }).slice(0, 12);
   }
 
   window.KRScan = { scanRaw: scanRaw, scanSlab: scanSlab, fileToImage: fileToImage, urlToImage: urlToImage,
