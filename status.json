@@ -1,0 +1,12 @@
+{
+ "errors": [],
+ "games": {
+  "Pokemon": 32868,
+  "Pokemon JP": 30730,
+  "One Piece": 7740,
+  "Lorcana": 3979
+ },
+ "run_at": "2026-10-17T14:57:56+00:00",
+ "source_updated": "2026-10-16T20:05:27+0000",
+ "requests": 1583
+}
