@@ -307,7 +307,9 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
       if(r.error)throw r.error;S.holdings=r.data||[];
       var ids=Array.from(new Set(S.holdings.map(function(h){return h.card_id}).filter(Boolean)));
       var since=new Date(Date.now()-400*864e5).toISOString().slice(0,10);
-      var pp=ids.length?sb.from('card_prices').select('*').in('card_id',ids).gte('date',since).order('date').limit(20000):Promise.resolve({data:[]});
+      // Supabase tek istekte en fazla 1000 satır döndürür; fiyat geçmişi sayfa sayfa okunur.
+      function pageAll(from,acc){return sb.from('card_prices').select('*').in('card_id',ids).gte('date',since).order('date').order('card_id').range(from,from+999).then(function(r){if(r.error)return r;acc=acc.concat(r.data||[]);return (r.data||[]).length<1000||from>=60000?{data:acc}:pageAll(from+1000,acc);});}
+      var pp=ids.length?pageAll(0,[]):Promise.resolve({data:[]});
       var fp=sb.from('fx_rates').select('*').gte('date',since).order('date').limit(1000);
       return Promise.all([pp,fp,loadFolders()]);
     }).then(function(res){
