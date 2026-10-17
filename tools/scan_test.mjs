@@ -83,6 +83,16 @@ await page.setContent(`<html><body style="margin:0;background:#ddd">
 await page.waitForTimeout(1500);
 await (await page.$('#slab')).screenshot({ path: 'docs/_t/slab.png' });
 await page.goto('http://localhost:8799/ara.html'); await page.waitForTimeout(1200);
+out.zxdiag = await page.evaluate(async () => {
+  const img = await KRScan.urlToImage('/_t/slab.png'); const r = {};
+  try { await KRScan.readBarcode(img).then(v => { r.readBarcode = v; r.err = KRScan.lastBarcodeError; }); } catch (e) { r.e0 = String(e); }
+  const Z = window.ZXing; r.has = ['BrowserMultiFormatReader', 'BrowserBarcodeReader', 'HTMLCanvasElementLuminanceSource', 'Code128Reader', 'GlobalHistogramBinarizer'].filter(k => Z && Z[k]);
+  try { if (Z.BrowserMultiFormatReader) { const res = await new Z.BrowserMultiFormatReader().decodeFromImageElement(img); r.browser = res.getText(); } } catch (e) { r.browserErr = String(e && (e.message || e)).slice(0, 120); }
+  try { const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight; c.getContext('2d').drawImage(img, 0, 0);
+    const src = new Z.HTMLCanvasElementLuminanceSource(c); const rd = new Z.Code128Reader();
+    const res = rd.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(src))); r.code128 = res.getText(); } catch (e) { r.code128Err = String(e && (e.message || e)).slice(0, 120); }
+  return r;
+});
 out.slab = await page.evaluate(async () => {
   const img = await KRScan.urlToImage('/_t/slab.png');
   const s = await KRScan.scanSlab(img); s.label = s.raw; delete s.raw; s.zxingType = typeof window.ZXing; s.barcodeError = KRScan.lastBarcodeError || null;

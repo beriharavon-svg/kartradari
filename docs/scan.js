@@ -153,7 +153,8 @@
           for (var k = 0; k < canvases.length; k++) {
             try {
               var src = new Z.HTMLCanvasElementLuminanceSource(canvases[k]);
-              var res = reader.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(src)));
+              var bmp = new Z.BinaryBitmap(new Z.HybridBinarizer(src)), res;
+              try { res = reader.decode(bmp, hints); } catch (e1) { res = reader.decode(new Z.BinaryBitmap(new Z.GlobalHistogramBinarizer(src)), hints); }
               if (res && /\d{7,}/.test(res.getText())) return res.getText();
             } catch (e) { KRScan.lastBarcodeError = String(e && (e.message || e.name) || e).slice(0, 120); }
             reader.reset && reader.reset();
