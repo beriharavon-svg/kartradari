@@ -135,6 +135,9 @@ def clean_set(s):
 def pick(cands, number, set_name):
     want = num_key(number)
     hits = [c for c in cands if want and num_key(c.get("cardNumber")) == want] if want else list(cands)
+    if not hits and want:
+        # Numarası olmayan kartlar (ör. Japon Vending serisi): set adı tutuyorsa numarasız adaylar kabul edilir.
+        hits = [c for c in cands if not num_key(c.get("cardNumber")) and set_overlap(set_name, c.get("setName")) > 0]
     if not hits:
         return None, len(cands)
     hits.sort(key=lambda c: -set_overlap(set_name, c.get("setName")))
@@ -206,7 +209,7 @@ def match_from_catalog(h, cgame):
 
     cands.sort(key=score, reverse=True)
     best = cands[0]
-    if number and score(best)[0] == 0 and score(best)[1] == 0:
+    if number and score(best)[0] == 0 and (score(best)[1] == 0 or best.get("number")):
         return None, "Katalogda bu numarayla kart bulunamadı. Numarayı kontrol et."
     row = {"source": "tcgcsv", "ext_id": str(best["product_id"]), "game": cgame, "language": "english",
            "name": best.get("name") or "", "set_name": best.get("set_name"), "number": best.get("number"),
