@@ -4,7 +4,7 @@
 
 -- Arama kuralı: her kelime eşleşmeli.
 --   Yalnız rakam ("199")           → kart numarası (199/165, OP05-199, TG199 …) ya da set adındaki sayı ("151")
---   Bölü işaretli ("4/102")        → tam kart numarası
+--   Bölü işaretli ("4/102")        → tam kart numarası (baştaki sıfırlar önemsiz: 063/193 = 63/193)
 --   Diğer her şey ("charizard", "evolving", "op05", "sv8a") → kart adı, set adı veya set kodu
 -- Kapalı ürünler (kutu, paket; numarası ve nadirliği olmayanlar) aramaya girmez.
 -- Numarası olmayan kartlar (ör. Japon Vending serisi) nadirliği olduğu için aramada kalır.
@@ -27,8 +27,9 @@ language sql stable set search_path = public, extensions as $$
             or lower(coalesce(c.set_name, '')) ~ ('(^|[^0-9])' || w || '($|[^0-9])')
             or (c.number is null and c.search ~ ('(^|[^0-9])' || w || '($|[^0-9])'))
           when w ~ '/' then
-            lower(c.number) = w
-            or c.num_key = regexp_replace(split_part(w, '/', 1), '^0+([0-9])', '\1')
+            -- Tam numara: "63/193" yalnızca 063/193'ü bulur (başka setlerdeki 63 numaralar değil)
+            regexp_replace(lower(coalesce(c.number, '')), '(^|/|[a-z])0+([0-9])', '\1\2', 'g')
+              = regexp_replace(w, '(^|/|[a-z])0+([0-9])', '\1\2', 'g')
           else
             c.search like '%' || public._like_esc(w) || '%'
             or lower(coalesce(c.set_code, '')) = w

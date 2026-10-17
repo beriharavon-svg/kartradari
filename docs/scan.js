@@ -95,29 +95,39 @@
     return '';
   }
 
-  var GRADES = [[/GEM\s*-?\s*M(?:IN)?T\s*10|PRISTINE\s*10/i, 10], [/\bMINT\s*9\b/i, 9], [/NM\s*-?\s*MT\s*\+?\s*8|\bNM-MT\s*8/i, 8],
-    [/\bNM\s*7\b|NEAR\s*MINT\s*7/i, 7], [/EX\s*-?\s*MT\s*6/i, 6], [/\bEX\s*5\b/i, 5], [/VG\s*-?\s*EX\s*4/i, 4], [/\bVG\s*3\b/i, 3], [/\bGOOD\s*2\b/i, 2]];
+  // PSA derece kelimeleri; sayı etiketin başka bir satırında olabilir.
+  var GRADES = [[/GEM\s*-?\s*M(?:IN)?T|PRISTINE/i, 10], [/NM\s*-?\s*MT/i, 8], [/VG\s*-?\s*EX/i, 4], [/EX\s*-?\s*MT/i, 6], [/\bMINT\b/i, 9],
+    [/\bNM\b|NEAR\s*MINT/i, 7], [/\bEX\b/i, 5], [/\bVG\b/i, 3], [/\bGOOD\b/i, 2], [/\bPOOR\b|\bPR\b/i, 1]];
+  var GRADE_WORDS = /GEM\s*-?\s*M(?:IN)?T|PRISTINE|NM\s*-?\s*MT\+?|VG\s*-?\s*EX|EX\s*-?\s*MT|\bMINT\b|\bNM\b|\bVG\b|\bGOOD\b|\bPOOR\b|\bAUTHENTIC\b/gi;
   function parseSlab(text) {
     var out = { raw: text }, T = text.replace(/[‐–—]/g, '-');
-    for (var i = 0; i < GRADES.length; i++) if (GRADES[i][0].test(T)) { out.grade = 'PSA ' + GRADES[i][1]; break; }
+    // Belirgin derece kelimeleri her yerde aranır; "EX", "NM" gibi kısa olanlar yıl/set satırında aranmaz (set adlarında da geçer).
+    var rest = T.split(/\n/).filter(function (l) { return !/\b(19|20)\d{2}\b/.test(l); }).join('\n');
+    for (var i = 0; i < GRADES.length; i++) {
+      var strong = i < 5, hay = strong ? T : rest;
+      if (GRADES[i][0].test(hay)) { out.grade = 'PSA ' + GRADES[i][1]; break; }
+    }
+    var lone = T.match(/(?:^|\s)(10|[1-9](?:\.5)?)(?:\s|$)/g);
+    if (lone && out.grade) { var nums = lone.map(function (x) { return x.trim(); }); if (nums.indexOf(out.grade.slice(4)) < 0 && nums.indexOf('10') >= 0 && /GEM|PRISTINE/i.test(T)) out.grade = 'PSA 10'; }
     var n = T.match(/#\s?([A-Z]{0,4}\d{1,3}[A-Z]?)\b/i) || T.match(/\bNO\.?\s?(\d{1,3})\b/i);
     if (n) out.number = n[1].toUpperCase().replace(/^0+(?=\d)/, '');
     var op = findNumber(T); if (op && op.kind === 'op') out.number = op.code;
     var y = T.match(/\b(19[89]\d|20[0-3]\d)\b/); if (y) out.year = y[1];
     out.japanese = /JAPANESE|JPN\b/i.test(T);
-    T.split(/\n+/).forEach(function (l) { var m = l.replace(/\s/g, '').match(/^\D{0,6}(\d{8,10})\D{0,3}$/); if (m && !out.certText) out.certText = m[1]; });
+    T.split(/\n+/).forEach(function (l) { var runs = l.replace(/[ ]/g, '').match(/\d+/g) || []; var big = runs.filter(function (r) { return r.length >= 8 && r.length <= 10; });
+      if (big.length === 1 && runs.length <= 2 && !out.certText) out.certText = big[0]; });
     // Etiket satırları: 1. satır yıl + marka/set, 2. satır kart adı
     var lines = T.split(/\n+/).map(function (s) { return s.trim(); }).filter(Boolean);
     var brand = lines.find(function (l) { return /POKEMON|ONE PIECE|LORCANA|BANDAI|DISNEY/i.test(l); }) || '';
-    out.set = brand.replace(/\b(19|20)\d{2}\b/, '').replace(/POKEMON|JAPANESE|ENGLISH|ONE PIECE|BANDAI|DISNEY|LORCANA|#\S+|\b[A-Z]{2,3}\d{2}-\d{3}\b/gi, ' ').replace(/[^A-Za-z0-9 &'-]/g, ' ').replace(/\s+/g, ' ').trim();
-    var nameLine = lines.find(function (l) { return l !== brand && /^[A-Z][A-Z .'\-]{2,}$/.test(l.replace(/#\S+|\b\d+\b/g, '').trim()) && !/GEM|MINT|NM-MT|PSA|PRISTINE|\bEX\b-?MT/i.test(l); });
-    if (nameLine) out.name = nameLine.replace(/#\S+|\b\d+\b|-HOLO|HOLO|REV\.?FOIL|1ST EDITION|FULL ART|SPECIAL ART RARE|ILLUSTRATION RARE/gi, ' ').replace(/\s+/g, ' ').trim();
+    out.set = brand.replace(GRADE_WORDS, ' ').replace(/\b(19|20)\d{2}\b/, '').replace(/POKEMON|JAPANESE|ENGLISH|ONE PIECE|BANDAI|DISNEY|LORCANA|#\S+|\b[A-Z]{2,3}\d{2}-\d{3}\b/gi, ' ').replace(/[^A-Za-z0-9 &'-]/g, ' ').replace(/\s+/g, ' ').trim();
+    var nameLine = lines.find(function (l) { var bare = l.replace(GRADE_WORDS, ' ').replace(/#\S+|\b\d+(\.\d)?\b/g, '').trim(); return l !== brand && bare.length > 2 && /^[A-Z][A-Z .'\-]{2,}$/.test(bare) && !/PSA|CERT/i.test(l); });
+    if (nameLine) out.name = nameLine.replace(GRADE_WORDS, ' ').replace(/#\S+|\b\d+\b|-HOLO|HOLO|REV\.?FOIL|1ST EDITION|FULL ART|SPECIAL ART RARE|ILLUSTRATION RARE/gi, ' ').replace(/\s+/g, ' ').trim();
     return out;
   }
 
   // ---------- barkod ----------
   function readBarcode(img) {
-    var tries = [[0, 0, 1, 0.45], [0, 0, 1, 1]];
+    var tries = [[0, 0, 1, 0.45], [0, 0, 1, 0.3], [0, 0, 1, 1]];
     function viaNative() {
       if (!('BarcodeDetector' in window)) return Promise.resolve(null);
       var det; try { det = new window.BarcodeDetector(); } catch (e) { return Promise.resolve(null); }
@@ -134,7 +144,7 @@
             var cv = crop(img, t[0], t[1], t[2], t[3], 1400), src = new Z.HTMLCanvasElementLuminanceSource(cv);
             var res = reader.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(src)));
             if (res && /\d{7,}/.test(res.getText())) return res.getText();
-          } catch (e) { /* bulunamadı, sonraki kesit */ }
+          } catch (e) { KRScan.lastBarcodeError = String(e && (e.name || e.message) || e); }
         }
         return null;
       });
@@ -147,16 +157,30 @@
 
   // ---------- akışlar ----------
   function scanRaw(img, progress) {
+    // Numara: Pokemon'da sol alt (eski kartlarda sağ alt), One Piece'te sağ alt, Lorcana'da sol alt.
+    var spots = [[0, 0.84, 0.55, 0.16], [0.45, 0.84, 0.55, 0.16], [0, 0.72, 1, 0.28]];
     return getWorker(progress).then(function (w) {
-      progress && progress('Kartın üst kısmı okunuyor', 0.3);
-      return ocr(w, crop(img, 0, 0, 1, 0.22, 1600)).then(function (top) {
-        progress && progress('Kart numarası okunuyor', 0.6);
-        return ocr(w, crop(img, 0, 0.72, 1, 0.28, 1800)).then(function (bottom) {
-          var num = findNumber(bottom), name = findName(top) || findName(bottom);
-          if (num) return { name: name, num: num, text: top + '\n' + bottom };
-          progress && progress('Tüm kart okunuyor', 0.8);
-          return ocr(w, crop(img, 0, 0, 1, 1, 1800)).then(function (all) {
-            return { name: name || findName(all), num: findNumber(all), text: top + '\n' + bottom + '\n' + all };
+      progress && progress('Kartın üst kısmı okunuyor', 0.25);
+      return ocr(w, crop(img, 0, 0, 1, 0.2, 2000)).then(function (top) {
+        var texts = [top], i = 0;
+        function nextSpot(invert) {
+          if (i >= spots.length) {
+            if (!invert) { i = 0; return nextSpot(true); }   // koyu (full art) kartlar için ters renk
+            return Promise.resolve(null);
+          }
+          var sp = spots[i++];
+          progress && progress('Kart numarası aranıyor', 0.35 + 0.08 * i + (invert ? 0.25 : 0));
+          return ocr(w, crop(img, sp[0], sp[1], sp[2], sp[3], 2200, invert)).then(function (t) {
+            texts.push(t); var n = findNumber(t); return n || nextSpot(invert);
+          });
+        }
+        return nextSpot(false).then(function (num) {
+          var name = findName(top);
+          if (num && name) return { name: name, num: num, text: texts.join('\n') };
+          progress && progress('Tüm kart okunuyor', 0.9);
+          return ocr(w, crop(img, 0, 0, 1, 1, 2000)).then(function (all) {
+            texts.push(all);
+            return { name: name || findName(all), num: num || findNumber(all), text: texts.join('\n') };
           });
         });
       });
