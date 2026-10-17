@@ -256,17 +256,21 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
   function rateNow(){var f=S.fx[S.fx.length-1];return f?Number(f.rates[S.ccy]):NaN;}
   function fxOn(date){var best=null;for(var i=0;i<S.fx.length;i++){if(S.fx[i].date<=date)best=S.fx[i].rates;else break;}return best?Number(best[S.ccy]):rateNow();}
   function gradeKey(g){return g==='PSA 10'?'psa10':(g==='PSA 9'?'psa9':(g==='Ham'?'raw':null));}
-  function series(h){var rows=h.card_id?(S.prices[h.card_id]||[]):[],k=gradeKey(h.grade);if(!k)return [];return rows.filter(function(r){return r[k]!=null}).map(function(r){return [r.date,Number(r[k])]});}
+  // Pokemon dışı kartlarda (katalog/TCGCSV) yalnızca ham fiyat var; dereceli kartlar ham değerle gösterilir.
+  function rawOnly(h){return !!(h.cards&&h.cards.source==='tcgcsv');}
+  function pkey(h){return rawOnly(h)?'raw':gradeKey(h.grade);}
+  function series(h){var rows=h.card_id?(S.prices[h.card_id]||[]):[],k=pkey(h);if(!k)return [];return rows.filter(function(r){return r[k]!=null}).map(function(r){return [r.date,Number(r[k])]});}
   function latest(h){var rows=h.card_id?(S.prices[h.card_id]||[]):[];return rows.length?rows[rows.length-1]:null;}
-  function price(h){var r=latest(h),k=gradeKey(h.grade);return r&&k&&r[k]!=null?Number(r[k]):null;}
+  function price(h){var r=latest(h),k=pkey(h);return r&&k&&r[k]!=null?Number(r[k]):null;}
   function priced(h){return h.match_status==='matched'&&price(h)!=null;}
   function changeOver(h,days){var s=series(h);if(s.length<2)return null;var last=s[s.length-1],t=new Date(last[0]+'T00:00:00Z');t.setUTCDate(t.getUTCDate()-days);var cut=t.toISOString().slice(0,10),base=null;for(var i=s.length-1;i>=0;i--){if(s[i][0]<=cut){base=s[i][1];break;}}return base?(last[1]-base)/base*100:null;}
   function statusChip(h){
     if(h.match_status==='pending')return el('span',{class:'chip info',text:'Eşleştiriliyor'});
     if(h.match_status==='failed')return el('span',{class:'chip err',text:'Bulunamadı'});
     if(h.match_status==='unsupported')return el('span',{class:'chip warn',text:'Desteklenmiyor'});
-    if(!gradeKey(h.grade))return el('span',{class:'chip warn',text:'Derece desteklenmiyor'});
+    if(!pkey(h))return el('span',{class:'chip warn',text:'Derece desteklenmiyor'});
     if(price(h)==null)return el('span',{class:'chip info',text:'Fiyat bekleniyor'});
+    if(rawOnly(h)&&h.grade!=='Ham')return el('span',{class:'chip warn',title:'Bu oyun için dereceli (PSA) fiyat kaynağı henüz yok; ham piyasa değeri gösteriliyor.',text:'Ham değer'});
     if(h.match_note&&/kontrol et/.test(h.match_note))return el('span',{class:'chip warn',text:'Kontrol et'});
     var r=latest(h),c=h.grade==='PSA 10'?r.psa10_conf:(h.grade==='PSA 9'?r.psa9_conf:null);
     if(c==='low')return el('span',{class:'chip warn',text:'Düşük güven'});

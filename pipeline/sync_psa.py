@@ -162,7 +162,91 @@ def upsert_card(c, game, language):
     return res[0]["id"]
 
 
+# ---------- Pokemon dışı oyunlar: TCGCSV kataloğundan ham fiyat ----------
+
+CATALOG_GAMES = {"onepiece": "One Piece", "lorcana": "Lorcana", "disneylorcana": "Lorcana"}
+
+
+def catalog_game(game):
+    return CATALOG_GAMES.get(norm(game))
+
+
+def _cat_get(params):
+    return sb("GET", "catalog", {"select": "product_id,game,set_name,name,clean_name,number,rarity,image,url,market,price_date",
+                                 "limit": "60", **params}) or []
+
+
+def _pg_like(v):
+    return re.sub(r"[*,()]", " ", str(v or "")).strip()
+
+
+def match_from_catalog(h, cgame):
+    """Kartı gece yüklenen katalogda (TCGCSV) bulur. Kredi harcamaz."""
+    name, number, set_in = h.get("name_input") or "", (h.get("number_input") or "").strip(), h.get("set_input") or ""
+    cands = []
+    if number:
+        cands = _cat_get({"game": f"eq.{cgame}", "number": f"ilike.*{_pg_like(number)}*"})
+    if not cands and name:
+        words = [w for w in re.split(r"\W+", name) if len(w) > 1][:4]
+        if words:
+            cands = _cat_get({"game": f"eq.{cgame}", "name": "ilike.*" + "*".join(_pg_like(w) for w in words) + "*"})
+    if not cands:
+        return None, "Katalogda bulunamadı. Kart adını ve numarasını (ör. OP05-119) kontrol et."
+    want_num = norm(number)
+    name_words = {norm(w) for w in re.split(r"\W+", name) if len(w) > 1}
+
+    def score(c):
+        cn = norm(c.get("number"))
+        num_ok = 3 if want_num and cn == want_num else (2 if want_num and cn.endswith(want_num) else 0)
+        nm = norm(c.get("clean_name") or c.get("name"))
+        name_hits = sum(1 for w in name_words if w and w in nm)
+        variant_pen = 0 if any(t in norm(name) for t in ("alternate", "parallel", "manga", "enchanted", "foil")) else \
+            (1 if re.search(r"alternate|parallel|manga|enchanted|special", str(c.get("name")), re.I) else 0)
+        return (num_ok, name_hits, set_overlap(set_in, c.get("set_name")), -variant_pen, c.get("market") or 0)
+
+    cands.sort(key=score, reverse=True)
+    best = cands[0]
+    if number and score(best)[0] == 0 and score(best)[1] == 0:
+        return None, "Katalogda bu numarayla kart bulunamadı. Numarayı kontrol et."
+    row = {"source": "tcgcsv", "ext_id": str(best["product_id"]), "game": cgame, "language": "english",
+           "name": best.get("name") or "", "set_name": best.get("set_name"), "number": best.get("number"),
+           "rarity": best.get("rarity"), "image": best.get("image"), "url": best.get("url")}
+    res = sb("POST", "cards", {"on_conflict": "source,ext_id"}, [row], prefer="resolution=merge-duplicates,return=representation")
+    others = sum(1 for c in cands[1:] if score(c)[:2] == score(best)[:2])
+    note = f"{best.get('set_name')} · {best.get('number')} · yalnızca ham fiyat (TCGplayer)"
+    if others:
+        note += " · birden fazla aday vardı, kontrol et"
+    return res[0]["id"], note
+
+
+def price_catalog_cards(cards):
+    """Katalogdan eşleşen kartların bugünkü ham fiyatını yazar."""
+    if not cards:
+        return 0
+    have = {r["card_id"] for r in (sb("GET", "card_prices", {"select": "card_id", "date": f"eq.{TODAY}",
+                                                             "card_id": f"in.({','.join(str(c['id']) for c in cards)})"}) or [])}
+    todo = [c for c in cards if c["id"] not in have]
+    if not todo:
+        return 0
+    rows = _cat_get({"product_id": f"in.({','.join(c['ext_id'] for c in todo)})", "limit": "1000"})
+    by = {str(r["product_id"]): r for r in rows}
+    out = []
+    for c in todo:
+        r = by.get(c["ext_id"])
+        if r and r.get("market") is not None:
+            out.append({"card_id": c["id"], "date": TODAY, "raw": r["market"]})
+            sb("PATCH", "cards", {"id": f"eq.{c['id']}"}, {"last_priced": TODAY, "image": r.get("image"), "url": r.get("url")})
+    if out:
+        sb("POST", "card_prices", {"on_conflict": "card_id,date"}, out, prefer="resolution=merge-duplicates,return=minimal")
+    log(f"Katalogdan ham fiyat yazılan kart: {len(out)}")
+    return len(out)
+
+
 def match_pending(budget):
+    # Katalogla desteklenen oyunlarda daha önce "desteklenmiyor" denmiş kartları yeniden dene.
+    for g in set(CATALOG_GAMES.values()):
+        sb("PATCH", "holdings", {"match_status": "eq.unsupported", "game": f"ilike.*{g.split()[0]}*"},
+           {"match_status": "pending", "match_note": None})
     params = {"match_status": "eq.pending", "order": "created_at.asc", "limit": "200"}
     try:
         pending = sb("GET", "holdings", {**params, "select": "id,game,set_input,name_input,number_input,language,psa"}) or []
@@ -176,6 +260,18 @@ def match_pending(budget):
     memo = {}
     for h in pending:
         game = (h.get("game") or "Pokemon").strip()
+        cgame = catalog_game(game)
+        if cgame:
+            try:
+                card_id, note = match_from_catalog(h, cgame)
+            except Exception as e:  # noqa: BLE001
+                note_error("katalog eşleştirme", e)
+                continue
+            sb("PATCH", "holdings", {"id": f"eq.{h['id']}"},
+               {"card_id": card_id, "match_status": "matched" if card_id else "failed", "match_note": note})
+            done += 1
+            log(("EŞLEŞTİ (katalog) " if card_id else "BULUNAMADI (katalog) ") + str(h.get("name_input")), "→", note)
+            continue
         if norm(game) != "pokemon":
             sb("PATCH", "holdings", {"id": f"eq.{h['id']}"},
                {"match_status": "unsupported", "match_note": f"{game} için PSA fiyat kaynağı henüz bağlı değil."})
@@ -257,14 +353,20 @@ def price_cards(budget, cap=None):
     ids = sorted({r["card_id"] for r in matched})
     if not ids:
         return 0
-    cards = sb("GET", "cards", {"select": "id,ext_id,language,last_priced", "id": f"in.({','.join(map(str, ids))})"}) or []
+    cards = sb("GET", "cards", {"select": "id,ext_id,language,last_priced,source", "id": f"in.({','.join(map(str, ids))})"}) or []
+    try:
+        cat_done = price_catalog_cards([c for c in cards if c.get("source") == "tcgcsv"])
+    except Exception as e:  # noqa: BLE001
+        note_error("katalog fiyatı", e)
+        cat_done = 0
+    cards = [c for c in cards if c.get("source", "ppt") == "ppt"]
     # Bugün fiyat satırı olmayan her kart fiyatlanır. Ücretsiz planda kredi kısıtlı olduğundan
     # fiyatı gelmeyen kartlar (last_priced bugün) gün içinde yeniden denenmez.
     have = {r["card_id"] for r in (sb("GET", "card_prices", {"select": "card_id", "date": f"eq.{TODAY}"}) or [])}
     todo = [c for c in cards if c["id"] not in have and (DAILY_BUDGET > 1000 or c.get("last_priced") != TODAY)]
     todo.sort(key=lambda c: c.get("last_priced") or "")
     log(f"Takip edilen kart: {len(cards)} · bugün fiyatlanacak: {len(todo)}")
-    done = 0
+    done = cat_done
     for c in todo:
         if cap is not None and budget.used + 2 > cap:
             break
@@ -523,7 +625,7 @@ def backfill_history(budget):
     ids = sorted(i for i in {r["card_id"] for r in matched} - done_ids if tried.get(i) != TODAY)
     if not ids:
         return 0
-    cards = sb("GET", "cards", {"select": "id,ext_id,language", "id": f"in.({','.join(map(str, ids))})"}) or []
+    cards = sb("GET", "cards", {"select": "id,ext_id,language", "source": "eq.ppt", "id": f"in.({','.join(map(str, ids))})"}) or []
     log(f"Geçmiş fiyatı çekilecek kart: {len(cards)}")
     n = 0
     try:
