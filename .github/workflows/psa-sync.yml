@@ -11,6 +11,9 @@ on:
       - "pipeline/sync_psa.py"
       - ".github/workflows/psa-sync.yml"
 
+permissions:
+  contents: write
+
 concurrency:
   group: psa-sync
   cancel-in-progress: false
@@ -30,4 +33,15 @@ jobs:
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           PPT_KEY: ${{ secrets.POKEMONPRICETRACKER_API_KEY }}
           PSA_TOKEN: ${{ secrets.PSA_API_TOKEN }}
+          STATUS_FILE: ${{ runner.temp }}/status.json
         run: python pipeline/sync_psa.py
+
+      - name: Çalışma özetini 'status' dalına yaz (yalnızca sayılar ve hata mesajları)
+        if: always()
+        run: |
+          f="${{ runner.temp }}/status.json"
+          [ -f "$f" ] || exit 0
+          d=$(mktemp -d); cp "$f" "$d/status.json"; cd "$d"
+          git init -q -b status && git add status.json
+          git -c user.name="kartradari-bot" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Çalışma özeti $(date -u +%FT%TZ)"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" status

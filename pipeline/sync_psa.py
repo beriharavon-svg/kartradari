@@ -34,6 +34,14 @@ MATCH_SHARE = 0.7  # fiyatlamadan kalan bütçenin bu kadarı eşleştirmeye, ge
 PRICE_SHARE = 0.6  # bütçenin önce bu kadarı eşleşmiş kartların fiyatına
 
 TODAY = datetime.now(timezone.utc).date().isoformat()
+STATUS = {"errors": [], "price_samples": []}
+
+
+def note_error(where, e):
+    msg = f"{where}: {str(e)[:300]}"
+    log("HATA", msg)
+    if len(STATUS["errors"]) < 20:
+        STATUS["errors"].append(msg)
 
 
 def log(*a):
@@ -261,22 +269,37 @@ def price_cards(budget, cap=None):
                         "includeEbay": "true", "limit": 1}, budget, 2)
         except BudgetExhausted:
             break
-        data = [x for x in (body.get("data") or []) if isinstance(x, dict)]
-        if not data:
-            log("Fiyat yok:", c["ext_id"])
-            sb("PATCH", "cards", {"id": f"eq.{c['id']}"}, {"last_priced": TODAY})
+        except Exception as e:  # noqa: BLE001
+            note_error(f"fiyat isteği (kart {c['id']})", e)
             continue
-        d = data[0]
-        grades = ((d.get("ebay") or {}).get("salesByGrade")) or {}
-        p10, c10, n10 = grade_price(grades.get("psa10"))
-        p9, c9, n9 = grade_price(grades.get("psa9"))
-        raw = (d.get("prices") or {}).get("market")
-        sb("POST", "card_prices", {"on_conflict": "card_id,date"}, [{
-            "card_id": c["id"], "date": TODAY, "raw": raw, "psa10": p10, "psa10_conf": c10, "psa10_n": n10,
-            "psa9": p9, "psa9_conf": c9, "psa9_n": n9}], prefer="resolution=merge-duplicates,return=minimal")
-        sb("PATCH", "cards", {"id": f"eq.{c['id']}"}, {
-            "last_priced": TODAY, "image": d.get("imageCdnUrl400") or d.get("imageUrl"), "url": d.get("tcgPlayerUrl")})
-        done += 1
+        try:
+            data = [x for x in (body.get("data") or []) if isinstance(x, dict)]
+            meta = body.get("metadata") or {}
+            if len(STATUS["price_samples"]) < 3:
+                d0 = data[0] if data else {}
+                STATUS["price_samples"].append({
+                    "card": c["id"], "lang": c.get("language"), "n_data": len(data),
+                    "keys": sorted(d0.keys())[:40], "has_ebay": bool(d0.get("ebay")),
+                    "grades": sorted(((d0.get("ebay") or {}).get("salesByGrade") or {}).keys())[:12],
+                    "has_market": bool((d0.get("prices") or {}).get("market")),
+                    "meta_total": meta.get("total"), "error": body.get("error") or body.get("message")})
+            if not data:
+                log("Fiyat yok:", c["ext_id"])
+                sb("PATCH", "cards", {"id": f"eq.{c['id']}"}, {"last_priced": TODAY})
+                continue
+            d = data[0]
+            grades = ((d.get("ebay") or {}).get("salesByGrade")) or {}
+            p10, c10, n10 = grade_price(grades.get("psa10"))
+            p9, c9, n9 = grade_price(grades.get("psa9"))
+            raw = (d.get("prices") or {}).get("market")
+            sb("POST", "card_prices", {"on_conflict": "card_id,date"}, [{
+                "card_id": c["id"], "date": TODAY, "raw": raw, "psa10": p10, "psa10_conf": c10, "psa10_n": n10,
+                "psa9": p9, "psa9_conf": c9, "psa9_n": n9}], prefer="resolution=merge-duplicates,return=minimal")
+            sb("PATCH", "cards", {"id": f"eq.{c['id']}"}, {
+                "last_priced": TODAY, "image": d.get("imageCdnUrl400") or d.get("imageUrl"), "url": d.get("tcgPlayerUrl")})
+            done += 1
+        except Exception as e:  # noqa: BLE001
+            note_error(f"fiyat kaydı (kart {c['id']})", e)
     return done
 
 
@@ -462,6 +485,7 @@ def main():
             log(f"PSA verisi alınan kart: {n}")
     except Exception as e:  # noqa: BLE001
         log("PSA adımı hata verdi:", e)
+    STATUS.update({"run_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "credits_before": budget.used})
     m = p = 0
     try:
         # Önce eşleşmiş kartların fiyatı (bütçenin en fazla %60'ı), sonra yeni eşleştirmeler,
@@ -469,8 +493,23 @@ def main():
         p = price_cards(budget, cap=budget.used + int(budget.left * PRICE_SHARE))
         m = match_pending(budget)
         p += price_cards(budget)
+    except Exception as e:  # noqa: BLE001
+        note_error("görev", e)
+        raise
     finally:
         budget.save()
+        try:
+            counts = {}
+            for st in ("pending", "matched", "failed", "unsupported"):
+                counts[st] = len(sb("GET", "holdings", {"select": "id", "match_status": f"eq.{st}"}) or [])
+            STATUS["holdings"] = counts
+            STATUS["cards_priced_ever"] = len({r["card_id"] for r in (sb("GET", "card_prices", {"select": "card_id"}) or [])})
+            STATUS["price_rows_today"] = len(sb("GET", "card_prices", {"select": "card_id", "date": f"eq.{TODAY}"}) or [])
+        except Exception as e:  # noqa: BLE001
+            STATUS["errors"].append(f"durum sayımı: {str(e)[:200]}")
+        STATUS.update({"matched_this_run": m, "priced_this_run": p, "credits_after": budget.used})
+        with open(os.environ.get("STATUS_FILE", "status.json"), "w", encoding="utf-8") as f:
+            json.dump(STATUS, f, ensure_ascii=False, indent=1)
     log(f"Eşleştirilen: {m} · fiyatlanan: {p} · kalan kredi: {budget.left}")
 
 
