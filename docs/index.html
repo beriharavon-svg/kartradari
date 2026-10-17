@@ -61,6 +61,10 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:.76rem;color:var(--
 @keyframes sweep{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.mark::after{animation:none}}
 .brand h1{font-size:1.3rem;font-weight:800;letter-spacing:-.02em}
+.nav{display:flex;gap:4px}
+.nav a{color:var(--muted);text-decoration:none;font-weight:600;font-size:.88rem;padding:6px 10px;border-radius:7px}
+.nav a:hover{background:var(--surface)}
+.nav a[aria-current="page"]{color:var(--ink);background:var(--surface);border:1px solid var(--line)}
 .seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:3px;gap:2px}
 .seg button{border:0;background:transparent;padding:5px 9px;border-radius:6px;cursor:pointer;font:600 .78rem var(--f-mono);color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
@@ -189,6 +193,7 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
 <header class="top">
   <div class="wrap">
     <div class="brand"><span class="mark" aria-hidden="true"></span><h1>KartRadarı</h1></div>
+    <nav class="nav" aria-label="Sayfalar"><a href="ara.html">Kart ara</a><a href="./" aria-current="page">Portföyüm</a></nav>
     <div class="ccy" id="ccyBox" role="group" aria-label="İkinci para birimi" hidden>
       <span class="ccy-fixed" title="Ana fiyat her zaman USD">USD</span>
       <div class="seg" id="ccySeg"></div>
@@ -281,6 +286,7 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
       if(res[0].error)throw res[0].error;if(res[1].error)throw res[1].error;
       S.prices={};(res[0].data||[]).forEach(function(p){(S.prices[p.card_id]=S.prices[p.card_id]||[]).push(p)});
       S.fx=res[1].data||[];render();
+      try{var qp=new URLSearchParams(location.search),ek=qp.get('ekle');if(ek){history.replaceState(null,'',location.pathname);openAdd(null,JSON.parse(ek));}}catch(e){}
     }).catch(function(e){app.innerHTML='';app.appendChild(el('div',{class:'panel empty',style:'margin-top:20px'},[el('h2',{text:'Veriler okunamadı'}),el('p',{class:'muted',text:String(e.message||e)})]));});
   }
 
@@ -434,9 +440,9 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
     p.appendChild(el('div',{class:'sheet-head'},[el('h2',{text:title}),el('button',{class:'x',type:'button','aria-label':'Kapat',text:'×',onclick:close})]));
     body(p,close);ov.appendChild(p);ov.addEventListener('click',function(e){if(e.target===ov)close();});document.addEventListener('keydown',esc);document.body.appendChild(ov);var f=p.querySelector('input,select,button.btn');if(f)f.focus();}
 
-  function openAdd(h){
+  function openAdd(h,pre){
     sheet(h?'Kartı düzenle':'Kart ekle',function(p,close){
-      var x=h||{game:'Pokemon',language:'english',grade:'PSA 10',qty:1};
+      var x=h||Object.assign({game:'Pokemon',language:'english',grade:'PSA 10',qty:1},pre||{});
       function field(id,lab,node,span){return el('label',{class:'f'+(span?' span2':''),for:id},[lab,node]);}
       function sel(id,opts,val){var s=el('select',{id:id});opts.forEach(function(o){var op=el('option',{value:o[0],text:o[1]});if(o[0]===val)op.selected=true;s.appendChild(op);});return s;}
       var fGame=sel('aGame',[['Pokemon','Pokemon'],['One Piece','One Piece'],['Magic','Magic'],['Yu-Gi-Oh!','Yu-Gi-Oh!'],['Lorcana','Lorcana']],x.game),

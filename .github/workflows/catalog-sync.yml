@@ -1,0 +1,45 @@
+name: Kart kataloğu (TCGCSV)
+
+on:
+  schedule:
+    # Her gece 00:41 Türkiye saati (TCGCSV günlük güncellemesinden sonra)
+    - cron: "41 21 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "pipeline/sync_catalog.py"
+      - ".github/workflows/catalog-sync.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: catalog-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Kataloğu yükle
+        env:
+          SUPABASE_URL: https://bsifvfcnktofugaspsls.supabase.co
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          STATUS_FILE: ${{ runner.temp }}/catalog-status.json
+        run: python pipeline/sync_catalog.py
+
+      - name: Çalışma özetini 'status-catalog' dalına yaz
+        if: always()
+        run: |
+          f="${{ runner.temp }}/catalog-status.json"
+          [ -f "$f" ] || exit 0
+          d=$(mktemp -d); cp "$f" "$d/status.json"; cd "$d"
+          git init -q -b status-catalog && git add status.json
+          git -c user.name="kartradari-bot" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Katalog özeti $(date -u +%FT%TZ)"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" status-catalog

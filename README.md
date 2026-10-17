@@ -60,3 +60,11 @@ Parçalar:
 Veri kaynakları: PokemonPriceTracker (TCGplayer ham fiyatları ve eBay PSA satışları), Avrupa Merkez Bankası kurları (Frankfurter). Şu an yalnızca Pokemon kartları fiyatlanıyor.
 
 Eski örnek panelin TCGCSV görevi (`pipeline/fetch_prices.py`) artık yalnızca elle çalıştırılıyor.
+
+## Herkese açık kart arama (docs/ara.html)
+
+Giriş gerektirmeyen arama sayfası: https://beriharavon-svg.github.io/kartradari/ara.html
+
+- `pipeline/sync_catalog.py` + `.github/workflows/catalog-sync.yml`: her gece TCGCSV'den Pokemon (İngilizce/Japonca), One Piece ve Lorcana kataloğunu ve TCGplayer piyasa fiyatlarını `catalog` tablosuna yükler.
+- `supabase/migrations/003_catalog.sql`: katalog tablosu ve herkese açık `search_catalog`, `card_history`, `latest_fx` fonksiyonları. Tabloya doğrudan erişim yoktur; arama en fazla 60 sonuç döndürür.
+- Portföylerde takip edilen kartlar için PSA 10/9 fiyatları ve fiyat geçmişi de gösterilir. "Portföyüme ekle" kartı bilgileri doldurulmuş olarak portföy sayfasına gönderir.
