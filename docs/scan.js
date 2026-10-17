@@ -207,8 +207,18 @@
         progress && progress('PSA etiketi okunuyor', 0.5);
         return ocr(w, crop(img, 0, 0, 1, 0.3, 1800)).then(function (label) {
           var s = parseSlab(label);
-          s.cert = cert || s.certText || null; s.certFrom = cert ? 'barcode' : (s.certText ? 'text' : null);
-          return s;
+          if (cert || s.certText) { s.cert = cert || s.certText; s.certFrom = cert ? 'barcode' : 'text'; return s; }
+          // Sertifika numarası için yalnızca rakam okuyan ikinci geçiş (seyrek metin modu)
+          progress && progress('Sertifika numarası aranıyor', 0.8);
+          return w.setParameters({ tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: '11' })
+            .then(function () { return ocr(w, crop(img, 0, 0, 1, 0.32, 1800)); })
+            .then(function (digits) {
+              var runs = (digits.match(/\d+/g) || []).filter(function (r) { return r.length >= 8 && r.length <= 10; });
+              if (runs.length) { s.cert = runs[0]; s.certFrom = 'text'; }
+              return s;
+            })
+            .then(function (res) { return w.setParameters({ tessedit_char_whitelist: '', tessedit_pageseg_mode: '3' }).then(function () { return res; }); },
+                  function () { return w.setParameters({ tessedit_char_whitelist: '', tessedit_pageseg_mode: '3' }).then(function () { return s; }); });
         });
       });
     });
