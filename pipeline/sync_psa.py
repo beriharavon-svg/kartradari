@@ -257,7 +257,11 @@ def price_cards(budget, cap=None):
     if not ids:
         return 0
     cards = sb("GET", "cards", {"select": "id,ext_id,language,last_priced", "id": f"in.({','.join(map(str, ids))})"}) or []
-    todo = [c for c in cards if c.get("last_priced") != TODAY]
+    if os.environ.get("FORCE_REPRICE") == "1":
+        have = {r["card_id"] for r in (sb("GET", "card_prices", {"select": "card_id", "date": f"eq.{TODAY}"}) or [])}
+        todo = [c for c in cards if c["id"] not in have]
+    else:
+        todo = [c for c in cards if c.get("last_priced") != TODAY]
     todo.sort(key=lambda c: c.get("last_priced") or "")
     log(f"Takip edilen kart: {len(cards)} · bugün fiyatlanacak: {len(todo)}")
     done = 0
