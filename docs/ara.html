@@ -89,6 +89,20 @@ a{color:var(--accent)}
 .price{font:600 1rem var(--f-mono)}
 .sec{font-size:.74rem;color:var(--muted)}
 .tag{display:inline-block;font-size:.66rem;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.recent{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:.82rem}
+.recent .lbl{color:var(--faint);font-weight:600;margin-right:2px}
+.rq{display:inline-flex;align-items:center;border:1px dashed var(--line);border-radius:999px;background:transparent;color:var(--ink);font-size:.82rem}
+.rq button{border:0;background:transparent;color:inherit;cursor:pointer;padding:5px 4px 5px 11px;font:inherit}
+.rq button+button{padding:5px 9px 5px 4px;color:var(--faint)}
+.rq button+button:hover{color:var(--ink)}
+.linkbtn{border:0;background:transparent;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:.8rem;padding:4px}
+.shelf{margin:4px 0 20px}
+.shelf-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px}
+.shelf-h h3{font-size:1.02rem}
+.strip{display:grid;grid-auto-flow:column;grid-auto-columns:128px;gap:10px;overflow-x:auto;padding:2px 2px 10px;scroll-snap-type:x proximity;overscroll-behavior-x:contain}
+.strip .card{scroll-snap-align:start;padding:8px;gap:6px}
+.strip .cname{font-size:.82rem}
+.strip .price{font-size:.88rem}
 .empty{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:30px;text-align:center;color:var(--muted)}
 .empty h3{color:var(--ink);margin-bottom:6px}
 
@@ -133,6 +147,11 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
       <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="ör. charizard 199, umbreon ex terastal, luffy op05" aria-label="Kart ara">
     </label>
     <div class="chips" id="games" role="group" aria-label="Oyun"></div>
+    <div class="recent" id="recentQ" hidden></div>
+  </section>
+  <section class="shelf" id="shelf" hidden aria-labelledby="shelfH">
+    <div class="shelf-h"><h3 id="shelfH">Son baktıkların</h3><button type="button" class="linkbtn" id="shelfClear">Temizle</button></div>
+    <div class="strip" id="strip"></div>
   </section>
   <div class="meta"><span id="metaText" aria-live="polite">Yükleniyor</span><span id="dateText"></span></div>
   <section class="grid" id="grid" aria-label="Sonuçlar"></section>
@@ -157,11 +176,39 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
   function usd(v){if(v==null||!isFinite(v))return '—';v=Number(v);return '$'+v.toLocaleString('en-US',{minimumFractionDigits:v>=1000?0:2,maximumFractionDigits:v>=1000?0:2});}
   function sec(v){var r=S.fx&&Number(S.fx.rates[S.ccy]);if(v==null||!r)return '';var m=meta(S.ccy);return '≈ '+m.s+(Number(v)*r).toLocaleString('tr-TR',{minimumFractionDigits:m.d,maximumFractionDigits:m.d});}
   function dfmt(iso){if(!iso)return '—';var p=String(iso).slice(0,10).split('-');return Number(p[2])+' '+MONTHS[Number(p[1])-1]+' '+p[0];}
+  function jget(k){try{var v=JSON.parse(store.get(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return []}}
+  function jset(k,v){store.set(k,JSON.stringify(v))}
+  var RQ='kr-recent-q',RV='kr-recent-v',RQ_MAX=8,RV_MAX=16;
+  var VIEW_KEYS=['product_id','game','name','set_name','number','rarity','image','url','sub_type','market','low','price_date','psa9','psa9_conf','psa9_n','psa10','psa10_conf','psa10_n','tracked'];
+  function rememberQuery(q,g){q=(q||'').trim();if(q.length<2)return;var a=jget(RQ).filter(function(x){return !(x.q.toLowerCase()===q.toLowerCase()&&(x.g||'')===(g||''))});a.unshift({q:q,g:g||''});jset(RQ,a.slice(0,RQ_MAX));renderRecentQ();}
+  function rememberView(r){var o={};VIEW_KEYS.forEach(function(k){if(r[k]!=null)o[k]=r[k]});o.seen=new Date().toISOString();var a=jget(RV).filter(function(x){return x.product_id!==r.product_id});a.unshift(o);jset(RV,a.slice(0,RV_MAX));renderShelf();}
+  function gameLabel(g){var f=GAMES.find(function(x){return x[0]===g});return f?f[1]:g;}
   var grid=document.getElementById('grid'),metaText=document.getElementById('metaText'),dateText=document.getElementById('dateText'),qi=document.getElementById('q');
 
-  function renderCcy(){var seg=document.getElementById('ccySeg');seg.innerHTML='';CCY.forEach(function(m){seg.appendChild(el('button',{type:'button','aria-pressed':String(S.ccy===m.c),text:m.c,onclick:function(){S.ccy=m.c;store.set('kr-ccy',m.c);renderCcy();renderGrid();}}));});}
-  function renderGames(){var box=document.getElementById('games');box.innerHTML='';GAMES.forEach(function(g){box.appendChild(el('button',{type:'button',class:'chip','aria-pressed':String(S.g===g[0]),text:g[1],onclick:function(){S.g=g[0];renderGames();search();}}));});}
+  function renderCcy(){var seg=document.getElementById('ccySeg');seg.innerHTML='';CCY.forEach(function(m){seg.appendChild(el('button',{type:'button','aria-pressed':String(S.ccy===m.c),text:m.c,onclick:function(){S.ccy=m.c;store.set('kr-ccy',m.c);renderCcy();renderGrid();renderShelf();}}));});}
+  function renderGames(){var box=document.getElementById('games');box.innerHTML='';GAMES.forEach(function(g){box.appendChild(el('button',{type:'button',class:'chip','aria-pressed':String(S.g===g[0]),text:g[1],onclick:function(){S.g=g[0];renderGames();renderRecentQ();renderShelf();search();}}));});}
   function art(r){var a=el('div',{class:'art'});if(r.image){var i=el('img',{src:r.image,alt:r.name,loading:'lazy',decoding:'async'});i.onerror=function(){i.replaceWith(el('div',{class:'ph',text:'Görsel yok'}))};a.appendChild(i);}else a.appendChild(el('div',{class:'ph',text:'Görsel yok'}));return a;}
+
+  function renderRecentQ(){
+    var box=document.getElementById('recentQ'),a=jget(RQ);box.innerHTML='';
+    if(S.g)a=a.filter(function(x){return !x.g||x.g===S.g});
+    if(!a.length){box.hidden=true;return;}box.hidden=false;
+    box.appendChild(el('span',{class:'lbl',text:'Son aramalar'}));
+    a.forEach(function(x){box.appendChild(el('span',{class:'rq'},[
+      el('button',{type:'button',title:x.g?gameLabel(x.g)+' içinde':null,text:x.q+(x.g&&!S.g?' · '+gameLabel(x.g):''),onclick:function(){S.q=x.q;qi.value=x.q;if(x.g)S.g=x.g;renderGames();renderRecentQ();renderShelf();search();}}),
+      el('button',{type:'button','aria-label':x.q+' aramasını sil',text:'×',onclick:function(){jset(RQ,jget(RQ).filter(function(y){return !(y.q===x.q&&y.g===x.g)}));renderRecentQ();}})]));});
+    box.appendChild(el('button',{type:'button',class:'linkbtn',text:'Temizle',onclick:function(){jset(RQ,[]);renderRecentQ();}}));
+  }
+  function miniCard(r){return el('button',{type:'button',class:'card',onclick:function(){openCard(r)}},[art(r),el('div',{class:'cname',text:r.name}),el('div',{class:'cset',text:(r.number?r.number+' · ':'')+(r.set_name||'')}),el('div',{class:'price',text:usd(r.market)})]);}
+  function renderShelf(){
+    var shelf=document.getElementById('shelf'),strip=document.getElementById('strip'),a=jget(RV);
+    if(S.g)a=a.filter(function(x){return x.game===S.g});
+    strip.innerHTML='';
+    if(!a.length||S.q){shelf.hidden=true;return;}
+    shelf.hidden=false;document.getElementById('shelfH').textContent='Son baktıkların'+(S.g?' · '+gameLabel(S.g):'');
+    a.forEach(function(r){strip.appendChild(miniCard(r))});
+  }
+  document.getElementById('shelfClear').addEventListener('click',function(){var g=S.g;jset(RV,g?jget(RV).filter(function(x){return x.game!==g}):[]);renderShelf();});
 
   function renderGrid(){
     grid.innerHTML='';
@@ -186,6 +233,7 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
         if(my!==S.seq)return;
         if(res.error){metaText.textContent='Katalog henüz hazır değil.';S.rows=[];renderGrid();return;}
         S.rows=res.data||[];
+        clearTimeout(S.rqT);if(S.q&&S.rows.length){var q=S.q,g=S.g;S.rqT=setTimeout(function(){if(S.q===q)rememberQuery(q,g)},1500);}
         metaText.textContent=S.q?(S.rows.length+' sonuç'+(S.rows.length>=48?' (ilk 48)':'')):'En değerli kartlar'+(S.g?' · '+GAMES.find(function(g){return g[0]===S.g})[1]:'');
         var d=S.rows.map(function(r){return r.price_date}).filter(Boolean).sort().pop();dateText.textContent=d?'Fiyatlar '+dfmt(d):'';
         renderGrid();
@@ -209,6 +257,7 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
   }
 
   function openCard(r){
+    if(S.q)rememberQuery(S.q,S.g);rememberView(r);
     var ov=el('div',{class:'sheet',role:'dialog','aria-modal':'true','aria-label':r.name}),p=el('div',{class:'panel'});
     function close(){ov.remove();document.removeEventListener('keydown',esc);}function esc(e){if(e.key==='Escape')close();}
     p.appendChild(el('button',{class:'x',type:'button','aria-label':'Kapat',text:'×',onclick:close}));
@@ -234,8 +283,8 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
     p.appendChild(info);ov.appendChild(p);ov.addEventListener('click',function(e){if(e.target===ov)close();});document.addEventListener('keydown',esc);document.body.appendChild(ov);p.querySelector('.x').focus();
   }
 
-  qi.value=S.q;qi.addEventListener('input',function(){S.q=qi.value.trim();search();});
-  renderCcy();renderGames();search();
+  qi.value=S.q;qi.addEventListener('input',function(){var had=!!S.q;S.q=qi.value.trim();if(had!==!!S.q)renderShelf();search();});
+  renderCcy();renderGames();renderRecentQ();renderShelf();search();
   if(sb)sb.rpc('latest_fx').then(function(res){if(res.data&&res.data[0]){S.fx=res.data[0];renderGrid();}});
 })();
 </script>
