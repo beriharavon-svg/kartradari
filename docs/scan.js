@@ -216,8 +216,10 @@
   // Aday sorguları: en ayırt edici olandan genele.
   // Katalog arama alanında noktalama yok ("Monkey.D.Luffy" → "MonkeyDLuffy").
   function tidy(n) { return String(n || '').replace(/\./g, '').replace(/\s+/g, ' ').trim(); }
+  // OCR çöpünü ad sanmayalım: en az bir kelime 4+ harfli ve sesli harf içermeli.
+  function plausible(n) { return String(n || '').split(' ').some(function (w) { return w.length >= 4 && /[aeiouy]/i.test(w) && !/(.)\1\1/i.test(w); }); }
   function rawQueries(r) {
-    var q = [], n = tidy(r.name), num = r.num;
+    var q = [], n = plausible(r.name) ? tidy(r.name) : '', num = r.num;
     if (num && num.kind === 'slash') { if (n) q.push(n + ' ' + num.full); q.push(num.full); if (n) q.push(n + ' ' + num.base); }
     if (num && (num.kind === 'op' || num.kind === 'promo')) { q.push(num.code); if (n) q.push(n + ' ' + num.code); }
     if (n) { q.push(n); var first = n.split(' ')[0]; if (first !== n && first.length > 2) q.push(first); }
@@ -236,5 +238,5 @@
   }
 
   window.KRScan = { scanRaw: scanRaw, scanSlab: scanSlab, fileToImage: fileToImage, urlToImage: urlToImage,
-    rawQueries: rawQueries, slabQueries: slabQueries, findNumber: findNumber, findName: findName, parseSlab: parseSlab, readBarcode: readBarcode };
+    rawQueries: rawQueries, plausible: plausible, slabQueries: slabQueries, findNumber: findNumber, findName: findName, parseSlab: parseSlab, readBarcode: readBarcode };
 })();
