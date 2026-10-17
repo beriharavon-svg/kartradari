@@ -1,0 +1,358 @@
+{
+ "raw": [
+  {
+   "q": "charizard ex 199/165",
+   "g": "Pokemon",
+   "expect": 517045,
+   "expect_name": "Charizard ex - 199/165",
+   "w": 719,
+   "name": "WACACAA",
+   "num": null,
+   "qs": [
+    "WACACAA"
+   ],
+   "hit": null,
+   "ids": [],
+   "text": "y/ ou arizard(@g pa 330\nre rr en om 0 WACACAA\n\\ f= ‘ y Vo : Herd: y's An\noe _ Bodh ii ils gh\na NY £5 3 a pe a os\n\nwaetaess £9337) [Wvesistance\nPokémon €)\nIlusmikifkudo] er\nG MEW ey 799716580 1 g\\ is Knocked Out, ye\n| | rre—m—\n\n|\nee ee i\némon €X rule PZ” When your Pokémon €X | |\ned Out, your opponent",
+   "found": false,
+   "rank": -1
+  },
+  {
+   "q": "umbreon vmax 215/203",
+   "g": "Pokemon",
+   "expect": 246723,
+   "expect_name": "Umbreon VMAX (Alternate Art Secret)",
+   "w": 719,
+   "name": "SUmbreonViaxss",
+   "num": {
+    "full": "215/203",
+    "base": "215",
+    "kind": "slash"
+   },
+   "qs": [
+    "SUmbreonViaxss 215/203",
+    "215/203",
+    "SUmbreonViaxss 215",
+    "SUmbreonViaxss"
+   ],
+   "hit": "215/203",
+   "ids": [
+    246723
+   ],
+   "text": "| J a 0 Efe = xd - - 8 5 =\nvmx SUmbreonViaxss =) [0/@\n: ’ < a p P\n> Evolves from UmbreonV reg oy—— Ie\n{ AER EE INGLE(\nfs a id Jim |\nA CE pr, oN ARES TARA a\n\n(weakness (7) X 2 (( resistance |\n\n; | I E 3 C2\n\ni1lusYKENCHIROYTO), AX rule\nNN % o\n\nQ is Knocked Out, y.\n\n9 Comme ad EE —\n\na ( [retreat G368\na",
+   "found": true,
+   "rank": 0
+  },
+  {
+   "q": "charizard 4/102",
+   "g": "Pokemon",
+   "expect": 106999,
+   "expect_name": "Charizard",
+   "w": 610,
+   "name": "Charizard",
+   "num": {
+    "full": "4/102",
+    "base": "4",
+    "kind": "slash"
+   },
+   "qs": [
+    "Charizard 4/102",
+    "4/102",
+    "Charizard 4",
+    "Charizard"
+   ],
+   "hit": "Charizard 4/102",
+   "ids": [
+    106999,
+    42382,
+    250320,
+    714372,
+    657516,
+    252517
+   ],
+   "text": "A Evolves from Charmeleon Put Charizard on the Stage | card\nSTAGE 2 -\np Hp) » Charizard 120 HP\n\\ Ye\nBW ei Yay\n\nSpits fire that is hot enough tom\nunintentionally cause forest fires.\nIllus. Mitsuhiro Arica © 1995,96,98,99 Nintendo, Crean\n\n@ DIY\ngh to melt boulders. Known to |\nast fires. LV. 76 #6 di\ne",
+   "found": true,
+   "rank": 0
+  },
+  {
+   "q": "pikachu ex",
+   "g": "Pokemon",
+   "expect": 497474,
+   "expect_name": "Pikachu ex",
+   "w": 719,
+   "name": "Pikachu",
+   "num": null,
+   "qs": [
+    "Pikachu"
+   ],
+   "hit": "Pikachu",
+   "ids": [
+    88096,
+    88091,
+    88074,
+    114004,
+    88101,
+    88087
+   ],
+   "text": "#45 Pikachu@X 4190 4\nLT ———\nAEN. ere\n\n~ - - “\n» weakness & x 2. resistance 4\nA mr\nHus. hig - —\nwe (PAL® f is ocked av t, y¢\n9 [6] (CED 0637193 Xx | CITE\nrs ”nr 7d ©2023 Pokémon / Nintendo / Crea\n\n>. oo a” PAIR aT\n—— — = =\n\n» g retreat YW\némon EX rule gi Lh 2 LL When your Pokémon €X J\nked Out, your o",
+   "found": false,
+   "rank": -1
+  },
+  {
+   "q": "op05-119",
+   "g": "One Piece",
+   "expect": 527026,
+   "expect_name": "Monkey.D.Luffy (119) (Alternate Art) (Manga)",
+   "w": 600,
+   "name": "HENNE",
+   "num": null,
+   "qs": [
+    "HENNE"
+   ],
+   "hit": null,
+   "ids": [],
+   "text": "nat) HENNE NS\nEa = gr\nan A oY N2000 BR) Yor 3\nAN * ANE - Z Ee ANY he\n; [= . / [2 . = 2%\nUB 5% Er \\\n- / 3 aA PN a AL\n’ S J N= %4 \\A \\\n\\. SiR) \\ Rl NS A \\\nry PE aA Ap \\ \\ =) od Vr a\npy i \\ “S ] N pr / | Ses /\nRs As 3\n| T/A. THR\n\nPATA ARE\nMonkey.L\n\n23 § The Four Emperors/S\naL [| ap A\n\nHALTER NaevecceaN",
+   "found": false,
+   "rank": -1
+  },
+  {
+   "q": "op01-120",
+   "g": "One Piece",
+   "expect": 514047,
+   "expect_name": "Shanks (Championship 2023) [Serial Number]",
+   "w": 600,
+   "name": "Vor MAYAN",
+   "num": null,
+   "qs": [
+    "Vor MAYAN",
+    "Vor"
+   ],
+   "hit": "Vor",
+   "ids": [
+    696801,
+    600749,
+    656090,
+    597041,
+    656091,
+    696098
+   ],
+   "text": "Wc, = 410000 &\nZW 4\n1 V7 aN Ty\n\nS oS URARAL\nShan!\n\ni The Four Emperor\n\\ r—\n\nARALIER Yama .\nlank\nE d Pirates opo1-120em Q\n\n4 WT — So wi? go Zz\nWhen Attacking Your'opponent cannot activatela I Tig 2\n(Gharactergthat hae2000 orjless\\power.during:this|battle® :\n2 niet Ny Aud amd 47 EN J Ea od a ) ‘ fo -\n",
+   "found": false,
+   "rank": -1
+  },
+  {
+   "q": "elsa 207/204",
+   "g": "Lorcana",
+   "expect": 510153,
+   "expect_name": "Elsa - Spirit of Winter (Enchanted)",
+   "w": 430,
+   "name": "Saas",
+   "num": {
+    "full": "207/204",
+    "base": "207",
+    "kind": "slash"
+   },
+   "qs": [
+    "Saas 207/204",
+    "207/204",
+    "Saas 207",
+    "Saas"
+   ],
+   "hit": "207/204",
+   "ids": [
+    510153,
+    632686,
+    619735,
+    550718,
+    527797,
+    539157
+   ],
+   "text": "i === Ope: “J =\nAN / Lo. EY) BR\" %\npe Ne A\n\" 4 / Ne\n\\ | We. of BN\n\ntheir next turn.\n> Matthew Robert Davies Ny\n207/204 - EN - 1 Wo”\n\n7\nJ, sl\na\nyy\n7\n: \\\nel = RE)\n. {4 05\npine . Saas NA NZ\n® _ Floodborn + Hero « Queen « Sorcerer ;\nShift 6 (You may pay 6 © to play this on top of one of Ad\nyour characte",
+   "found": true,
+   "rank": 0
+  },
+  {
+   "q": "umbreon 217/187",
+   "g": "Pokemon JP",
+   "expect": 602681,
+   "expect_name": "Umbreon ex - 217/187",
+   "w": 670,
+   "name": "Bora",
+   "num": null,
+   "qs": [
+    "Bora"
+   ],
+   "hit": "Bora",
+   "ids": [
+    613474
+   ],
+   "text": "g 4% o a A 7 TR ae as. Dr. RRS REET NE =\n5 & ; 5 < ~ \\ Lo cat a NA Vay ‘ a ov\nSE ovEtew. AIRC)\nTERN >a & is — (2 Z <) «7 ) ¢ Ly /1 Y i\n7, NN : 4X 4 ” a a oll AR — Bora 9 HP ==herf) hr :\n: / ) ~~ Gre 91115). 3 AR —— EEE : 4\nA { ZORTEVR. AYFEVBHED, DY DIX—I ERIE, 8°\nRT a ¥ RET Cp ~ Er Lt .\nEET td EY a",
+   "found": false,
+   "rank": -1
+  },
+  {
+   "q": "magmar vending",
+   "g": "Pokemon JP",
+   "expect": 617538,
+   "expect_name": "Magmar",
+   "w": 716,
+   "name": "Tal Te",
+   "num": null,
+   "qs": [],
+   "hit": null,
+   "ids": [],
+   "text": "foe] \\ | -— fic\n; - \\— Lv.27 HP V3\n\n6) Br\nee rr meee\nlus. Atsuko Nishida\n\n~ TLT, ROPEHL\nSR: NBL. 2< L 7. pas\nINVEL EDs , ;\n\nYX YININT 40\n-— XK) X =\nLEY) SHES BSF LV IBICRA\n22 A ~ TLIT, ROFIEHL\nys - 3 ws nae. 2 RPh\n5 Ma Shecws. 0\n\n6) Br\n| — Te Tr mee\nlus. Atsuko Nishida\n\n~ TLT, ROPEHL\nSR: NBL. 2< L 7",
+   "found": false,
+   "rank": -1
+  },
+  {
+   "q": "charizard ex 199/165",
+   "hires": true,
+   "expect": 517045,
+   "w": 733,
+   "name": "Zt TEs",
+   "num": null,
+   "qs": [],
+   "hit": null,
+   "fuzzy": null,
+   "ids": [],
+   "text": "STAGE Zt o> ART TEs\nsaad Charizard EX 4330) ®\n/4 Evolves from Hh me — ; vss we, = vs\nA 4 as | E.: I Ha Ss\nFEAR Gc\n\nwarts C9 37) [Wvesistance\nPokémon €.\nIllusqmikifkudo\n8 MWe) gery Wea (is Knocked ou,\n|\n\nEE\n\némon €X rule a When your Pokémon €X |\n\nked Out, your opponent takes 2 Prize cards. (\n\n4\n\nDisc",
+   "found": false,
+   "rank": -1
+  },
+  {
+   "q": "umbreon vmax 215/203",
+   "hires": true,
+   "expect": 246723,
+   "w": 734,
+   "name": "SUmbreon Vax",
+   "num": null,
+   "qs": [
+    "SUmbreon Vax",
+    "SUmbreon"
+   ],
+   "hit": "fuzzy:Umbreon V",
+   "fuzzy": "Umbreon V",
+   "ids": [
+    264207,
+    246716,
+    246723,
+    246719,
+    476050,
+    476049
+   ],
+   "text": "\\ vax SUmbreon Vax = L310)\nEvolves from UmbreonV & _ £ ;\n: pe JP he i ENE EF\nynamax Fa * ‘STRIKE /\n\n<3 - a. . Hp on pa s {TARY EE\n\nCC e Be LESS Saati A ® Se ANI\np 2 CClERTR ACTER ES Cg\n\n[veskness YX { reseeance\n\nily SAKE HCHIROITO)] Ws AX rule\n\nQ E hy is Knocked Out, y«\n\n\\ ©2021 Pokémon / Nintendo /",
+   "found": true,
+   "rank": 2
+  },
+  {
+   "q": "charizard 4/102",
+   "hires": true,
+   "expect": 106999,
+   "w": 600,
+   "name": "Ho Charizard",
+   "num": {
+    "full": "4/102",
+    "base": "4",
+    "kind": "slash"
+   },
+   "qs": [
+    "Ho Charizard 4/102",
+    "4/102",
+    "Ho Charizard 4",
+    "Ho Charizard"
+   ],
+   "hit": "4/102",
+   "fuzzy": null,
+   "ids": [
+    106999,
+    42382,
+    657516,
+    252517,
+    250320,
+    714372
+   ],
+   "text": "wo 2 Evolves from Charmeleon Put Charizard on the Stage | card\nd Ho : Charizard 120 HP WY\nSRP 2 -\n\nWwWEannucoe @®\nSpits fire that is hot enough to m\nunintentionally cause forest fires\n\nIllus. Mitsuhiro Arita © 1995,96,98,99 Nintendo, Crean\n\nS21080aGNsS TERI Sas Vos\n@ DIY\ngh to melt boulders. Known t",
+   "found": true,
+   "rank": 0
+  },
+  {
+   "q": "charizard ex 234/091",
+   "hires": true,
+   "expect": 535090,
+   "w": 733,
+   "name": "Chaizand",
+   "num": null,
+   "qs": [
+    "Chaizand"
+   ],
+   "hit": "fuzzy:Charizard GX",
+   "fuzzy": "Charizard GX",
+   "ids": [
+    197780,
+    138496,
+    197651,
+    138497,
+    148151,
+    185253
+   ],
+   "text": "£3 4 wr a\n[sTace = Chaizand { |\n: - EN = - a - A\n— hakizan Ox\n| \\ LEvolves from Charmeleon . sera\n// As long as this Pokémon is on your Bench, prevent all damage done to this .\n| /@ Pokémon by attacks (both yours and your opponent’s). A\n: ATT WN WARN =A, - v |i”\n\\ SSO ONT. OF N ASQ VIE Al: paw\nSn Ta",
+   "found": false,
+   "rank": -1
+  },
+  {
+   "q": "charizard vstar gg70",
+   "hires": true,
+   "error": "görsel indirilemedi"
+  }
+ ],
+ "slab": {
+  "grade": "PSA 10",
+  "number": "215",
+  "year": "2021",
+  "japanese": false,
+  "set": "SWORD & SHIELD EVOLVING",
+  "cands": [
+   "SKIES GEM",
+   "UMBREON VMAX",
+   "IIH resasz"
+  ],
+  "name": "SKIES GEM",
+  "cert": "76543210",
+  "certFrom": "text",
+  "label": "2021 POKEMON SWORD & SHIELD EVOLVING #215\nSKIES GEM\nUMBREON VMAX MT\nALT. ART SECRET 10\nIIH resasz\n",
+  "zxingType": "object",
+  "barcodeError": "No MultiFormat Readers were able to detect the code.",
+  "qs": [
+   "SKIES GEM 215 SWORD SHIELD",
+   "SKIES GEM 215",
+   "UMBREON VMAX 215",
+   "IIH resasz 215",
+   "SKIES GEM SWORD SHIELD",
+   "SKIES GEM",
+   "SKIES",
+   "UMBREON VMAX",
+   "UMBREON",
+   "IIH resasz"
+  ],
+  "hit": "UMBREON VMAX 215",
+  "names": [
+   "Umbreon VMAX (Alternate Art Secret) · SWSH07: Evolving Skies"
+  ]
+ },
+ "errors": [],
+ "zxdiag": {
+  "readBarcode": null,
+  "err": "No MultiFormat Readers were able to detect the code.",
+  "has": [
+   "BrowserMultiFormatReader",
+   "BrowserBarcodeReader",
+   "HTMLCanvasElementLuminanceSource",
+   "Code128Reader",
+   "GlobalHistogramBinarizer"
+  ],
+  "browserErr": "No MultiFormat Readers were able to detect the code.",
+  "code128Err": "N"
+ },
+ "summary": "5/14 ham kart bulundu; PSA barkod: text"
+}
