@@ -29,7 +29,8 @@ DAILY_BUDGET = int(os.environ.get("PPT_DAILY_BUDGET", "95"))
 PPT = "https://www.pokemonpricetracker.com/api/v2"
 UA = "KartRadari/0.2 (+https://github.com/beriharavon-svg/kartradari)"
 CURRENCIES = ["TRY", "EUR", "GBP", "JPY", "CNY"]
-SEARCH_LIMIT = 3
+SEARCH_LIMIT = int(os.environ.get("PPT_SEARCH_LIMIT", "3"))
+HISTORY_DAYS = int(os.environ.get("PPT_HISTORY_DAYS", "0"))  # 0: geçmiş çekilmez (ücretsiz plan)
 MATCH_SHARE = 0.7  # fiyatlamadan kalan bütçenin bu kadarı eşleştirmeye, gerisi yeni eşleşenlerin fiyatına
 PRICE_SHARE = 0.6  # bütçenin önce bu kadarı eşleşmiş kartların fiyatına
 
@@ -442,6 +443,148 @@ def sync_psa_certs():
     return done
 
 
+# ---------- Geçmiş fiyatlar (bir kart için bir kez) ----------
+
+DATE_KEYS = ("date", "day", "timestamp", "time", "recordedAt", "createdAt", "t")
+PRICE_KEYS = ("market", "marketPrice", "price", "avg", "average", "averagePrice", "median", "medianPrice", "value", "p")
+
+
+def _date_of(v):
+    if isinstance(v, (int, float)) and v > 1e9:
+        return datetime.fromtimestamp(v / 1000 if v > 1e11 else v, timezone.utc).date().isoformat()
+    m = re.match(r"^(\d{4}-\d{2}-\d{2})", str(v or ""))
+    return m.group(1) if m else None
+
+
+def _num(v):
+    try:
+        f = float(v)
+        return round(f, 2) if f > 0 else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _as_series(node):
+    """Liste [{date, price}] ya da sözlük {tarih: fiyat} biçimindeki bir geçmişi {tarih: fiyat} yapar."""
+    out = {}
+    if isinstance(node, list):
+        for x in node:
+            if isinstance(x, dict):
+                d = next((_date_of(x[k]) for k in DATE_KEYS if k in x and _date_of(x[k])), None)
+                v = next((_num(x[k]) for k in PRICE_KEYS if k in x and _num(x[k]) is not None), None)
+                if d and v is not None:
+                    out[d] = v
+            elif isinstance(x, (list, tuple)) and len(x) >= 2 and _date_of(x[0]):
+                v = _num(x[1])
+                if v is not None:
+                    out[_date_of(x[0])] = v
+    elif isinstance(node, dict) and node and all(_date_of(k) for k in list(node)[:5]):
+        for k, v in node.items():
+            if isinstance(v, dict):
+                v = next((_num(v[k2]) for k2 in PRICE_KEYS if k2 in v and _num(v[k2]) is not None), None)
+            else:
+                v = _num(v)
+            if _date_of(k) and v is not None:
+                out[_date_of(k)] = v
+    return out
+
+
+def _walk(node, path=()):
+    """Yanıttaki tüm tarihli fiyat serilerini (yol, seri) olarak bulur."""
+    ser = _as_series(node)
+    if len(ser) >= 2:
+        yield path, ser
+        return
+    if isinstance(node, dict):
+        for k, v in node.items():
+            yield from _walk(v, path + (str(k),))
+    elif isinstance(node, list) and node and isinstance(node[0], dict) and not ser:
+        for i, v in enumerate(node[:20]):
+            yield from _walk(v, path + (str(i),))
+
+
+def _best(found, want, avoid=()):
+    cands = [(p, s) for p, s in found if any(w in "/".join(p).lower().replace(" ", "") for w in want)
+             and not any(a in "/".join(p).lower().replace(" ", "") for a in avoid)]
+    if not cands:
+        return {}, None
+    # Önce "near mint", sonra en çok gün içeren seri
+    cands.sort(key=lambda ps: (("nearmint" in "/".join(ps[0]).lower().replace(" ", "")), len(ps[1])), reverse=True)
+    return cands[0][1], "/".join(cands[0][0])
+
+
+def backfill_history(budget):
+    if HISTORY_DAYS <= 0:
+        return 0
+    st = sb("GET", "job_state", {"key": "eq.backfill:v1", "select": "value"}) or []
+    done_ids = set(st[0]["value"].get("done", [])) if st else set()
+    # Geçmişi okunamayan kartlar günde en fazla bir kez yeniden denenir.
+    tried = {int(k): v for k, v in (st[0]["value"].get("tried", {}) if st else {}).items()}
+    matched = sb("GET", "holdings", {"select": "card_id", "match_status": "eq.matched", "card_id": "not.is.null"}) or []
+    ids = sorted(i for i in {r["card_id"] for r in matched} - done_ids if tried.get(i) != TODAY)
+    if not ids:
+        return 0
+    cards = sb("GET", "cards", {"select": "id,ext_id,language", "id": f"in.({','.join(map(str, ids))})"}) or []
+    log(f"Geçmiş fiyatı çekilecek kart: {len(cards)}")
+    n = 0
+    try:
+        for c in cards:
+            try:
+                body = ppt({"tcgPlayerId": c["ext_id"], "language": c.get("language") or "english", "limit": 1,
+                            "includeHistory": "true", "includeEbay": "true", "days": HISTORY_DAYS}, budget, 3)
+            except BudgetExhausted:
+                raise
+            except Exception as e:  # noqa: BLE001
+                note_error(f"geçmiş isteği (kart {c['id']})", e)
+                continue
+            data = body.get("data")
+            d = data if isinstance(data, dict) else ((data or [{}])[0] if isinstance(data, list) else {})
+            found = list(_walk(d))
+            raw, raw_path = _best(found, ("pricehistory", "history"), ("ebay", "psa", "grade"))
+            p10, p10_path = _best(found, ("psa10",))
+            p9, p9_path = _best(found, ("psa9",), ("psa10",))
+            if len(STATUS.setdefault("history_samples", [])) < 3:
+                STATUS["history_samples"].append({
+                    "card": c["id"], "paths": ["/".join(p) + f" ({len(s)})" for p, s in found][:12],
+                    "raw": raw_path, "psa10": p10_path, "psa9": p9_path,
+                    "top_keys": sorted(d.keys())[:40] if isinstance(d, dict) else str(type(d)),
+                    "ph_keys": sorted((d.get("priceHistory") or {}).keys())[:12] if isinstance(d.get("priceHistory"), dict) else None})
+            dates = sorted((set(raw) | set(p10) | set(p9)) - {TODAY})
+            rows = [{"card_id": c["id"], "date": dt, "raw": raw.get(dt), "psa10": p10.get(dt), "psa9": p9.get(dt)}
+                    for dt in dates if raw.get(dt) is not None or p10.get(dt) is not None or p9.get(dt) is not None]
+            for i in range(0, len(rows), 500):
+                sb("POST", "card_prices", {"on_conflict": "card_id,date"}, rows[i:i + 500],
+                   prefer="resolution=ignore-duplicates,return=minimal")
+            if rows:
+                done_ids.add(c["id"])
+                tried.pop(c["id"], None)
+                n += 1
+            else:
+                tried[c["id"]] = TODAY
+            log(f"Geçmiş: kart {c['id']} · {len(rows)} gün")
+    except BudgetExhausted:
+        pass
+    finally:
+        sb("POST", "job_state", {"on_conflict": "key"},
+           [{"key": "backfill:v1", "value": {"done": sorted(done_ids), "tried": {str(k): v for k, v in tried.items()}}, "updated_at": datetime.now(timezone.utc).isoformat()}],
+           prefer="resolution=merge-duplicates,return=minimal")
+    return n
+
+
+def retry_failed_once():
+    """Daha geniş aramayla (ücretli plan) bulunamayan kartları bir kez yeniden dener."""
+    if SEARCH_LIMIT <= 3:
+        return
+    key = f"retry_failed:limit{SEARCH_LIMIT}"
+    if sb("GET", "job_state", {"key": f"eq.{key}", "select": "key"}):
+        return
+    sb("PATCH", "holdings", {"match_status": "eq.failed"}, {"match_status": "pending", "match_note": None})
+    sb("POST", "job_state", {"on_conflict": "key"},
+       [{"key": key, "value": {"at": TODAY}, "updated_at": datetime.now(timezone.utc).isoformat()}],
+       prefer="resolution=merge-duplicates,return=minimal")
+    log("Bulunamayan kartlar daha geniş aramayla yeniden denenecek.")
+
+
 # ---------- Kurlar ----------
 
 def fetch_fx(date=None):
@@ -499,9 +642,11 @@ def main():
     try:
         # Önce eşleşmiş kartların fiyatı (bütçenin en fazla %60'ı), sonra yeni eşleştirmeler,
         # en son kalan krediyle bugün fiyatlanmamış kartlar.
+        retry_failed_once()
         p = price_cards(budget, cap=budget.used + int(budget.left * PRICE_SHARE))
         m = match_pending(budget)
         p += price_cards(budget)
+        STATUS["history_backfilled"] = backfill_history(budget)
     except Exception as e:  # noqa: BLE001
         note_error("görev", e)
         raise

@@ -34,6 +34,10 @@ jobs:
           PPT_KEY: ${{ secrets.POKEMONPRICETRACKER_API_KEY }}
           PSA_TOKEN: ${{ secrets.PSA_API_TOKEN }}
           STATUS_FILE: ${{ runner.temp }}/status.json
+          # PokemonPriceTracker API planı (günde 20.000 kredi). Ücretsiz plana dönülürse: 95 / 3 / 0
+          PPT_DAILY_BUDGET: "15000"
+          PPT_SEARCH_LIMIT: "10"
+          PPT_HISTORY_DAYS: "180"
         run: python pipeline/sync_psa.py
 
       - name: Çalışma özetini 'status' dalına yaz (yalnızca sayılar ve hata mesajları)
