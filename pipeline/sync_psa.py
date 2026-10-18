@@ -343,13 +343,18 @@ def match_pending(budget):
 
 # ---------- Fiyatlar ----------
 
-GRADE_KEY = re.compile(r"^(psa|bgs|cgc|sgc|tag|ace)(\d+(?:_5)?)$")
+# psa10, bgs9_5, cgc10_pristine, bgs10_black, ... (şirket + derece + isteğe bağlı ek)
+GRADE_KEY = re.compile(r"^(psa|bgs|cgc|sgc|tag|ace)_?(\d+(?:_5)?)(?:_?[a-z]+)?$")
 HAS_GRADES = {"ok": True}
 
 
 def all_grades(sales):
     """eBay derece verisini {"bgs9_5": {"p": fiyat, "c": güven, "n": satış adedi}} biçimine çevirir."""
     out = {}
+    STATUS.setdefault("grade_keys", [])
+    for k in (sales or {}):
+        if k not in STATUS["grade_keys"]:
+            STATUS["grade_keys"].append(k)
     for k, v in (sales or {}).items():
         if not GRADE_KEY.match(str(k)):
             continue
@@ -736,6 +741,33 @@ def backfill_history(budget):
     return n
 
 
+def probe_grade_keys(budget):
+    """Bir kez: en değerli birkaç kartın eBay derece anahtarlarını kaydeder (Pristine, Black Label adları için)."""
+    if DAILY_BUDGET <= 1000 or sb("GET", "job_state", {"key": "eq.gradekeys:v1", "select": "key"}):
+        return
+    cards = sb("GET", "cards", {"select": "id,ext_id,language", "source": "eq.ppt", "order": "id.asc", "limit": "12"}) or []
+    keys, hist = set(), set()
+    for c in cards:
+        try:
+            body = ppt({"tcgPlayerId": c["ext_id"], "language": c.get("language") or "english", "limit": 1,
+                        "includeHistory": "true", "includeEbay": "true", "days": 30}, budget, 3)
+        except BudgetExhausted:
+            break
+        except Exception:  # noqa: BLE001
+            continue
+        d = body.get("data")
+        d = d if isinstance(d, dict) else ((d or [{}])[0] if isinstance(d, list) else {})
+        e = d.get("ebay") or {}
+        keys |= set((e.get("salesByGrade") or {}).keys())
+        hist |= set((e.get("priceHistory") or {}).keys()) if isinstance(e.get("priceHistory"), dict) else set()
+        STATUS.setdefault("ebay_keys", sorted(e.keys()))
+    STATUS["probe_sales_keys"] = sorted(keys)
+    STATUS["probe_history_keys"] = sorted(hist)
+    sb("POST", "job_state", {"on_conflict": "key"},
+       [{"key": "gradekeys:v1", "value": {"sales": sorted(keys), "history": sorted(hist)}, "updated_at": datetime.now(timezone.utc).isoformat()}],
+       prefer="resolution=merge-duplicates,return=minimal")
+
+
 def retry_failed_once():
     """Daha geniş aramayla (ücretli plan) bulunamayan kartları bir kez yeniden dener."""
     if SEARCH_LIMIT <= 3:
@@ -812,6 +844,7 @@ def main():
         m = match_pending(budget)
         p += price_cards(budget)
         STATUS["history_backfilled"] = backfill_history(budget)
+        probe_grade_keys(budget)
     except Exception as e:  # noqa: BLE001
         note_error("görev", e)
         raise
