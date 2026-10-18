@@ -1,4 +1,4 @@
-"""KartRadarı günlük fiyat kaydı.
+"""Holotique günlük fiyat kaydı.
 
 Her gün GitHub Actions tarafından çalıştırılır:
   1. pipeline/portfolio.json içindeki kartları TCGCSV (TCGplayer verisi) kataloğunda bulur.
@@ -24,7 +24,7 @@ DATA_DIR = os.path.join(ROOT, "docs", "data")
 LATEST = os.path.join(DATA_DIR, "latest.json")
 HISTORY = os.path.join(DATA_DIR, "history.json")
 
-UA = "KartRadari/0.1 (+https://github.com/beriharavon-svg/kartradari)"
+UA = "Holotique/0.1 (+https://holotique.com)"
 TCG = "https://tcgcsv.com/tcgplayer"
 CURRENCIES = ["TRY", "EUR", "GBP", "JPY", "CNY"]
 VARIANT_ORDER = [

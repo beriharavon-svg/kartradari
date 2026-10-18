@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Kart Ara · KartRadarı</title>
+<title>Kart Ara · Holotique</title>
 <meta name="description" content="Pokemon, Japon Pokemon, One Piece ve Lorcana kartlarının güncel piyasa fiyatları, görselleri ve PSA fiyatları. Üyelik gerekmez.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -162,7 +162,7 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
 <body>
 <header class="top">
   <div class="wrap">
-    <a class="brand" href="./"><span class="mark" aria-hidden="true"></span><h1>KartRadarı</h1></a>
+    <a class="brand" href="./"><span class="mark" aria-hidden="true"></span><h1>Holotique</h1></a>
     <nav class="nav" aria-label="Sayfalar"><a href="ara.html" aria-current="page">Kart ara</a><a href="./">Portföyüm</a></nav>
     <div class="ccy" role="group" aria-label="İkinci para birimi"><span class="ccy-fixed" title="Ana fiyat her zaman USD">USD</span><div class="seg" id="ccySeg"></div></div>
   </div>
@@ -207,7 +207,7 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
   <section class="grid" id="grid" aria-label="Sonuçlar"></section>
   <div class="more" id="more" hidden><button type="button" class="btn ghost" id="moreBtn">Daha fazla göster</button></div>
   <footer>
-    <span>Ham fiyatlar: TCGplayer piyasa fiyatı (TCGCSV aracılığıyla), günlük. PSA fiyatları: eBay satışları (PokemonPriceTracker), yalnızca KartRadarı portföylerinde takip edilen kartlar için. Yatırım tavsiyesi değildir.</span>
+    <span>Ham fiyatlar: TCGplayer piyasa fiyatı (TCGCSV aracılığıyla), günlük. PSA fiyatları: eBay satışları (PokemonPriceTracker), yalnızca Holotique portföylerinde takip edilen kartlar için. Yatırım tavsiyesi değildir.</span>
   </footer>
 </main>
 <script>
@@ -395,7 +395,7 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
     info.appendChild(f);
     if(r.tracked){var mini=el('div',{class:'mini'});info.appendChild(el('div',null,[el('div',{class:'label',style:'margin-bottom:4px',text:(r.psa10!=null?'PSA 10':'Ham')+' fiyat geçmişi, USD'}),mini]));
       sb.rpc('card_history',{pid:r.product_id}).then(function(res){var rows=(res.data||[]),k=r.psa10!=null?'psa10':'raw';lineChart(mini,rows.filter(function(x){return x[k]!=null}).map(function(x){return [x.date,Number(x[k])]}));});}
-    else info.appendChild(el('p',{class:'note',style:'margin:0',text:'PSA fiyatları ve fiyat geçmişi, kart bir KartRadarı portföyüne eklendiğinde takip edilmeye başlar.'}));
+    else info.appendChild(el('p',{class:'note',style:'margin:0',text:'PSA fiyatları ve fiyat geçmişi, kart bir Holotique portföyüne eklendiğinde takip edilmeye başlar.'}));
     var lang=r.game==='Pokemon JP'?'japanese':'english',game=r.game==='Pokemon JP'?'Pokemon':r.game;
     var pre=Object.assign({},{game:game,set_input:r.set_name,name_input:(r.name||'').replace(/\s*-\s*[\w\/-]+$/,'').replace(/\s*\(\d+\)\s*$/,''),number_input:r.number?String(r.number).split('/')[0]:null,language:lang});
     info.appendChild(el('div',{class:'actions'},[el('a',{class:'btn',href:'./?ekle='+encodeURIComponent(JSON.stringify(pre)),text:'Portföyüme ekle'}),r.url?el('a',{class:'btn ghost',href:r.url,target:'_blank',rel:'noopener',text:'TCGplayer’da gör'}):null]));

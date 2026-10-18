@@ -1,4 +1,4 @@
-"""KartRadarı PSA fiyat görevi.
+"""Holotique PSA fiyat görevi.
 
 GitHub Actions tarafından iki saatte bir çalışır:
   1. Kullanıcıların yeni eklediği kartları PokemonPriceTracker kataloğunda bulur (eşleştirme).
@@ -27,7 +27,7 @@ PSA_DAILY_BUDGET = int(os.environ.get("PSA_DAILY_BUDGET", "90"))
 PSA_API = "https://api.psacard.com/publicapi"
 DAILY_BUDGET = int(os.environ.get("PPT_DAILY_BUDGET", "95"))
 PPT = "https://www.pokemonpricetracker.com/api/v2"
-UA = "KartRadari/0.2 (+https://github.com/beriharavon-svg/kartradari)"
+UA = "Holotique/0.2 (+https://holotique.com)"
 CURRENCIES = ["TRY", "EUR", "GBP", "JPY", "CNY"]
 SEARCH_LIMIT = int(os.environ.get("PPT_SEARCH_LIMIT", "3"))
 HISTORY_DAYS = int(os.environ.get("PPT_HISTORY_DAYS", "0"))  # 0: geçmiş çekilmez (ücretsiz plan)

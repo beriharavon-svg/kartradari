@@ -1,4 +1,4 @@
-"""KartRadarı katalog görevi.
+"""Holotique katalog görevi.
 
 Her gece TCGCSV'den (TCGplayer verisi) seçili oyunların tüm kartlarını ve
 güncel piyasa fiyatlarını Supabase'deki `catalog` tablosuna yükler.
@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 SUPA = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SKEY = os.environ.get("SUPABASE_SECRET_KEY", "")
 TCG = "https://tcgcsv.com/tcgplayer"
-UA = "KartRadari/0.3 (+https://github.com/beriharavon-svg/kartradari)"
+UA = "Holotique/0.3 (+https://holotique.com)"
 FORCE = os.environ.get("CATALOG_FORCE") == "1"
 BATCH = 500
 # Katalog satır biçimi değişince artırılır; böylece kaynak aynı olsa bile bir kez yeniden yüklenir.

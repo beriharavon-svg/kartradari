@@ -1,6 +1,8 @@
-# KartRadarı MVP
+# Holotique
 
-Bu proje KartRadarı.com için hazırlanmış ilk Next.js landing page / MVP taslağıdır.
+TCG koleksiyonu için fiyat takibi ve portföy uygulaması — https://holotique.com
+
+Canlı site `docs/` klasöründen GitHub Pages ile yayınlanır (aşağıda). Kökteki Next.js dosyaları ilk taslaktır, yayında kullanılmıyor.
 
 ## Kurulum
 
