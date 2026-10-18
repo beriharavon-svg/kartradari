@@ -242,12 +242,14 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
   function gradeColor(g){return GRADE_COLORS[g]||CO_COLORS[String(g).split(' ')[0]]||'#888';}
   // Kart ekleme formundaki derece seçenekleri (eBay satış verisi olan dereceler)
   var GRADE_OPTS=[['Ham','Ham (derecesiz)']].concat(
-    ['10','9','8','7','6','5','4','3','2','1'].map(function(n){return ['PSA '+n,'PSA '+n]}),
-    ['10','9.5','9','8.5','8'].map(function(n){return ['BGS '+n,'BGS '+n]}),
-    ['10','9.5','9','8.5','8','7.5','7'].map(function(n){return ['CGC '+n,'CGC '+n]}),
-    ['10','9.5','9','8'].map(function(n){return ['SGC '+n,'SGC '+n]}),
-    ['10','9.5','9'].map(function(n){return ['TAG '+n,'TAG '+n]}),
+    ['10','9','8.5','8','7','6','5','4','3','2','1'].map(function(n){return ['PSA '+n,'PSA '+n]}),
+    [['BGS 10 Black Label','BGS 10 Black Label']],['10','9.5','9','8.5','8'].map(function(n){return ['BGS '+n,'BGS '+n]}),
+    [['CGC 10 Pristine','CGC 10 Pristine']],['10','9.5','9','8.5','8','7.5','7','6.5','6'].map(function(n){return ['CGC '+n,'CGC '+n]}),
+    [['SGC 10 Pristine','SGC 10 Pristine']],['10','9.5','9','8'].map(function(n){return ['SGC '+n,'SGC '+n]}),
+    ['10','9','8.5','8'].map(function(n){return ['TAG '+n,'TAG '+n]}),
     ['10','9','8'].map(function(n){return ['ACE '+n,'ACE '+n]}));
+  // Pristine / Black Label satışları fiyat kaynağında ayrı tutulmuyor; aynı şirketin 10 fiyatı yaklaşık değer olarak kullanılır.
+  function premiumGrade(g){return /\b(pristine|black\s*label)\b/i.test(String(g||''));}
   var MONTHS=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
   var CONF={high:'yüksek',medium:'orta',low:'düşük'};
   var store={get:function(k){try{return localStorage.getItem(k)}catch(e){return null}},set:function(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
@@ -266,7 +268,7 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
   function rateNow(){var f=S.fx[S.fx.length-1];return f?Number(f.rates[S.ccy]):NaN;}
   function fxOn(date){var best=null;for(var i=0;i<S.fx.length;i++){if(S.fx[i].date<=date)best=S.fx[i].rates;else break;}return best?Number(best[S.ccy]):rateNow();}
   // "BGS 9.5" → "bgs9_5", "PSA 10" → "psa10", "Ham" → "raw"
-  function gradeKey(g){if(g==='Ham')return 'raw';var m=String(g||'').trim().match(/^(PSA|BGS|CGC|SGC|TAG|ACE)\s*(\d+(?:\.5)?)$/i);return m?m[1].toLowerCase()+m[2].replace('.','_'):null;}
+  function gradeKey(g){if(g==='Ham')return 'raw';var m=String(g||'').trim().match(/^(PSA|BGS|CGC|SGC|TAG|ACE)\s*(\d+(?:\.5)?)(?:\s+(?:pristine|black\s*label))?$/i);return m?m[1].toLowerCase()+m[2].replace('.','_'):null;}
   function gval(r,k){if(!r||!k)return null;if((k==='raw'||k==='psa10'||k==='psa9')&&r[k]!=null)return Number(r[k]);var g=r.grades&&r.grades[k];return g&&g.p!=null?Number(g.p):null;}
   function gconf(r,k){if(!r)return null;if(k==='psa10')return r.psa10_conf;if(k==='psa9')return r.psa9_conf;var g=r.grades&&r.grades[k];return g?g.c:null;}
   function gcount(r,k){if(!r)return null;if(k==='psa10')return r.psa10_n;if(k==='psa9')return r.psa9_n;var g=r.grades&&r.grades[k];return g?g.n:null;}
@@ -286,6 +288,7 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
     if(!pkey(h))return el('span',{class:'chip warn',text:'Derece desteklenmiyor'});
     if(price(h)==null)return latest(h)&&pkey(h)!=='raw'?el('span',{class:'chip warn',title:'Bu kartın bu derecesi için son 6 ayda eBay satışı bulunamadı.',text:'Bu derecede satış yok'}):el('span',{class:'chip info',text:'Fiyat bekleniyor'});
     if(rawOnly(h)&&h.grade!=='Ham')return el('span',{class:'chip warn',title:'Bu oyun için dereceli (PSA) fiyat kaynağı henüz yok; ham piyasa değeri gösteriliyor.',text:'Ham değer'});
+    if(premiumGrade(h.grade))return el('span',{class:'chip warn',title:'Fiyat kaynağı '+h.grade.replace(/\s+(pristine|black\s*label)/i,'')+' satışlarını '+h.grade.split(' ').slice(2).join(' ')+' ayrımı yapmadan veriyor. Gösterilen değer yaklaşıktır; gerçek değer genellikle daha yüksektir.',text:'Yaklaşık değer'});
     if(h.match_note&&/kontrol et/.test(h.match_note))return el('span',{class:'chip warn',text:'Kontrol et'});
     var c=gconf(latest(h),pkey(h));
     if(c==='low')return el('span',{class:'chip warn',text:'Düşük güven'});
@@ -543,7 +546,8 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
       if(mk&&mk!=='raw'&&mk!=='psa9'&&mk!=='psa10'&&!rawOnly(h))cols[1]=[h.grade,mk];   // kendi derecen ortada
       cols.forEach(function(x){var k=x[1],v=k==='raw'?gval(row,k):(function(){var s=series({card_id:h.card_id,grade:x[0],cards:h.cards});return s.length?s[s.length-1][1]:null;})(),c=gconf(row,k),n=gcount(row,k);
         g.appendChild(el('div',{class:h.grade===x[0]?'mine':null},[el('div',{class:'label',text:x[0]}),el('div',{class:'v num',text:v==null?'—':(Number(v)>=1000?'$'+Math.round(Number(v)).toLocaleString('en-US'):usd(Number(v)))}),el('div',{class:'c',text:k==='raw'?'TCGplayer':(v==null?'satış yok':(c?CONF[c]+' güven':'eBay')+(n?' · '+n+' satış':''))})]));});
-      d.appendChild(g);}
+      d.appendChild(g);
+      if(premiumGrade(h.grade))d.appendChild(el('div',{class:'msg info',text:h.grade+' satışları fiyat kaynağımızda ayrı tutulmuyor; '+h.grade.split(' ').slice(0,2).join(' ')+' satışlarının ortalaması gösteriliyor. '+h.grade+' kartlar genellikle bunun belirgin üstünde işlem görür, bu yüzden değer temkinli tarafta kalır.'}));}
     var f=el('div',{class:'facts'});
     [['Adet',String(h.qty)],['Alış (adet)',usd(Number(h.cost_usd))],['Alış tarihi',dfmt(h.bought)]].forEach(function(x){f.appendChild(el('span',{text:x[0]}));f.appendChild(el('span',{class:'num',text:x[1]}));});
     var co=String(h.grade||'').split(' ')[0].toUpperCase();
@@ -635,7 +639,7 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
     return null;}
   function toISO(v){if(v==null||v==='')return null;if(v instanceof Date&&!isNaN(v))return new Date(Date.UTC(v.getFullYear(),v.getMonth(),v.getDate())).toISOString().slice(0,10);if(typeof v==='number'&&v>20000&&v<80000){return new Date(Date.UTC(1899,11,30)+v*864e5).toISOString().slice(0,10);}var s=String(v).trim(),m=s.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);if(m)return m[3]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2);m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);return m?m[0]:null;}
   function toNum(v){if(typeof v==='number')return v;var s=String(v==null?'':v).replace(/[^\d,.\-]/g,'');if(/,\d{1,2}$/.test(s))s=s.replace(/\./g,'').replace(',','.');else s=s.replace(/,/g,'');var n=parseFloat(s);return isFinite(n)?n:null;}
-  function normGrade(v){var s=String(v||'').trim(),m=s.match(/\b(PSA|BGS|CGC|SGC|TAG|ACE)\s*-?\s*(\d{1,2}(?:[.,]5)?)\b/i);if(m&&Number(m[2].replace(',','.'))<=10)return m[1].toUpperCase()+' '+m[2].replace(',','.');if(!s||/ham|raw|ungraded/i.test(s))return 'Ham';return s;}
+  function normGrade(v){var s=String(v||'').trim(),m=s.match(/\b(PSA|BGS|CGC|SGC|TAG|ACE)\s*-?\s*(\d{1,2}(?:[.,]5)?)\b/i);if(m&&Number(m[2].replace(',','.'))<=10){var gg=m[1].toUpperCase()+' '+m[2].replace(',','.');if(m[2]==='10'&&/black\s*label|\bBL\b/i.test(s)&&gg==='BGS 10')return 'BGS 10 Black Label';if(m[2]==='10'&&/pristine|\bPRI\b/i.test(s))return gg+' Pristine';return gg;}if(!s||/ham|raw|ungraded/i.test(s))return 'Ham';return s;}
   function normGame(v){var k=nk(v);if(!k||k.indexOf('pokemon')>=0)return 'Pokemon';if(k.indexOf('onepiece')>=0)return 'One Piece';if(k.indexOf('magic')>=0||k==='mtg')return 'Magic';if(k.indexOf('yugioh')>=0)return 'Yu-Gi-Oh!';if(k.indexOf('lorcana')>=0)return 'Lorcana';return String(v).trim();}
   function parseRows(rows,det){var m=det.map,out=[],warn=[];
     rows.slice(det.header+1).forEach(function(r,i){r=r||[];var g=function(f){return m[f]!=null?r[m[f]]:null};var name=String(g('name')||'').trim();if(!name)return;
