@@ -545,7 +545,7 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
       var mk=gradeKey(h.grade),cols=[['Ham','raw'],['PSA 9','psa9'],['PSA 10','psa10']];
       if(mk&&mk!=='raw'&&mk!=='psa9'&&mk!=='psa10'&&!rawOnly(h))cols[1]=[h.grade,mk];   // kendi derecen ortada
       cols.forEach(function(x){var k=x[1],v=k==='raw'?gval(row,k):(function(){var s=series({card_id:h.card_id,grade:x[0],cards:h.cards});return s.length?s[s.length-1][1]:null;})(),c=gconf(row,k),n=gcount(row,k);
-        g.appendChild(el('div',{class:h.grade===x[0]?'mine':null},[el('div',{class:'label',text:x[0]}),el('div',{class:'v num',text:v==null?'—':(Number(v)>=1000?'$'+Math.round(Number(v)).toLocaleString('en-US'):usd(Number(v)))}),el('div',{class:'c',text:k==='raw'?'TCGplayer':(v==null?'satış yok':(c?CONF[c]+' güven':'eBay')+(n?' · '+n+' satış':''))})]));});
+        g.appendChild(el('div',{class:h.grade===x[0]?'mine':null},[el('div',{class:'label',lang:'en',text:x[0]}),el('div',{class:'v num',text:v==null?'—':(Number(v)>=1000?'$'+Math.round(Number(v)).toLocaleString('en-US'):usd(Number(v)))}),el('div',{class:'c',text:k==='raw'?'TCGplayer':(v==null?'satış yok':(c?CONF[c]+' güven':'eBay')+(n?' · '+n+' satış':''))})]));});
       d.appendChild(g);
       if(premiumGrade(h.grade))d.appendChild(el('div',{class:'msg info',text:h.grade+' satışları fiyat kaynağımızda ayrı tutulmuyor; '+h.grade.split(' ').slice(0,2).join(' ')+' satışlarının ortalaması gösteriliyor. '+h.grade+' kartlar genellikle bunun belirgin üstünde işlem görür, bu yüzden değer temkinli tarafta kalır.'}));}
     var f=el('div',{class:'facts'});
