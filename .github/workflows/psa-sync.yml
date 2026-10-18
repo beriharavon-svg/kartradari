@@ -2,8 +2,9 @@ name: PSA fiyat ve eşleştirme görevi
 
 on:
   schedule:
-    # İki saatte bir (GitHub zamanlamayı geciktirebilir); günlük kredi bütçeleri aşılmaz.
-    - cron: "17 */2 * * *"
+    # 15 dakikada bir: yeni eklenen kartlar kısa sürede eşleşip fiyatlanır.
+    # Yapılacak iş yoksa görev kredi harcamadan biter (GitHub zamanlamayı birkaç dakika geciktirebilir).
+    - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
   push:
     branches: [main]
