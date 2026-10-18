@@ -238,6 +238,16 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
   var SB_KEY='sb_publishable_IFtbpaxlRhYiB7kjJydiIA_ilx0aRI1';
   var CCY=[{c:'TRY',s:'₺',d:0},{c:'EUR',s:'€',d:2},{c:'GBP',s:'£',d:2},{c:'JPY',s:'¥',d:0},{c:'CNY',s:'CN¥',d:0}];
   var GRADE_COLORS={'PSA 10':'#2B47D6','PSA 9':'#6E56CF','Ham':'#D9961A'};
+  var CO_COLORS={PSA:'#8C9BE8',BGS:'#0F766E',CGC:'#C2410C',SGC:'#4B5563',TAG:'#9333EA',ACE:'#0284C7'};
+  function gradeColor(g){return GRADE_COLORS[g]||CO_COLORS[String(g).split(' ')[0]]||'#888';}
+  // Kart ekleme formundaki derece seçenekleri (eBay satış verisi olan dereceler)
+  var GRADE_OPTS=[['Ham','Ham (derecesiz)']].concat(
+    ['10','9','8','7','6','5','4','3','2','1'].map(function(n){return ['PSA '+n,'PSA '+n]}),
+    ['10','9.5','9','8.5','8'].map(function(n){return ['BGS '+n,'BGS '+n]}),
+    ['10','9.5','9','8.5','8','7.5','7'].map(function(n){return ['CGC '+n,'CGC '+n]}),
+    ['10','9.5','9','8'].map(function(n){return ['SGC '+n,'SGC '+n]}),
+    ['10','9.5','9'].map(function(n){return ['TAG '+n,'TAG '+n]}),
+    ['10','9','8'].map(function(n){return ['ACE '+n,'ACE '+n]}));
   var MONTHS=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
   var CONF={high:'yüksek',medium:'orta',low:'düşük'};
   var store={get:function(k){try{return localStorage.getItem(k)}catch(e){return null}},set:function(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
@@ -255,13 +265,18 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
   function dfmt(iso){if(!iso)return '—';var p=String(iso).slice(0,10).split('-');return Number(p[2])+' '+MONTHS[Number(p[1])-1]+' '+p[0];}
   function rateNow(){var f=S.fx[S.fx.length-1];return f?Number(f.rates[S.ccy]):NaN;}
   function fxOn(date){var best=null;for(var i=0;i<S.fx.length;i++){if(S.fx[i].date<=date)best=S.fx[i].rates;else break;}return best?Number(best[S.ccy]):rateNow();}
-  function gradeKey(g){return g==='PSA 10'?'psa10':(g==='PSA 9'?'psa9':(g==='Ham'?'raw':null));}
+  // "BGS 9.5" → "bgs9_5", "PSA 10" → "psa10", "Ham" → "raw"
+  function gradeKey(g){if(g==='Ham')return 'raw';var m=String(g||'').trim().match(/^(PSA|BGS|CGC|SGC|TAG|ACE)\s*(\d+(?:\.5)?)$/i);return m?m[1].toLowerCase()+m[2].replace('.','_'):null;}
+  function gval(r,k){if(!r||!k)return null;if((k==='raw'||k==='psa10'||k==='psa9')&&r[k]!=null)return Number(r[k]);var g=r.grades&&r.grades[k];return g&&g.p!=null?Number(g.p):null;}
+  function gconf(r,k){if(!r)return null;if(k==='psa10')return r.psa10_conf;if(k==='psa9')return r.psa9_conf;var g=r.grades&&r.grades[k];return g?g.c:null;}
+  function gcount(r,k){if(!r)return null;if(k==='psa10')return r.psa10_n;if(k==='psa9')return r.psa9_n;var g=r.grades&&r.grades[k];return g?g.n:null;}
   // Pokemon dışı kartlarda (katalog/TCGCSV) yalnızca ham fiyat var; dereceli kartlar ham değerle gösterilir.
   function rawOnly(h){return !!(h.cards&&h.cards.source==='tcgcsv');}
   function pkey(h){return rawOnly(h)?'raw':gradeKey(h.grade);}
-  function series(h){var rows=h.card_id?(S.prices[h.card_id]||[]):[],k=pkey(h);if(!k)return [];return rows.filter(function(r){return r[k]!=null}).map(function(r){return [r.date,Number(r[k])]});}
+  function series(h){var rows=h.card_id?(S.prices[h.card_id]||[]):[],k=pkey(h);if(!k)return [];return rows.filter(function(r){return gval(r,k)!=null}).map(function(r){return [r.date,gval(r,k)]});}
   function latest(h){var rows=h.card_id?(S.prices[h.card_id]||[]):[];return rows.length?rows[rows.length-1]:null;}
-  function price(h){var r=latest(h),k=pkey(h);return r&&k&&r[k]!=null?Number(r[k]):null;}
+  // Son fiyat: o derecenin en son kaydedilmiş değeri (her gün satış olmayabilir)
+  function price(h){var k=pkey(h),s=series(h);return k&&s.length?s[s.length-1][1]:null;}
   function priced(h){return h.match_status==='matched'&&price(h)!=null;}
   function changeOver(h,days){var s=series(h);if(s.length<2)return null;var last=s[s.length-1],t=new Date(last[0]+'T00:00:00Z');t.setUTCDate(t.getUTCDate()-days);var cut=t.toISOString().slice(0,10),base=null;for(var i=s.length-1;i>=0;i--){if(s[i][0]<=cut){base=s[i][1];break;}}return base?(last[1]-base)/base*100:null;}
   function statusChip(h){
@@ -269,10 +284,10 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
     if(h.match_status==='failed')return el('span',{class:'chip err',text:'Bulunamadı'});
     if(h.match_status==='unsupported')return el('span',{class:'chip warn',text:'Desteklenmiyor'});
     if(!pkey(h))return el('span',{class:'chip warn',text:'Derece desteklenmiyor'});
-    if(price(h)==null)return el('span',{class:'chip info',text:'Fiyat bekleniyor'});
+    if(price(h)==null)return latest(h)&&pkey(h)!=='raw'?el('span',{class:'chip warn',title:'Bu kartın bu derecesi için son 6 ayda eBay satışı bulunamadı.',text:'Bu derecede satış yok'}):el('span',{class:'chip info',text:'Fiyat bekleniyor'});
     if(rawOnly(h)&&h.grade!=='Ham')return el('span',{class:'chip warn',title:'Bu oyun için dereceli (PSA) fiyat kaynağı henüz yok; ham piyasa değeri gösteriliyor.',text:'Ham değer'});
     if(h.match_note&&/kontrol et/.test(h.match_note))return el('span',{class:'chip warn',text:'Kontrol et'});
-    var r=latest(h),c=h.grade==='PSA 10'?r.psa10_conf:(h.grade==='PSA 9'?r.psa9_conf:null);
+    var c=gconf(latest(h),pkey(h));
     if(c==='low')return el('span',{class:'chip warn',text:'Düşük güven'});
     return null;
   }
@@ -478,7 +493,7 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
       kpi('Son değişim',chg==null?'—':pct(chg),dd==null?'İkinci gün kaydından sonra':usd(dd,true),cls(chg)),
       kpi('Kur etkisi · '+S.ccy,sec(T.fx,true),'alıştan bu yana USD/'+S.ccy,cls(T.fx))]));
     var mix=el('div',{class:'mix'}),lg=el('div',{class:'legend'});
-    Object.keys(T.mix).sort(function(a,b){return T.mix[b]-T.mix[a]}).forEach(function(g){var sh=T.val?T.mix[g]/T.val*100:0,c=GRADE_COLORS[g]||'#888',s=el('span');s.style.width=sh+'%';s.style.background=c;mix.appendChild(s);var i=el('i');i.style.background=c;lg.appendChild(el('span',null,[i,g+' '+sh.toFixed(0)+'%']));});
+    Object.keys(T.mix).sort(function(a,b){return T.mix[b]-T.mix[a]}).forEach(function(g){var sh=T.val?T.mix[g]/T.val*100:0,c=gradeColor(g),s=el('span');s.style.width=sh+'%';s.style.background=c;mix.appendChild(s);var i=el('i');i.style.background=c;lg.appendChild(el('span',null,[i,g+' '+sh.toFixed(0)+'%']));});
     stats.appendChild(el('div',null,[el('div',{class:'label',style:'margin-bottom:6px',text:'Derece dağılımı'}),mix,lg]));
     hero.appendChild(stats);
     var cp=el('div',{class:'panel chartp'}),seg=el('div',{class:'seg',role:'group','aria-label':'Zaman aralığı'});
@@ -524,14 +539,17 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
     if(h.match_status!=='matched'){d.appendChild(el('div',{class:'msg '+(h.match_status==='pending'?'info':'err'),text:h.match_status==='pending'?'Bu kart katalogla eşleştirilmeyi bekliyor. Görev iki saatte bir çalışır.':(h.match_note||'Kart eşleştirilemedi.')}));}
     else if(h.match_note&&/birden fazla|kontrol et/.test(h.match_note))d.appendChild(el('div',{class:'msg info',text:'Eşleşme: '+h.match_note+'. Yanlışsa Düzenle ile set adını ya da numarayı düzelt; kart yeniden eşleştirilir.'}));
     if(row){var g=el('div',{class:'grades'});
-      [['Ham','raw',null,null],['PSA 9','psa9','psa9_conf','psa9_n'],['PSA 10','psa10','psa10_conf','psa10_n']].forEach(function(x){var v=row[x[1]],c=x[2]?row[x[2]]:null,n=x[3]?row[x[3]]:null;
-        g.appendChild(el('div',{class:h.grade===x[0]?'mine':null},[el('div',{class:'label',text:x[0]}),el('div',{class:'v num',text:v==null?'—':(Number(v)>=1000?'$'+Math.round(Number(v)).toLocaleString('en-US'):usd(Number(v)))}),el('div',{class:'c',text:x[2]?(c?CONF[c]+' güven'+(n?' · '+n+' satış':''):'satış yok'):'TCGplayer'})]));});
+      var mk=gradeKey(h.grade),cols=[['Ham','raw'],['PSA 9','psa9'],['PSA 10','psa10']];
+      if(mk&&mk!=='raw'&&mk!=='psa9'&&mk!=='psa10'&&!rawOnly(h))cols[1]=[h.grade,mk];   // kendi derecen ortada
+      cols.forEach(function(x){var k=x[1],v=k==='raw'?gval(row,k):(function(){var s=series({card_id:h.card_id,grade:x[0],cards:h.cards});return s.length?s[s.length-1][1]:null;})(),c=gconf(row,k),n=gcount(row,k);
+        g.appendChild(el('div',{class:h.grade===x[0]?'mine':null},[el('div',{class:'label',text:x[0]}),el('div',{class:'v num',text:v==null?'—':(Number(v)>=1000?'$'+Math.round(Number(v)).toLocaleString('en-US'):usd(Number(v)))}),el('div',{class:'c',text:k==='raw'?'TCGplayer':(v==null?'satış yok':(c?CONF[c]+' güven':'eBay')+(n?' · '+n+' satış':''))})]));});
       d.appendChild(g);}
     var f=el('div',{class:'facts'});
     [['Adet',String(h.qty)],['Alış (adet)',usd(Number(h.cost_usd))],['Alış tarihi',dfmt(h.bought)]].forEach(function(x){f.appendChild(el('span',{text:x[0]}));f.appendChild(el('span',{class:'num',text:x[1]}));});
-    f.appendChild(el('span',{text:'PSA no'}));
-    var certNum=String(h.cert||'').replace(/\D/g,'');
-    f.appendChild(certNum?el('span',{class:'num'},[certNum+' · ',el('a',{href:'https://www.psacard.com/cert/'+certNum,target:'_blank',rel:'noopener',text:'PSA’da doğrula'})]):el('span',{class:'num',text:'—'}));
+    var co=String(h.grade||'').split(' ')[0].toUpperCase();
+    f.appendChild(el('span',{text:(/^(PSA|BGS|CGC|SGC|TAG|ACE)$/.test(co)?co+' ':'')+'sertifika no'}));
+    var certNum=String(h.cert||'').replace(/\D/g,''),VERIFY={PSA:'https://www.psacard.com/cert/',CGC:'https://www.cgccards.com/certlookup/'};
+    f.appendChild(certNum?el('span',{class:'num'},[certNum].concat(VERIFY[co]?[' · ',el('a',{href:VERIFY[co]+certNum+(co==='CGC'?'/':''),target:'_blank',rel:'noopener',text:co+'’da doğrula'})]:[])):el('span',{class:'num',text:'—'}));
     d.appendChild(f);
     if(h.psa&&h.psa.Subject){var P=h.psa,label=[P.Year,P.Brand,P.Subject,P.CardNumber?'#'+P.CardNumber:null,P.Variety].filter(Boolean).join(' · '),pg=el('div',{class:'facts'});
       var g=(P.CardGrade||'').match(/(\d+(?:\.\d)?)\s*$/),pgr=g?'PSA '+g[1]:null;
@@ -588,13 +606,13 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
           fName=el('input',{id:'aName',required:true,value:x.name_input||'',placeholder:'ör. Umbreon ex'}),
           fNum=el('input',{id:'aNum',value:x.number_input||'',placeholder:'ör. 217'}),
           fLang=sel('aLang',[['english','İngilizce'],['japanese','Japonca']],x.language),
-          fGrade=sel('aGrade',[['PSA 10','PSA 10'],['PSA 9','PSA 9'],['PSA 8','PSA 8'],['PSA 7','PSA 7'],['PSA 6','PSA 6'],['Ham','Ham (derecesiz)']].concat(['PSA 10','PSA 9','PSA 8','PSA 7','PSA 6','Ham'].indexOf(x.grade)<0&&x.grade?[[x.grade,x.grade]]:[]),x.grade),
+          fGrade=sel('aGrade',GRADE_OPTS.concat(GRADE_OPTS.some(function(o){return o[0]===x.grade})||!x.grade?[]:[[x.grade,x.grade]]),x.grade),
           fCert=el('input',{id:'aCert',value:x.cert||'',placeholder:'isteğe bağlı'}),
           fQty=el('input',{id:'aQty',type:'number',min:'1',value:String(x.qty||1)}),
           fCost=el('input',{id:'aCost',type:'number',min:'0',step:'0.01',required:true,value:x.cost_usd!=null?String(x.cost_usd):''}),
           fDate=el('input',{id:'aDate',type:'date',value:x.bought||''});
       var msg=el('div',{class:'msg',hidden:true});
-      var form=el('form',{class:'form-grid'},[field('aName','Kart adı',fName,true),field('aSet','Set',fSet,true),field('aNum','Kart numarası',fNum),field('aLang','Dil',fLang),field('aGame','Oyun',fGame),field('aGrade','Derece',fGrade),field('aCert','PSA numarası',fCert),field('aQty','Adet',fQty),field('aCost','Alış fiyatı $ (adet)',fCost),field('aDate','Alış tarihi',fDate)]);
+      var form=el('form',{class:'form-grid'},[field('aName','Kart adı',fName,true),field('aSet','Set',fSet,true),field('aNum','Kart numarası',fNum),field('aLang','Dil',fLang),field('aGame','Oyun',fGame),field('aGrade','Derece',fGrade),field('aCert','Sertifika no',fCert),field('aQty','Adet',fQty),field('aCost','Alış fiyatı $ (adet)',fCost),field('aDate','Alış tarihi',fDate)]);
       var save=el('button',{class:'btn span2',type:'submit',text:h?'Kaydet':'Ekle'});form.appendChild(save);
       form.addEventListener('submit',function(e){e.preventDefault();save.disabled=true;
         var row={game:fGame.value,set_input:fSet.value.trim()||null,name_input:fName.value.trim(),number_input:fNum.value.trim()||null,language:fLang.value,grade:fGrade.value,cert:fCert.value.trim()||null,qty:Math.max(1,parseInt(fQty.value,10)||1),cost_usd:Number(fCost.value)||0,bought:fDate.value||null};
@@ -617,7 +635,7 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
     return null;}
   function toISO(v){if(v==null||v==='')return null;if(v instanceof Date&&!isNaN(v))return new Date(Date.UTC(v.getFullYear(),v.getMonth(),v.getDate())).toISOString().slice(0,10);if(typeof v==='number'&&v>20000&&v<80000){return new Date(Date.UTC(1899,11,30)+v*864e5).toISOString().slice(0,10);}var s=String(v).trim(),m=s.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);if(m)return m[3]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2);m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);return m?m[0]:null;}
   function toNum(v){if(typeof v==='number')return v;var s=String(v==null?'':v).replace(/[^\d,.\-]/g,'');if(/,\d{1,2}$/.test(s))s=s.replace(/\./g,'').replace(',','.');else s=s.replace(/,/g,'');var n=parseFloat(s);return isFinite(n)?n:null;}
-  function normGrade(v){var s=String(v||'').trim();if(/psa\s*10/i.test(s))return 'PSA 10';if(/psa\s*9(?!\.)/i.test(s))return 'PSA 9';if(!s||/ham|raw|ungraded/i.test(s))return 'Ham';return s;}
+  function normGrade(v){var s=String(v||'').trim(),m=s.match(/\b(PSA|BGS|CGC|SGC|TAG|ACE)\s*-?\s*(\d{1,2}(?:[.,]5)?)\b/i);if(m&&Number(m[2].replace(',','.'))<=10)return m[1].toUpperCase()+' '+m[2].replace(',','.');if(!s||/ham|raw|ungraded/i.test(s))return 'Ham';return s;}
   function normGame(v){var k=nk(v);if(!k||k.indexOf('pokemon')>=0)return 'Pokemon';if(k.indexOf('onepiece')>=0)return 'One Piece';if(k.indexOf('magic')>=0||k==='mtg')return 'Magic';if(k.indexOf('yugioh')>=0)return 'Yu-Gi-Oh!';if(k.indexOf('lorcana')>=0)return 'Lorcana';return String(v).trim();}
   function parseRows(rows,det){var m=det.map,out=[],warn=[];
     rows.slice(det.header+1).forEach(function(r,i){r=r||[];var g=function(f){return m[f]!=null?r[m[f]]:null};var name=String(g('name')||'').trim();if(!name)return;

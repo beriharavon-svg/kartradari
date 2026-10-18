@@ -343,6 +343,37 @@ def match_pending(budget):
 
 # ---------- Fiyatlar ----------
 
+GRADE_KEY = re.compile(r"^(psa|bgs|cgc|sgc|tag|ace)(\d+(?:_5)?)$")
+HAS_GRADES = {"ok": True}
+
+
+def all_grades(sales):
+    """eBay derece verisini {"bgs9_5": {"p": fiyat, "c": güven, "n": satış adedi}} biçimine çevirir."""
+    out = {}
+    for k, v in (sales or {}).items():
+        if not GRADE_KEY.match(str(k)):
+            continue
+        p, c, n = grade_price(v)
+        if p is not None:
+            out[k] = {"p": p, "c": c, "n": n}
+    return out or None
+
+
+def write_prices(rows, prefer="resolution=merge-duplicates,return=minimal"):
+    """card_prices'a yazar; 'grades' sütunu henüz yoksa (008 çalışmadıysa) onsuz yazar."""
+    if not HAS_GRADES["ok"]:
+        rows = [{k: v for k, v in r.items() if k != "grades"} for r in rows]
+    try:
+        sb("POST", "card_prices", {"on_conflict": "card_id,date"}, rows, prefer=prefer)
+    except RuntimeError as e:
+        if "grades" in str(e) and HAS_GRADES["ok"]:
+            HAS_GRADES["ok"] = False
+            STATUS["note_grades"] = "008_all_grades.sql henüz çalıştırılmamış; yalnızca PSA 10/9 kaydedildi."
+            write_prices(rows, prefer)
+        else:
+            raise
+
+
 def grade_price(g):
     if not isinstance(g, dict):
         return None, None, None
@@ -406,9 +437,9 @@ def price_cards(budget, cap=None):
             p10, c10, n10 = grade_price(grades.get("psa10"))
             p9, c9, n9 = grade_price(grades.get("psa9"))
             raw = (d.get("prices") or {}).get("market")
-            sb("POST", "card_prices", {"on_conflict": "card_id,date"}, [{
+            write_prices([{
                 "card_id": c["id"], "date": TODAY, "raw": raw, "psa10": p10, "psa10_conf": c10, "psa10_n": n10,
-                "psa9": p9, "psa9_conf": c9, "psa9_n": n9}], prefer="resolution=merge-duplicates,return=minimal")
+                "psa9": p9, "psa9_conf": c9, "psa9_n": n9, "grades": all_grades(grades)}])
             sb("PATCH", "cards", {"id": f"eq.{c['id']}"}, {
                 "last_priced": TODAY, "image": d.get("imageCdnUrl400") or d.get("imageUrl"), "url": d.get("tcgPlayerUrl")})
             done += 1
@@ -496,7 +527,7 @@ def sync_psa_certs():
             return 0
     try:
         rows = sb("GET", "holdings", {"select": "id,cert,grade,match_status", "cert": "not.is.null",
-                                      "psa_checked": "is.null", "order": "created_at.asc", "limit": "60"}) or []
+                                      "grade": "ilike.PSA*", "psa_checked": "is.null", "order": "created_at.asc", "limit": "60"}) or []
     except RuntimeError as e:
         log("PSA alanları veritabanında yok (supabase/migrations/002_psa.sql çalıştırılmalı). PSA adımı atlandı.", str(e)[:120])
         return 0
@@ -617,10 +648,22 @@ def _best(found, want, avoid=()):
     return cands[0][1], "/".join(cands[0][0])
 
 
+# v2: tüm derecelerin geçmişi de yazılır (v1 yalnızca ham/PSA 10/PSA 9 yazıyordu).
+BACKFILL_KEY = "backfill:v2"
+
+
 def backfill_history(budget):
+    if HAS_GRADES["ok"]:
+        try:
+            sb("GET", "card_prices", {"select": "grades", "limit": "1"})
+        except RuntimeError:
+            HAS_GRADES["ok"] = False
+            STATUS["note_grades"] = "008_all_grades.sql henüz çalıştırılmamış; tüm derecelerin geçmişi bekliyor."
+    if not HAS_GRADES["ok"]:
+        return 0
     if HISTORY_DAYS <= 0:
         return 0
-    st = sb("GET", "job_state", {"key": "eq.backfill:v1", "select": "value"}) or []
+    st = sb("GET", "job_state", {"key": f"eq.{BACKFILL_KEY}", "select": "value"}) or []
     done_ids = set(st[0]["value"].get("done", [])) if st else set()
     # Geçmişi okunamayan kartlar günde en fazla bir kez yeniden denenir.
     tried = {int(k): v for k, v in (st[0]["value"].get("tried", {}) if st else {}).items()}
@@ -653,12 +696,30 @@ def backfill_history(budget):
                     "raw": raw_path, "psa10": p10_path, "psa9": p9_path,
                     "top_keys": sorted(d.keys())[:40] if isinstance(d, dict) else str(type(d)),
                     "ph_keys": sorted((d.get("priceHistory") or {}).keys())[:12] if isinstance(d.get("priceHistory"), dict) else None})
-            dates = sorted((set(raw) | set(p10) | set(p9)) - {TODAY})
-            rows = [{"card_id": c["id"], "date": dt, "raw": raw.get(dt), "psa10": p10.get(dt), "psa9": p9.get(dt)}
-                    for dt in dates if raw.get(dt) is not None or p10.get(dt) is not None or p9.get(dt) is not None]
-            for i in range(0, len(rows), 500):
-                sb("POST", "card_prices", {"on_conflict": "card_id,date"}, rows[i:i + 500],
-                   prefer="resolution=ignore-duplicates,return=minimal")
+            # Her derecenin geçmişi: ebay/.../<psa10|bgs9_5|cgc10...>
+            per_grade = {}
+            for pth, ser in found:
+                if not pth or "ebay" not in [x.lower() for x in pth]:
+                    continue
+                key = next((x.lower() for x in reversed(pth) if GRADE_KEY.match(x.lower())), None)
+                if key and len(ser) > len(per_grade.get(key, {})):
+                    per_grade[key] = ser
+            dates = sorted((set(raw) | set(p10) | set(p9) | {d for ser in per_grade.values() for d in ser}) - {TODAY})
+            rows = []
+            for dt in dates:
+                g = {k: {"p": ser[dt]} for k, ser in per_grade.items() if ser.get(dt) is not None} or None
+                if raw.get(dt) is None and p10.get(dt) is None and p9.get(dt) is None and not g:
+                    continue
+                rows.append({"card_id": c["id"], "date": dt, "raw": raw.get(dt), "psa10": p10.get(dt),
+                             "psa9": p9.get(dt), "grades": g})
+            # Yeni günler tam satır olarak eklenir; var olan günlere (günlük fiyat satırları dahil)
+            # yalnızca derece verisi eklenir, mevcut ham/PSA değerlerine dokunulmaz.
+            have = {r["date"] for r in (sb("GET", "card_prices", {"select": "date", "card_id": f"eq.{c['id']}", "limit": "5000"}) or [])}
+            new_rows = [r for r in rows if r["date"] not in have]
+            upd_rows = [{"card_id": r["card_id"], "date": r["date"], "grades": r["grades"]} for r in rows if r["date"] in have and r["grades"]]
+            for chunk in (new_rows, upd_rows):
+                for i in range(0, len(chunk), 500):
+                    write_prices(chunk[i:i + 500])
             if rows:
                 done_ids.add(c["id"])
                 tried.pop(c["id"], None)
@@ -670,7 +731,7 @@ def backfill_history(budget):
         pass
     finally:
         sb("POST", "job_state", {"on_conflict": "key"},
-           [{"key": "backfill:v1", "value": {"done": sorted(done_ids), "tried": {str(k): v for k, v in tried.items()}}, "updated_at": datetime.now(timezone.utc).isoformat()}],
+           [{"key": BACKFILL_KEY, "value": {"done": sorted(done_ids), "tried": {str(k): v for k, v in tried.items()}}, "updated_at": datetime.now(timezone.utc).isoformat()}],
            prefer="resolution=merge-duplicates,return=minimal")
     return n
 
