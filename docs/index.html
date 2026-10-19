@@ -3,15 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Holotique · Kart portföyü</title>
-<meta name="description" content="TCG koleksiyonunu bir yatırım portföyü gibi izle: ham ve PSA fiyatları, fiyat geçmişi, kur etkisi ve grading hesabı.">
+<title>Holotique · Kart fiyatları ve arama</title>
+<meta name="description" content="Pokemon, Japon Pokemon, One Piece ve Lorcana kartlarının güncel piyasa fiyatları, görselleri ve PSA fiyatları. Üyelik gerekmez.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
-/* Layout: collector's terminal — portfolio chart up top, holdings ledger left, card dossier right. Boldness lives in one place: the holo foil edge on graded slabs. */
+/* Layout: a catalog counter — one big search line, game chips, a grid of cards like a binder page, a dossier sheet on tap. */
 :root{
   --bg:#EEF1F5; --surface:#FFFFFF; --surface-2:#F6F8FB; --ink:#121A26; --muted:#5A6577; --faint:#8A94A6; --line:#DDE2EA;
   --accent:#2B47D6; --accent-ink:#FFFFFF; --accent-soft:#E5E9FC; --chart:#2B47D6; --chart-fill:rgba(43,71,214,.12);
@@ -44,18 +43,12 @@ h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance}
 button,input,select{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
 a{color:var(--accent)}
-.btn{font:600 .88rem var(--f-body);background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:9px 14px;cursor:pointer;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;font:600 .88rem var(--f-body);background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:9px 14px;cursor:pointer;white-space:nowrap;text-decoration:none}
 .btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
-.btn.quiet{background:var(--surface-2);color:var(--ink);border:1px solid var(--line)}
-.btn.danger{background:var(--bad-soft);color:var(--bad)}
-.btn[disabled]{opacity:.55;cursor:default}
-input,select{background:var(--surface-2);border:1px solid var(--line);border-radius:7px;padding:8px 10px;width:100%;min-width:0}
-label.f{display:flex;flex-direction:column;gap:4px;font-size:.76rem;color:var(--muted);font-weight:500;min-width:0}
 
-/* top bar */
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);margin:0 calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px))}
 .top .wrap{display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap}
-.brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto;text-decoration:none;color:inherit}
 .mark{width:30px;height:30px;border-radius:50%;background:radial-gradient(circle,var(--accent) 0 3px,transparent 4px),repeating-radial-gradient(circle,transparent 0 5px,var(--line) 5px 6px);position:relative;overflow:hidden;border:1px solid var(--line)}
 .mark::after{content:"";position:absolute;inset:0;background:conic-gradient(from 0deg,transparent 0 300deg,color-mix(in srgb,var(--accent) 55%,transparent) 360deg);animation:sweep 4s linear infinite}
 @keyframes sweep{to{transform:rotate(360deg)}}
@@ -65,631 +58,357 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:.76rem;color:var(--
 .nav a{color:var(--muted);text-decoration:none;font-weight:600;font-size:.88rem;padding:6px 10px;border-radius:7px}
 .nav a:hover{background:var(--surface)}
 .nav a[aria-current="page"]{color:var(--ink);background:var(--surface);border:1px solid var(--line)}
-.seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:3px;gap:2px}
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:3px;gap:2px;flex-wrap:wrap}
 .seg button{border:0;background:transparent;padding:5px 9px;border-radius:6px;cursor:pointer;font:600 .78rem var(--f-mono);color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .ccy-fixed{font:600 .78rem var(--f-mono);background:var(--accent);color:var(--accent-ink);border-radius:6px;padding:7px 9px}
 .ccy{display:flex;align-items:center;gap:6px}
-.who{display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--muted)}
-.who button{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:5px 9px;cursor:pointer;font-size:.8rem}
 
-/* auth */
-.auth{max-width:440px;margin:56px auto 0;padding:28px;display:flex;flex-direction:column;gap:16px}
-.auth h2{font-size:1.6rem;letter-spacing:-.01em}
-.auth p{margin:0}
-.auth form{display:flex;flex-direction:column;gap:12px}
-.tabs{display:flex;gap:4px;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:3px}
-.tabs button{flex:1;border:0;background:transparent;padding:7px;border-radius:7px;cursor:pointer;font-weight:600;font-size:.86rem;color:var(--muted)}
-.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
-.msg{font-size:.86rem;padding:10px 12px;border-radius:8px}
-.msg.ok{background:var(--good-soft);color:var(--good)} .msg.err{background:var(--bad-soft);color:var(--bad)} .msg.info{background:var(--accent-soft);color:var(--ink)}
-.linkbtn{background:none;border:0;color:var(--accent);cursor:pointer;padding:0;font-size:.85rem;text-align:left}
-.lock{font-size:.8rem;color:var(--muted);display:flex;gap:8px;align-items:flex-start}
+.searchbar{margin:28px 0 14px;display:flex;flex-direction:column;gap:12px}
+.searchbar h2{font-size:clamp(1.5rem,4vw,2.2rem);letter-spacing:-.02em}
+.searchbar p{margin:0;color:var(--muted);max-width:62ch}
+.qbox{display:flex;align-items:center;gap:10px;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:6px 6px 6px 16px;box-shadow:var(--shadow)}
+.qbox:focus-within{border-color:var(--accent)}
+.qbox svg{flex:none;color:var(--faint)}
+.qbox input{flex:1;min-width:0;border:0;background:transparent;font-size:1.08rem;padding:10px 0;outline:none}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 12px;font-weight:600;font-size:.84rem;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.meta{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 12px;font-size:.84rem;color:var(--muted)}
 
-/* hero */
-.hero{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:16px;margin-top:20px}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
-.stats{padding:20px;display:flex;flex-direction:column;gap:16px}
-.value-big{font-family:var(--f-display);font-weight:700;font-size:2.5rem;letter-spacing:-.02em;line-height:1.05}
-.value-sec{font-size:.95rem;color:var(--muted);margin-top:4px}
-.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px;border-top:1px solid var(--line);padding-top:14px}
-.kpi{display:flex;flex-direction:column;gap:2px;min-width:0}
-.kpi .v{font-size:1.02rem;font-weight:500}
-.kpi .s{font-size:.76rem;color:var(--muted)}
-.mix{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--line)}
-.mix span{height:100%}
-.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.78rem;color:var(--muted);margin-top:6px}
-.legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
-.chartp{padding:16px 18px 10px;display:flex;flex-direction:column;min-width:0}
-.chart-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-.chart-head h2{font-size:1.02rem;font-weight:700}
-.chart-box{position:relative;margin-top:8px;flex:1;min-height:220px}
-.chart-box svg{display:block;width:100%;height:100%}
-.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font:500 .76rem var(--f-mono);padding:6px 8px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-115%);opacity:0;transition:opacity .1s;z-index:2}
-.tip.on{opacity:1}
-.note{font-size:.8rem;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;cursor:pointer;text-align:left;box-shadow:var(--shadow);transition:transform .12s ease,border-color .12s ease}
+.card:hover{transform:translateY(-2px);border-color:var(--accent)}
+@media (prefers-reduced-motion:reduce){.card{transition:none}.card:hover{transform:none}}
+.art{aspect-ratio:63/88;border-radius:8px;background:var(--surface-2);overflow:hidden;max-width:100%;display:flex;align-items:center;justify-content:center}
+.art img{width:100%;height:100%;object-fit:contain;display:block}
+.art .ph{font-size:.75rem;color:var(--faint);padding:8px;text-align:center}
+.cname{font-weight:600;line-height:1.25;font-size:.92rem;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.cset{font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow{display:flex;justify-content:space-between;align-items:baseline;gap:4px 6px;margin-top:auto;flex-wrap:wrap}
+.price{font:600 1rem var(--f-mono)}
+.sec{font-size:.74rem;color:var(--muted)}
+.tag{display:inline-block;font-size:.66rem;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.recent{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:.82rem}
+.recent .lbl{color:var(--faint);font-weight:600;margin-right:2px}
+.rq{display:inline-flex;align-items:center;border:1px dashed var(--line);border-radius:999px;background:transparent;color:var(--ink);font-size:.82rem}
+.rq button{border:0;background:transparent;color:inherit;cursor:pointer;padding:5px 4px 5px 11px;font:inherit}
+.rq button+button{padding:5px 9px 5px 4px;color:var(--faint)}
+.rq button+button:hover{color:var(--ink)}
+.linkbtn{border:0;background:transparent;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:.8rem;padding:4px}
+.shelf{margin:4px 0 20px}
+.shelf-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px}
+.shelf-h h3{font-size:1.02rem}
+.strip{display:grid;grid-auto-flow:column;grid-auto-columns:128px;gap:10px;overflow-x:auto;padding:2px 2px 10px;scroll-snap-type:x proximity;overscroll-behavior-x:contain}
+.strip .card{scroll-snap-align:start;padding:8px;gap:6px}
+.strip .cname{font-size:.82rem}
+.strip .price{font-size:.88rem}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.setpick{position:relative;display:flex;gap:4px;min-width:0;max-width:100%}
+.setbtn{max-width:min(420px,calc(100vw - 90px));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.setbtn[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.chip.x2{padding:6px 10px}
+.pop{position:absolute;top:calc(100% + 6px);left:0;z-index:15;width:min(420px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(10,14,22,.18);padding:8px}
+.pop input{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);padding:9px 10px;font-size:.95rem;outline:none}
+.pop input:focus{border-color:var(--accent)}
+.setlist{max-height:min(360px,55vh);overflow:auto;margin-top:6px;display:flex;flex-direction:column}
+.setlist button{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;text-align:left;border:0;background:transparent;border-radius:8px;padding:8px;cursor:pointer;color:var(--ink)}
+.setlist button:hover,.setlist button:focus-visible{background:var(--surface-2)}
+.setlist .sn{font-weight:600;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.setlist .sm{grid-column:1;font-size:.74rem;color:var(--muted)}
+.setlist .sc{grid-row:1/3;grid-column:2;align-self:center;font:500 .76rem var(--f-mono);color:var(--faint)}
+.sortsel{display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--muted)}
+.sortsel select{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 10px;font:600 .84rem var(--f-body,inherit)}
+.hint{font-size:.78rem;color:var(--faint)}
+.facets{display:flex;gap:6px;flex-wrap:nowrap;align-items:center;margin:-4px 0 12px;font-size:.82rem;overflow-x:auto;padding-bottom:6px;overscroll-behavior-x:contain}
+.facets>*{flex:none}
+.facets .lbl{color:var(--faint);font-weight:600;margin-right:2px}
+.facet{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 11px;cursor:pointer;color:var(--ink);font-size:.82rem;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.facet b{font:500 .76rem var(--f-mono);color:var(--faint);margin-left:4px}
+.facet:hover{border-color:var(--accent)}
+.sethead{grid-column:1/-1;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:10px 0 -2px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.sethead:first-child{margin-top:0}
+.sethead h4{font-size:1rem}
+.sethead span{font-size:.78rem;color:var(--muted)}
+.sethead button{margin-left:auto}
+.more{display:flex;justify-content:center;margin:18px 0 4px}
+.empty{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:30px;text-align:center;color:var(--muted)}
+.empty h3{color:var(--ink);margin-bottom:6px}
 
-/* main */
-.main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,380px);gap:16px;margin-top:16px;align-items:start}
-.ledger{padding:6px 0 4px}
-.ledger-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 18px 8px;flex-wrap:wrap}
-.ledger-head h2{font-size:1.02rem;font-weight:700}
-.ledger-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.ledger-tools select{width:auto;padding:6px 8px;font-size:.82rem}
-.rows{display:flex;flex-direction:column}
-.row{display:grid;grid-template-columns:52px minmax(0,1.6fr) minmax(0,.9fr) minmax(0,.8fr);gap:14px;align-items:center;padding:10px 18px;border-top:1px solid var(--line);cursor:pointer;background:transparent;border-left:0;border-right:0;border-bottom:0;text-align:left;width:100%}
-.row:hover{background:var(--surface-2)}
-.row[aria-current="true"]{background:var(--accent-soft)}
-.thumb{width:52px;aspect-ratio:63/88;border-radius:5px;padding:2px;background:var(--line);max-width:100%}
-.thumb.slab{background:var(--foil)}
-.thumb img,.thumb .ph{width:100%;height:100%;object-fit:cover;border-radius:3px;display:block;background:var(--surface-2)}
-.nm{font-weight:600;line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.sub{font-size:.78rem;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chips{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap}
-.chip{font-size:.68rem;font-weight:600;padding:1px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
-.chip.grade{border-color:transparent;background:var(--ink);color:var(--bg)}
-.chip.warn{border-color:transparent;background:var(--warn-soft);color:var(--warn)}
-.chip.err{border-color:transparent;background:var(--bad-soft);color:var(--bad)}
-.chip.info{border-color:transparent;background:var(--accent-soft);color:var(--accent)}
-.px{text-align:right;min-width:0}
-.px .a{font-weight:500}
-.px .b{font-size:.78rem}
-.pill{display:inline-block;padding:1px 6px;border-radius:5px;font-size:.78rem}
-.pill.pos{background:var(--good-soft)} .pill.neg{background:var(--bad-soft)}
-.ledger-foot{padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:.82rem;color:var(--muted)}
-
-/* dossier */
-.dossier{position:sticky;top:calc(env(safe-area-inset-top,0px) + 70px);padding:18px;display:flex;flex-direction:column;gap:16px}
-.d-top{display:grid;grid-template-columns:120px minmax(0,1fr);gap:14px;align-items:start}
-.d-top .thumb{width:120px;border-radius:8px;padding:3px}
-.d-top .thumb img,.d-top .thumb .ph{border-radius:6px}
-.d-top h3{font-size:1.1rem;font-weight:700;line-height:1.2}
-.d-price{font-family:var(--f-display);font-size:1.7rem;font-weight:700;margin-top:6px;line-height:1.1}
-.grades{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.grades div{background:var(--surface-2);border-radius:8px;padding:8px 10px;min-width:0;border:1px solid transparent}
-.grades div.mine{border-color:var(--accent)}
-.grades .v{font-size:.86rem;white-space:nowrap}
-.grades .c{font-size:.7rem;color:var(--muted)}
-.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 12px;font-size:.84rem}
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(10,14,22,.5);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:calc(env(safe-area-inset-top,0px) + 32px) max(16px,env(safe-area-inset-right,0px)) 32px max(16px,env(safe-area-inset-left,0px))}
+.sheet .panel{width:100%;max-width:860px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:22px;position:relative}
+.x{position:absolute;top:12px;right:12px;border:0;background:var(--surface-2);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:1.15rem;color:var(--muted)}
+.big{border-radius:12px;padding:3px;background:var(--line);align-self:start}
+.big.foil{background:var(--foil)}
+.big .art{border-radius:10px}
+.dinfo{display:flex;flex-direction:column;gap:14px;min-width:0}
+.dinfo h3{font-size:1.4rem;line-height:1.15;padding-right:36px}
+.facts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;font-size:.88rem}
 .facts span:nth-child(odd){color:var(--muted)}
-.mini-chart{height:150px;position:relative}
-.mini-chart svg{width:100%;height:100%;display:block}
-.desk{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:10px}
-.desk h3{font-size:.98rem}
-.desk .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.desk input{font:500 .88rem var(--f-mono);padding:6px 8px}
-.desk input[readonly]{color:var(--muted)}
-.verdict{border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:5px}
-.verdict.go{background:var(--good-soft)} .verdict.no{background:var(--bad-soft)}
-.verdict .big{font-family:var(--f-display);font-weight:700;font-size:1.3rem}
-.kv{display:flex;justify-content:space-between;gap:8px;font-size:.84rem}
-.actions{display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:14px}
-
-/* add / import */
-.sheet{position:fixed;inset:0;z-index:20;background:rgba(10,14,22,.45);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:calc(env(safe-area-inset-top,0px) + 40px) max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px))}
-.sheet .panel{width:100%;max-width:760px;padding:22px;display:flex;flex-direction:column;gap:16px}
-.sheet-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.sheet-head h2{font-size:1.2rem}
-.x{border:0;background:var(--surface-2);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:1.1rem;color:var(--muted)}
-.form-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.span2{grid-column:span 2}
-.drop{border:1.5px dashed var(--line);border-radius:12px;padding:22px;text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center;background:var(--surface-2)}
-.drop.over{border-color:var(--accent);background:var(--accent-soft)}
-.preview{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
-.preview table{border-collapse:collapse;width:100%;min-width:640px;font-size:.8rem}
-.preview th{text-align:left;font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:7px 9px;border-bottom:1px solid var(--line);background:var(--surface-2)}
-.preview td{padding:6px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
-.empty{padding:34px 24px;display:flex;flex-direction:column;gap:14px;align-items:flex-start}
-.empty h2{font-size:1.4rem}
-.empty .cta{display:flex;gap:10px;flex-wrap:wrap}
-footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-direction:column;gap:4px}
-
-.fbar{display:flex;align-items:center;gap:6px;margin-top:20px;overflow-x:auto;padding:2px 2px 6px;overscroll-behavior-x:contain}
-.fbar>*{flex:none}
-.ftab{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 14px;font-weight:600;font-size:.86rem;cursor:pointer;display:inline-flex;align-items:center;gap:7px;max-width:240px}
-.ftab span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ftab b{font:500 .74rem var(--f-mono);color:var(--faint)}
-.ftab[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.ftab[aria-pressed="true"] b{color:inherit;opacity:.7}
-.ftab.new{border-style:dashed;color:var(--accent);background:transparent}
-.fsub{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:.84rem;color:var(--muted);margin-top:4px}
-.fchips{display:flex;gap:6px;flex-wrap:wrap}
-.fchip{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:4px 10px;font-size:.78rem;font-weight:600;cursor:pointer}
-.fchip[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
-.pick-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.pick-tools input[type=search]{flex:1 1 200px;width:auto}
-.pick-tools select{width:auto}
-.pick-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:.84rem;color:var(--muted)}
-.pick-bar .linkbtn{font-size:.84rem}
-.pick-list{border:1px solid var(--line);border-radius:10px;max-height:min(420px,50vh);overflow:auto}
-.pick{display:grid;grid-template-columns:auto 40px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 12px;border-top:1px solid var(--line);cursor:pointer}
-.pick:first-child{border-top:0}
-.pick:hover{background:var(--surface-2)}
-.pick input{width:18px;height:18px;accent-color:var(--accent);margin:0}
-.pick .thumb{width:40px}
-.pick .nm{font-weight:600;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pick .sub{font-size:.76rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pick .pr{font:500 .82rem var(--f-mono);text-align:right}
-.sheet-foot{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.sheet-foot .grow{flex:1}
-@media (max-width:980px){.main{grid-template-columns:1fr}.dossier{position:static}}
-@media (max-width:760px){.top{position:static}.hero{grid-template-columns:1fr}.row{grid-template-columns:44px minmax(0,1fr) minmax(0,auto)}.row .px.val{display:none}.thumb{width:44px}.value-big{font-size:2.1rem}.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:420px){.d-top{grid-template-columns:96px minmax(0,1fr)}.d-top .thumb{width:96px}.grades{grid-template-columns:repeat(3,minmax(0,1fr))}.form-grid{grid-template-columns:1fr}.span2{grid-column:auto}}
+.prices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.prices div{background:var(--surface-2);border-radius:10px;padding:10px 12px;min-width:0}
+.prices .v{font:600 1.05rem var(--f-mono);white-space:nowrap}
+.prices .c{font-size:.72rem;color:var(--muted)}
+.mini{height:150px;position:relative}
+.mini svg{width:100%;height:100%;display:block}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.note{font-size:.8rem;color:var(--muted)}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font:500 .76rem var(--f-mono);padding:6px 8px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-115%);opacity:0}
+.tip.on{opacity:1}
+footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+@media (max-width:720px){.sheet .panel{grid-template-columns:1fr}.big{max-width:240px}.grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}.top{position:static}}
 </style>
 </head>
 <body>
 <header class="top">
   <div class="wrap">
-    <div class="brand"><span class="mark" aria-hidden="true"></span><h1>Holotique</h1></div>
-    <nav class="nav" aria-label="Sayfalar"><a href="ara.html">Kart ara</a><a href="./" aria-current="page">Portföyüm</a></nav>
-    <div class="ccy" id="ccyBox" role="group" aria-label="İkinci para birimi" hidden>
-      <span class="ccy-fixed" title="Ana fiyat her zaman USD">USD</span>
-      <div class="seg" id="ccySeg"></div>
-    </div>
-    <div class="who" id="who" hidden><span id="whoMail"></span><button type="button" id="signOut">Çıkış</button></div>
+    <a class="brand" href="./"><span class="mark" aria-hidden="true"></span><h1>Holotique</h1></a>
+    <nav class="nav" aria-label="Sayfalar"><a href="./" aria-current="page">Kart ara</a><a href="portfoy.html">Portföyüm</a></nav>
+    <div class="ccy" role="group" aria-label="İkinci para birimi"><span class="ccy-fixed" title="Ana fiyat her zaman USD">USD</span><div class="seg" id="ccySeg"></div></div>
   </div>
 </header>
-<main class="wrap" id="app"><div class="panel auth"><h2>Yükleniyor</h2></div></main>
-
+<main class="wrap">
+  <section class="searchbar">
+    <h2>Kartın ne kadar ediyor?</h2>
+    <p>Pokemon, Japon Pokemon, One Piece ve Lorcana kartlarını adıyla, setiyle ya da numarasıyla ara. Fiyatlar her gün güncellenir, üyelik gerekmez.</p>
+    <label class="qbox" for="q">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Kart adı, set ya da numara" aria-label="Kart ara">
+    </label>
+    <div class="chips" id="games" role="group" aria-label="Oyun"></div>
+    <div class="tools">
+      <div class="setpick">
+        <button type="button" class="chip setbtn" id="setBtn" aria-haspopup="listbox" aria-expanded="false" aria-pressed="false">Set / seri: tümü ▾</button>
+        <button type="button" class="chip x2" id="setClear" hidden aria-label="Set filtresini kaldır">×</button>
+        <div class="pop" id="setPop" hidden>
+          <input id="setQ" type="search" placeholder="Set adı, kodu ya da yılı" autocomplete="off" aria-label="Set ara">
+          <div class="setlist" id="setList" role="listbox" aria-label="Setler"></div>
+        </div>
+      </div>
+      <label class="sortsel">Sırala
+        <select id="sort">
+          <option value="relevance">En uygun</option>
+          <option value="value">En değerli</option>
+          <option value="value_asc">En ucuz</option>
+          <option value="new">Yeni setler önce</option>
+          <option value="number">Set ve kart numarası</option>
+        </select>
+      </label>
+    </div>
+    <div class="hint">İpucu: ad + numara <b>charizard 4/102</b> · ad + set <b>umbreon evolving</b> · numara <b>OP05-119</b> · set kodu <b>sv8a</b></div>
+    <div class="recent" id="recentQ" hidden></div>
+  </section>
+  <section class="shelf" id="shelf" hidden aria-labelledby="shelfH">
+    <div class="shelf-h"><h3 id="shelfH">Son baktıkların</h3><button type="button" class="linkbtn" id="shelfClear">Temizle</button></div>
+    <div class="strip" id="strip"></div>
+  </section>
+  <div class="meta"><span id="metaText" aria-live="polite">Yükleniyor</span><span id="dateText"></span></div>
+  <div class="facets" id="facets" hidden></div>
+  <section class="grid" id="grid" aria-label="Sonuçlar"></section>
+  <div class="more" id="more" hidden><button type="button" class="btn ghost" id="moreBtn">Daha fazla göster</button></div>
+  <footer>
+    <span>Ham fiyatlar: TCGplayer piyasa fiyatı (TCGCSV aracılığıyla), günlük. PSA fiyatları: eBay satışları (PokemonPriceTracker), yalnızca Holotique portföylerinde takip edilen kartlar için. Yatırım tavsiyesi değildir.</span>
+  </footer>
+</main>
+<script>
+// Eski onay / şifre e-postalarındaki linkler ana sayfaya gelirse portföy sayfasına aktar
+if(/access_token=|type=(signup|recovery|magiclink)|error_description=/.test(location.hash+location.search)){location.replace('portfoy.html'+location.search+location.hash);}
+</script>
 <script>
 (function(){
   'use strict';
-  var SB_URL='https://bsifvfcnktofugaspsls.supabase.co';
-  var SB_KEY='sb_publishable_IFtbpaxlRhYiB7kjJydiIA_ilx0aRI1';
+  var SB_URL='https://bsifvfcnktofugaspsls.supabase.co',SB_KEY='sb_publishable_IFtbpaxlRhYiB7kjJydiIA_ilx0aRI1';
+  var GAMES=[['','Tümü'],['Pokemon','Pokemon'],['Pokemon JP','Pokemon (Japonca)'],['One Piece','One Piece'],['Lorcana','Lorcana']];
   var CCY=[{c:'TRY',s:'₺',d:0},{c:'EUR',s:'€',d:2},{c:'GBP',s:'£',d:2},{c:'JPY',s:'¥',d:0},{c:'CNY',s:'CN¥',d:0}];
-  var GRADE_COLORS={'PSA 10':'#2B47D6','PSA 9':'#6E56CF','Ham':'#D9961A'};
-  var CO_COLORS={PSA:'#8C9BE8',BGS:'#0F766E',CGC:'#C2410C',SGC:'#4B5563',TAG:'#9333EA',ACE:'#0284C7'};
-  function gradeColor(g){return GRADE_COLORS[g]||CO_COLORS[String(g).split(' ')[0]]||'#888';}
-  // Kart ekleme formundaki derece seçenekleri (eBay satış verisi olan dereceler)
-  var GRADE_OPTS=[['Ham','Ham (derecesiz)']].concat(
-    ['10','9','8.5','8','7','6','5','4','3','2','1'].map(function(n){return ['PSA '+n,'PSA '+n]}),
-    [['BGS 10 Black Label','BGS 10 Black Label']],['10','9.5','9','8.5','8'].map(function(n){return ['BGS '+n,'BGS '+n]}),
-    [['CGC 10 Pristine','CGC 10 Pristine']],['10','9.5','9','8.5','8','7.5','7','6.5','6'].map(function(n){return ['CGC '+n,'CGC '+n]}),
-    [['SGC 10 Pristine','SGC 10 Pristine']],['10','9.5','9','8'].map(function(n){return ['SGC '+n,'SGC '+n]}),
-    ['10','9','8.5','8'].map(function(n){return ['TAG '+n,'TAG '+n]}),
-    ['10','9','8'].map(function(n){return ['ACE '+n,'ACE '+n]}));
-  // Pristine / Black Label satışları fiyat kaynağında ayrı tutulmuyor; aynı şirketin 10 fiyatı yaklaşık değer olarak kullanılır.
-  function premiumGrade(g){return /\b(pristine|black\s*label)\b/i.test(String(g||''));}
-  var MONTHS=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
-  var CONF={high:'yüksek',medium:'orta',low:'düşük'};
+  var CONF={high:'yüksek',medium:'orta',low:'düşük'},MONTHS=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
   var store={get:function(k){try{return localStorage.getItem(k)}catch(e){return null}},set:function(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
-  var S={ccy:store.get('kr-ccy')||'TRY',range:store.get('kr-range')||'all',sort:store.get('kr-sort')||'value',sel:null,user:null,holdings:[],prices:{},fx:[],authTab:'in',folders:[],fitems:{},folder:store.get('kr-folder')||'',foldersOk:true};
+  var qs=new URLSearchParams(location.search);
+  var S={q:qs.get('q')||'',g:qs.get('g')||'',gid:Number(qs.get('set'))||null,gname:'',sort:qs.get('sort')||'relevance',off:0,total:0,ccy:store.get('kr-ccy')||'TRY',fx:null,rows:[],seq:0,v2:true,sets:{}};
   if(!CCY.some(function(m){return m.c===S.ccy}))S.ccy='TRY';
-  var sb=window.supabase?window.supabase.createClient(SB_URL,SB_KEY):null;
-
-  // ---------- helpers ----------
+  var sb=window.supabase?window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true}}):null;
   function el(tag,attrs,kids){var e=document.createElement(tag);if(attrs)for(var k in attrs){var v=attrs[k];if(v==null||v===false)continue;if(k==='text')e.textContent=v;else if(k==='class')e.className=v;else if(k.slice(0,2)==='on')e.addEventListener(k.slice(2),v);else e.setAttribute(k,v===true?'':v);}(kids||[]).forEach(function(c){if(c!=null)e.appendChild(typeof c==='string'?document.createTextNode(c):c)});return e;}
   function meta(c){for(var i=0;i<CCY.length;i++)if(CCY[i].c===c)return CCY[i];return CCY[0];}
-  function usd(v,sign){if(v==null||!isFinite(v))return '—';return (sign&&v>0?'+':'')+(v<0?'−':'')+'$'+Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
-  function sec(v,sign){if(v==null||!isFinite(v))return '—';var m=meta(S.ccy);return (sign&&v>0?'+':'')+(v<0?'−':'')+m.s+Math.abs(v).toLocaleString('tr-TR',{minimumFractionDigits:m.d,maximumFractionDigits:m.d});}
-  function pct(v){if(v==null||!isFinite(v))return '—';return (v>0?'+':'')+(v<0?'−':'')+Math.abs(v).toFixed(1)+'%';}
-  function cls(v){return v>0?'pos':(v<0?'neg':'');}
+  function usd(v){if(v==null||!isFinite(v))return '—';v=Number(v);return '$'+v.toLocaleString('en-US',{minimumFractionDigits:v>=1000?0:2,maximumFractionDigits:v>=1000?0:2});}
+  function sec(v){var r=S.fx&&Number(S.fx.rates[S.ccy]);if(v==null||!r)return '';var m=meta(S.ccy);return '≈ '+m.s+(Number(v)*r).toLocaleString('tr-TR',{minimumFractionDigits:m.d,maximumFractionDigits:m.d});}
   function dfmt(iso){if(!iso)return '—';var p=String(iso).slice(0,10).split('-');return Number(p[2])+' '+MONTHS[Number(p[1])-1]+' '+p[0];}
-  function rateNow(){var f=S.fx[S.fx.length-1];return f?Number(f.rates[S.ccy]):NaN;}
-  function fxOn(date){var best=null;for(var i=0;i<S.fx.length;i++){if(S.fx[i].date<=date)best=S.fx[i].rates;else break;}return best?Number(best[S.ccy]):rateNow();}
-  // "BGS 9.5" → "bgs9_5", "PSA 10" → "psa10", "Ham" → "raw"
-  function gradeKey(g){if(g==='Ham')return 'raw';var m=String(g||'').trim().match(/^(PSA|BGS|CGC|SGC|TAG|ACE)\s*(\d+(?:\.5)?)(?:\s+(?:pristine|black\s*label))?$/i);return m?m[1].toLowerCase()+m[2].replace('.','_'):null;}
-  function gval(r,k){if(!r||!k)return null;if((k==='raw'||k==='psa10'||k==='psa9')&&r[k]!=null)return Number(r[k]);var g=r.grades&&r.grades[k];return g&&g.p!=null?Number(g.p):null;}
-  function gconf(r,k){if(!r)return null;if(k==='psa10')return r.psa10_conf;if(k==='psa9')return r.psa9_conf;var g=r.grades&&r.grades[k];return g?g.c:null;}
-  function gcount(r,k){if(!r)return null;if(k==='psa10')return r.psa10_n;if(k==='psa9')return r.psa9_n;var g=r.grades&&r.grades[k];return g?g.n:null;}
-  // Pokemon dışı kartlarda (katalog/TCGCSV) yalnızca ham fiyat var; dereceli kartlar ham değerle gösterilir.
-  function rawOnly(h){return !!(h.cards&&h.cards.source==='tcgcsv');}
-  function pkey(h){return rawOnly(h)?'raw':gradeKey(h.grade);}
-  function series(h){var rows=h.card_id?(S.prices[h.card_id]||[]):[],k=pkey(h);if(!k)return [];return rows.filter(function(r){return gval(r,k)!=null}).map(function(r){return [r.date,gval(r,k)]});}
-  function latest(h){var rows=h.card_id?(S.prices[h.card_id]||[]):[];return rows.length?rows[rows.length-1]:null;}
-  // Son fiyat: o derecenin en son kaydedilmiş değeri (her gün satış olmayabilir)
-  function price(h){var k=pkey(h),s=series(h);return k&&s.length?s[s.length-1][1]:null;}
-  function priced(h){return h.match_status==='matched'&&price(h)!=null;}
-  function changeOver(h,days){var s=series(h);if(s.length<2)return null;var last=s[s.length-1],t=new Date(last[0]+'T00:00:00Z');t.setUTCDate(t.getUTCDate()-days);var cut=t.toISOString().slice(0,10),base=null;for(var i=s.length-1;i>=0;i--){if(s[i][0]<=cut){base=s[i][1];break;}}return base?(last[1]-base)/base*100:null;}
-  function statusChip(h){
-    if(h.match_status==='pending')return el('span',{class:'chip info',text:'Eşleştiriliyor'});
-    if(h.match_status==='failed')return el('span',{class:'chip err',text:'Bulunamadı'});
-    if(h.match_status==='unsupported')return el('span',{class:'chip warn',text:'Desteklenmiyor'});
-    if(!pkey(h))return el('span',{class:'chip warn',text:'Derece desteklenmiyor'});
-    if(price(h)==null)return latest(h)&&pkey(h)!=='raw'?el('span',{class:'chip warn',title:'Bu kartın bu derecesi için son 6 ayda eBay satışı bulunamadı.',text:'Bu derecede satış yok'}):el('span',{class:'chip info',text:'Fiyat bekleniyor'});
-    if(rawOnly(h)&&h.grade!=='Ham')return el('span',{class:'chip warn',title:'Bu oyun için dereceli (PSA) fiyat kaynağı henüz yok; ham piyasa değeri gösteriliyor.',text:'Ham değer'});
-    if(premiumGrade(h.grade))return el('span',{class:'chip warn',title:'Fiyat kaynağı '+h.grade.replace(/\s+(pristine|black\s*label)/i,'')+' satışlarını '+h.grade.split(' ').slice(2).join(' ')+' ayrımı yapmadan veriyor. Gösterilen değer yaklaşıktır; gerçek değer genellikle daha yüksektir.',text:'Yaklaşık değer'});
-    if(h.match_note&&/kontrol et/.test(h.match_note))return el('span',{class:'chip warn',text:'Kontrol et'});
-    var c=gconf(latest(h),pkey(h));
-    if(c==='low')return el('span',{class:'chip warn',text:'Düşük güven'});
-    return null;
+  function jget(k){try{var v=JSON.parse(store.get(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return []}}
+  function jset(k,v){store.set(k,JSON.stringify(v))}
+  var RQ='kr-recent-q',RV='kr-recent-v',RQ_MAX=8,RV_MAX=16;
+  var VIEW_KEYS=['product_id','game','group_id','set_code','released','name','set_name','number','rarity','image','url','sub_type','market','low','price_date','psa9','psa9_conf','psa9_n','psa10','psa10_conf','psa10_n','tracked'];
+  function rememberQuery(q,g){q=(q||'').trim();if(q.length<2)return;var gid=S.gid||null,gname=S.gid?S.gname:'';var a=jget(RQ).filter(function(x){return !(x.q.toLowerCase()===q.toLowerCase()&&(x.g||'')===(g||'')&&(x.gid||null)===gid)});a.unshift({q:q,g:g||'',gid:gid,gname:gname});jset(RQ,a.slice(0,RQ_MAX));renderRecentQ();}
+  function rememberView(r){var o={};VIEW_KEYS.forEach(function(k){if(r[k]!=null)o[k]=r[k]});o.seen=new Date().toISOString();var a=jget(RV).filter(function(x){return x.product_id!==r.product_id});a.unshift(o);jset(RV,a.slice(0,RV_MAX));renderShelf();}
+  function gameLabel(g){var f=GAMES.find(function(x){return x[0]===g});return f?f[1]:g;}
+  var grid=document.getElementById('grid'),metaText=document.getElementById('metaText'),dateText=document.getElementById('dateText'),qi=document.getElementById('q');
+
+  function renderCcy(){var seg=document.getElementById('ccySeg');seg.innerHTML='';CCY.forEach(function(m){seg.appendChild(el('button',{type:'button','aria-pressed':String(S.ccy===m.c),text:m.c,onclick:function(){S.ccy=m.c;store.set('kr-ccy',m.c);renderCcy();renderGrid();renderShelf();}}));});}
+  function renderGames(){var box=document.getElementById('games');box.innerHTML='';GAMES.forEach(function(g){box.appendChild(el('button',{type:'button',class:'chip','aria-pressed':String(S.g===g[0]),text:g[1],onclick:function(){S.g=g[0];setSet(null,'');renderGames();renderRecentQ();renderShelf();search();}}));});}
+  function art(r){var a=el('div',{class:'art'});if(r.image){var i=el('img',{src:r.image,alt:r.name,loading:'lazy',decoding:'async'});i.onerror=function(){i.replaceWith(el('div',{class:'ph',text:'Görsel yok'}))};a.appendChild(i);}else a.appendChild(el('div',{class:'ph',text:'Görsel yok'}));return a;}
+
+  function renderRecentQ(){
+    var box=document.getElementById('recentQ'),a=jget(RQ);box.innerHTML='';
+    if(S.g)a=a.filter(function(x){return !x.g||x.g===S.g});
+    if(!a.length){box.hidden=true;return;}box.hidden=false;
+    box.appendChild(el('span',{class:'lbl',text:'Son aramalar'}));
+    a.forEach(function(x){box.appendChild(el('span',{class:'rq'},[
+      el('button',{type:'button',title:x.g?gameLabel(x.g)+' içinde':null,text:x.q+(x.gname?' · '+x.gname:(x.g&&!S.g?' · '+gameLabel(x.g):'')),onclick:function(){S.q=x.q;qi.value=x.q;if(x.g)S.g=x.g;setSet(x.gid||null,x.gname||'');renderGames();renderRecentQ();renderShelf();search();}}),
+      el('button',{type:'button','aria-label':x.q+' aramasını sil',text:'×',onclick:function(){jset(RQ,jget(RQ).filter(function(y){return !(y.q===x.q&&y.g===x.g&&(y.gid||null)===(x.gid||null))}));renderRecentQ();}})]));});
+    box.appendChild(el('button',{type:'button',class:'linkbtn',text:'Temizle',onclick:function(){jset(RQ,[]);renderRecentQ();}}));
+  }
+  function miniCard(r){return el('button',{type:'button',class:'card',onclick:function(){openCard(r)}},[art(r),el('div',{class:'cname',text:r.name}),el('div',{class:'cset',text:(r.number?r.number+' · ':'')+(r.set_name||'')}),el('div',{class:'price',text:usd(r.market)})]);}
+  function renderShelf(){
+    var shelf=document.getElementById('shelf'),strip=document.getElementById('strip'),a=jget(RV);
+    if(S.g)a=a.filter(function(x){return x.game===S.g});
+    strip.innerHTML='';
+    if(!a.length||S.q){shelf.hidden=true;return;}
+    shelf.hidden=false;document.getElementById('shelfH').textContent='Son baktıkların'+(S.g?' · '+gameLabel(S.g):'');
+    a.forEach(function(r){strip.appendChild(miniCard(r))});
+  }
+  document.getElementById('shelfClear').addEventListener('click',function(){var g=S.g;jset(RV,g?jget(RV).filter(function(x){return x.game!==g}):[]);renderShelf();});
+
+  function yr(d){return d?String(d).slice(0,4):'';}
+  function card(r){
+    return el('button',{type:'button',class:'card',onclick:function(){openCard(r)}},[
+      art(r),
+      el('div',{class:'cname',text:r.name}),
+      el('div',{class:'cset',text:(r.number?r.number+' · ':'')+(r.set_name||'')}),
+      el('div',{class:'prow'},[el('div',null,[el('div',{class:'price',text:usd(r.market)}),el('div',{class:'sec',text:sec(r.market)})]),r.psa10!=null?el('span',{class:'tag',text:'PSA 10 '+usd(r.psa10)}):null])
+    ]);
+  }
+  function effSort(){return S.sort==='relevance'&&S.gid&&!S.q?'number':S.sort;}
+  function renderGrid(){
+    grid.innerHTML='';
+    if(!S.rows.length){
+      var msg=S.q||S.gid?['Sonuç bulunamadı',S.gid?'Bu sette aramana uyan kart yok. Set filtresini kaldırıp tekrar dene.':'Daha az kelimeyle dene: yalnızca kart adı, ya da ad + numara (ör. charizard 4).']:['Katalog hazırlanıyor','Kart listesi her gece güncellenir. Biraz sonra tekrar dene.'];
+      grid.appendChild(el('div',{class:'empty',style:'grid-column:1/-1'},[el('h3',{text:msg[0]}),el('p',{style:'margin:0',text:msg[1]})]));
+      document.getElementById('more').hidden=true;return;}
+    var heads=(effSort()==='new'||effSort()==='number')&&!S.gid,last=null;
+    S.rows.forEach(function(r){
+      if(heads&&r.group_id!==last){last=r.group_id;
+        grid.appendChild(el('div',{class:'sethead'},[el('h4',{text:r.set_name||'—'}),el('span',{text:[r.set_code,yr(r.released),S.g?'':r.game].filter(Boolean).join(' · ')}),
+          r.group_id?el('button',{type:'button',class:'linkbtn',text:'Bu sette ara',onclick:function(){setSet(r.group_id,r.set_name);search();}}):null]));}
+      grid.appendChild(card(r));});
+    document.getElementById('more').hidden=!(S.v2&&S.rows.length<S.total&&S.rows.length<5000);
   }
 
-  // ---------- auth ----------
-  function renderAuth(message){
-    document.getElementById('ccyBox').hidden=true;document.getElementById('who').hidden=true;
-    var app=document.getElementById('app');app.innerHTML='';
-    var box=el('section',{class:'panel auth'});
-    box.appendChild(el('div',null,[el('h2',{text:'Koleksiyonunu portföy gibi izle'}),el('p',{class:'muted',style:'margin-top:6px',text:'Ham ve PSA fiyatları her gün güncellenir. Alış fiyatların ve sertifika numaraların yalnızca sana görünür.'})]));
-    var tabs=el('div',{class:'tabs',role:'tablist'});
-    [['in','Giriş yap'],['up','Hesap aç']].forEach(function(t){tabs.appendChild(el('button',{type:'button',role:'tab','aria-selected':String(S.authTab===t[0]),text:t[1],onclick:function(){S.authTab=t[0];renderAuth();}}));});
-    box.appendChild(tabs);
-    var msg=el('div',{class:'msg',hidden:true,'aria-live':'polite'});
-    function say(kind,t){msg.className='msg '+kind;msg.textContent=t;msg.hidden=false;}
-    var email=el('input',{id:'authEmail',type:'email',autocomplete:'email',required:true,placeholder:'ornek@eposta.com'});
-    var pass=el('input',{id:'authPass',type:'password',autocomplete:S.authTab==='in'?'current-password':'new-password',required:true,minlength:'8',placeholder:'En az 8 karakter'});
-    var submit=el('button',{class:'btn',type:'submit',text:S.authTab==='in'?'Giriş yap':'Hesap aç'});
-    var form=el('form',null,[el('label',{class:'f',for:'authEmail'},['E-posta',email]),el('label',{class:'f',for:'authPass'},['Şifre',pass]),submit]);
-    form.addEventListener('submit',function(e){e.preventDefault();if(!sb)return say('err','Bağlantı kurulamadı. Sayfayı yenile.');submit.disabled=true;
-      var p=S.authTab==='in'?sb.auth.signInWithPassword({email:email.value.trim(),password:pass.value}):sb.auth.signUp({email:email.value.trim(),password:pass.value,options:{emailRedirectTo:location.origin+location.pathname}});
-      p.then(function(r){submit.disabled=false;if(r.error)return say('err',trErr(r.error.message));if(S.authTab==='up'&&!r.data.session)say('ok','Hesabın oluşturuldu. E-postana gelen onay bağlantısına tıkla, sonra buradan giriş yap.');});});
-    box.appendChild(form);
-    box.appendChild(el('button',{class:'linkbtn',type:'button',text:'Şifreni mi unuttun? E-postana giriş bağlantısı gönderelim',onclick:function(){var m=email.value.trim();if(!m)return say('info','Önce e-posta adresini yaz.');sb.auth.signInWithOtp({email:m,options:{shouldCreateUser:false,emailRedirectTo:location.origin+location.pathname}}).then(function(r){if(r.error)return say('err',trErr(r.error.message));say('ok','Giriş bağlantısı e-postana gönderildi.');});}}));
-    box.appendChild(msg);
-    if(message)say(message[0],message[1]);
-    box.appendChild(el('div',{class:'lock'},[el('span',{'aria-hidden':'true',text:'🔒'}),el('span',{text:'Portföyün veritabanı düzeyinde korunur: başka hiçbir kullanıcı senin kartlarını, alış fiyatlarını ya da PSA numaralarını göremez.'})]));
-    app.appendChild(box);
-  }
-  function trErr(m){m=String(m||'');if(/Invalid login/i.test(m))return 'E-posta ya da şifre hatalı.';if(/not confirmed/i.test(m))return 'E-posta adresin henüz onaylanmadı. Gelen kutundaki bağlantıya tıkla.';if(/already registered|already been registered/i.test(m))return 'Bu e-postayla zaten bir hesap var. Giriş yap sekmesini kullan.';if(/rate limit/i.test(m))return 'Çok fazla deneme yapıldı. Biraz bekleyip tekrar dene.';if(/at least|Password should/i.test(m))return 'Şifre en az 8 karakter olmalı.';return m;}
-
-  // ---------- data ----------
-  function load(){
-    var app=document.getElementById('app');
-    return sb.from('holdings').select('*, cards(*)').order('created_at').then(function(r){
-      if(r.error)throw r.error;S.holdings=r.data||[];
-      var ids=Array.from(new Set(S.holdings.map(function(h){return h.card_id}).filter(Boolean)));
-      var since=new Date(Date.now()-400*864e5).toISOString().slice(0,10);
-      // Supabase tek istekte en fazla 1000 satır döndürür; fiyat geçmişi sayfa sayfa okunur.
-      function pageAll(from,acc){return sb.from('card_prices').select('*').in('card_id',ids).gte('date',since).order('date').order('card_id').range(from,from+999).then(function(r){if(r.error)return r;acc=acc.concat(r.data||[]);return (r.data||[]).length<1000||from>=60000?{data:acc}:pageAll(from+1000,acc);});}
-      var pp=ids.length?pageAll(0,[]):Promise.resolve({data:[]});
-      var fp=sb.from('fx_rates').select('*').gte('date',since).order('date').limit(1000);
-      return Promise.all([pp,fp,loadFolders()]);
-    }).then(function(res){
-      if(res[0].error)throw res[0].error;if(res[1].error)throw res[1].error;
-      S.prices={};(res[0].data||[]).forEach(function(p){(S.prices[p.card_id]=S.prices[p.card_id]||[]).push(p)});
-      S.fx=res[1].data||[];render();
-      try{var qp=new URLSearchParams(location.search),ek=qp.get('ekle');if(ek){history.replaceState(null,'',location.pathname);openAdd(null,JSON.parse(ek));}}catch(e){}
-    }).catch(function(e){app.innerHTML='';app.appendChild(el('div',{class:'panel empty',style:'margin-top:20px'},[el('h2',{text:'Veriler okunamadı'}),el('p',{class:'muted',text:String(e.message||e)})]));});
+  function renderFacets(list){
+    var box=document.getElementById('facets');box.innerHTML='';
+    if(!list||list.length<2||S.gid){box.hidden=true;return;}
+    box.hidden=false;box.appendChild(el('span',{class:'lbl',text:'Sete göre daralt'}));
+    list.slice(0,20).forEach(function(x){box.appendChild(el('button',{type:'button',class:'facet',title:[x.set_name,x.set_code,yr(x.released)].filter(Boolean).join(' · '),onclick:function(){setSet(x.group_id,x.set_name);search();}},[x.set_name+(S.g?'':' ('+gameLabel(x.game).replace('Pokemon (Japonca)','JP')+')'),el('b',{text:String(x.n)})]));});
+    if(list.length>20)box.appendChild(el('button',{type:'button',class:'linkbtn',text:'Tüm setler',onclick:openSets}));
   }
 
-  // ---------- folders ----------
-  function loadFolders(){
-    return Promise.all([sb.from('folders').select('*').order('position').order('created_at'),sb.from('folder_items').select('folder_id,holding_id').limit(20000)]).then(function(r){
-      if(r[0].error||r[1].error){S.foldersOk=false;S.folders=[];S.fitems={};return;}
-      S.foldersOk=true;S.folders=r[0].data||[];S.fitems={};S.folders.forEach(function(f){S.fitems[f.id]=new Set()});
-      (r[1].data||[]).forEach(function(x){if(S.fitems[x.folder_id])S.fitems[x.folder_id].add(x.holding_id)});
-      if(S.folder&&!S.fitems[S.folder])S.folder='';
-    },function(){S.foldersOk=false;});
-  }
-  function curFolder(){return S.folders.find(function(f){return f.id===S.folder})||null;}
-  function view(){var f=curFolder();if(!f)return S.holdings;var set=S.fitems[f.id];return S.holdings.filter(function(h){return set.has(h.id)});}
-  function setFolder(id){S.folder=id||'';store.set('kr-folder',S.folder);S.sel=null;render();}
-  function gradeGroup(g){return g==='PSA 10'?'psa10':(g==='PSA 9'?'psa9':(g==='Ham'?'raw':'other'));}
-  function hname(h){return (h.cards&&h.cards.name)||h.name_input||'';}
-  function hsub(h){var c=h.cards||{};return (c.set_name||h.set_input||'—')+((c.number||h.number_input)?' · '+(c.number||h.number_input):'');}
-
-  function folderBar(){
-    var wrap=el('div'),bar=el('div',{class:'fbar',role:'group','aria-label':'Klasörler'});
-    bar.appendChild(el('button',{type:'button',class:'ftab','aria-pressed':String(!S.folder),onclick:function(){setFolder('')}},[el('span',{text:'Tüm kartlar'}),el('b',{text:String(S.holdings.length)})]));
-    S.folders.forEach(function(f){bar.appendChild(el('button',{type:'button',class:'ftab','aria-pressed':String(S.folder===f.id),title:f.name,onclick:function(){setFolder(f.id)}},[el('span',{text:f.name}),el('b',{text:String(S.fitems[f.id].size)})]));});
-    bar.appendChild(el('button',{type:'button',class:'ftab new',onclick:function(){openFolder(null)},text:'+ Yeni klasör'}));
-    wrap.appendChild(bar);
-    var f=curFolder();
-    if(f)wrap.appendChild(el('div',{class:'fsub'},[el('span',{text:'Değer, K/Z ve grafik yalnızca bu klasördeki kartları gösteriyor.'}),el('button',{type:'button',class:'linkbtn',text:'Kart ekle / çıkar',onclick:function(){openFolder(f)}}),el('button',{type:'button',class:'linkbtn',text:'Adını değiştir',onclick:function(){openFolder(f,true)}})]));
-    else if(!S.folders.length)wrap.appendChild(el('div',{class:'fsub'},[el('span',{text:'Kartlarını klasörlere ayır: “PSA 10’lar”, “Satılık”, “Charizard koleksiyonu” gibi. Bir kart birden fazla klasörde olabilir.'})]));
-    return wrap;
+  function setSet(gid,name){
+    S.gid=gid||null;S.gname=gid?(name||S.gname||''):'';
+    var b=document.getElementById('setBtn');b.textContent=S.gid?('Set: '+(S.gname||'seçili')):'Set / seri: tümü ▾';b.setAttribute('aria-pressed',String(!!S.gid));
+    document.getElementById('setClear').hidden=!S.gid;
   }
 
-  function openFolder(f,focusName){
-    var chosen=new Set(f?Array.from(S.fitems[f.id]):[]),F={q:'',grade:'',game:'',only:false};
-    sheet(f?'Klasör: '+f.name:'Yeni klasör',function(p,close){
-      var msg=el('div',{class:'msg',hidden:true,'aria-live':'polite'});function say(k,t){msg.className='msg '+k;msg.textContent=t;msg.hidden=false;}
-      var name=el('input',{id:'fName',type:'text',maxlength:'40',required:true,value:f?f.name:'',placeholder:'ör. PSA 10’lar, Satılık, Japon kartlar'});
-      p.appendChild(el('label',{class:'f',for:'fName'},['Klasör adı',name]));
-      // filtreler
-      var gradeBox=el('div',{class:'fchips',role:'group','aria-label':'Dereceye göre'});
-      var counts={'':S.holdings.length,psa10:0,psa9:0,other:0,raw:0};S.holdings.forEach(function(h){counts[gradeGroup(h.grade)]++});
-      function drawGrades(){gradeBox.innerHTML='';[['','Tümü'],['psa10','PSA 10'],['psa9','PSA 9'],['other','Diğer dereceli'],['raw','Ham (raw)']].forEach(function(g){if(g[0]&&!counts[g[0]])return;
-        gradeBox.appendChild(el('button',{type:'button',class:'fchip','aria-pressed':String(F.grade===g[0]),text:g[1]+' · '+counts[g[0]],onclick:function(){F.grade=g[0];drawGrades();draw();}}));});}
-      var games=Array.from(new Set(S.holdings.map(function(h){return (h.game||'Pokemon')+(h.language==='japanese'?' (JP)':'')}))).sort();
-      var gameSel=null;if(games.length>1){gameSel=el('select',{'aria-label':'Oyun'});gameSel.appendChild(el('option',{value:'',text:'Tüm oyunlar'}));games.forEach(function(g){gameSel.appendChild(el('option',{value:g,text:g}))});gameSel.addEventListener('change',function(){F.game=gameSel.value;draw();});}
-      var q=el('input',{type:'search',placeholder:'Kart adı, set ya da numara','aria-label':'Kartlarda ara'});q.addEventListener('input',function(){F.q=q.value;draw();});
-      var only=el('button',{type:'button',class:'fchip','aria-pressed':'false',text:'Sadece seçililer',onclick:function(){F.only=!F.only;only.setAttribute('aria-pressed',String(F.only));draw();}});
-      p.appendChild(el('div',null,[el('div',{class:'label',style:'margin-bottom:6px',text:'Kartları seç'}),gradeBox]));
-      p.appendChild(el('div',{class:'pick-tools'},[q,gameSel,only]));
-      var cnt=el('span'),bar=el('div',{class:'pick-bar'}),list=el('div',{class:'pick-list'}),visible=[];
-      bar.appendChild(cnt);bar.appendChild(el('span',{class:'fchips'},[el('button',{type:'button',class:'linkbtn',text:'Görünenlerin hepsini seç',onclick:function(){visible.forEach(function(h){chosen.add(h.id)});draw();}}),el('span',{text:'·'}),el('button',{type:'button',class:'linkbtn',text:'Görünenleri bırak',onclick:function(){visible.forEach(function(h){chosen.delete(h.id)});draw();}})]));
-      p.appendChild(bar);p.appendChild(list);
-      function match(h){if(F.grade&&gradeGroup(h.grade)!==F.grade)return false;if(F.only&&!chosen.has(h.id))return false;
-        if(F.game&&((h.game||'Pokemon')+(h.language==='japanese'?' (JP)':''))!==F.game)return false;
-        var t=nk(F.q).split(/\s+/).filter(Boolean);if(!t.length)return true;var hay=nk([hname(h),hsub(h),h.grade,h.cert].join(' '));return t.every(function(w){return hay.indexOf(w)>=0});}
-      function draw(){
-        visible=S.holdings.filter(match).sort(function(a,b){return hname(a).localeCompare(hname(b),'tr')});
-        list.innerHTML='';
-        if(!visible.length)list.appendChild(el('div',{class:'note',style:'padding:14px',text:'Bu filtreye uyan kart yok.'}));
-        visible.forEach(function(h){var cb=el('input',{type:'checkbox','aria-label':hname(h)});cb.checked=chosen.has(h.id);
-          cb.addEventListener('change',function(){cb.checked?chosen.add(h.id):chosen.delete(h.id);upd();});
-          var pr=price(h);
-          list.appendChild(el('label',{class:'pick'},[cb,thumb(h),el('div',{style:'min-width:0'},[el('div',{class:'nm',text:hname(h)}),el('div',{class:'sub',text:h.grade+' · '+hsub(h)+(h.qty>1?' · ×'+h.qty:'')})]),el('div',{class:'pr',text:pr==null?'—':usd(pr*h.qty)})]));});
-        upd();
-      }
-      function upd(){var v=0;S.holdings.forEach(function(h){if(chosen.has(h.id)&&priced(h))v+=price(h)*h.qty});cnt.textContent=chosen.size+' kart seçili'+(v?' · '+usd(v):'')+' · '+visible.length+' görünüyor';}
-      drawGrades();draw();
-      p.appendChild(msg);
-      var save=el('button',{class:'btn',type:'button',text:f?'Kaydet':'Klasörü oluştur'}),foot=el('div',{class:'sheet-foot'});
-      if(f){var del=el('button',{class:'btn danger',type:'button',text:'Klasörü sil'});
-        del.addEventListener('click',function(){if(!del.dataset.armed){del.dataset.armed='1';del.textContent='Silmek için tekrar bas (kartlar silinmez)';return;}
-          del.disabled=true;sb.from('folders').delete().eq('id',f.id).then(function(r){if(r.error){del.disabled=false;return say('err',r.error.message);}if(S.folder===f.id)S.folder='';store.set('kr-folder',S.folder);loadFolders().then(function(){close();render();});});});
-        foot.appendChild(del);}
-      foot.appendChild(el('span',{class:'grow'}));foot.appendChild(el('button',{class:'btn quiet',type:'button',text:'Vazgeç',onclick:close}));foot.appendChild(save);
-      p.appendChild(foot);
-      save.addEventListener('click',function(){
-        var nm=name.value.trim().replace(/\s+/g,' ');if(!nm){name.focus();return say('err','Klasöre bir ad ver.');}
-        if(S.folders.some(function(x){return x.name.toLowerCase()===nm.toLowerCase()&&(!f||x.id!==f.id)}))return say('err','Bu adla bir klasörün zaten var.');
-        save.disabled=true;save.textContent='Kaydediliyor…';
-        var before=f?S.fitems[f.id]:new Set(),add=Array.from(chosen).filter(function(id){return !before.has(id)}),rem=Array.from(before).filter(function(id){return !chosen.has(id)});
-        var step=f?(nm!==f.name?sb.from('folders').update({name:nm}).eq('id',f.id).select().single():Promise.resolve({data:f})):sb.from('folders').insert({name:nm,position:S.folders.length}).select().single();
-        step.then(function(r){if(r.error)throw r.error;var fid=r.data.id;
-          var ops=[];if(add.length)ops.push(sb.from('folder_items').insert(add.map(function(id){return {folder_id:fid,holding_id:id}})));
-          if(rem.length)ops.push(sb.from('folder_items').delete().eq('folder_id',fid).in('holding_id',rem));
-          return Promise.all(ops).then(function(rs){rs.forEach(function(x){if(x.error)throw x.error});return fid;});
-        }).then(function(fid){S.folder=fid;store.set('kr-folder',fid);S.sel=null;return loadFolders();}).then(function(){close();render();})
-        .catch(function(e){save.disabled=false;save.textContent=f?'Kaydet':'Klasörü oluştur';say('err','Kaydedilemedi: '+(e.message||e));});
+  var timer;
+  function syncUrl(){var url=new URL(location.href);url.search='';if(S.q)url.searchParams.set('q',S.q);if(S.g)url.searchParams.set('g',S.g);if(S.gid)url.searchParams.set('set',S.gid);if(S.sort!=='relevance')url.searchParams.set('sort',S.sort);history.replaceState(null,'',url);}
+  function fetchPage(off){
+    var p=S.v2?sb.rpc('search_cards',{q:S.q,g:S.g||null,gid:S.gid,sort:effSort(),lim:48,off:off}):sb.rpc('search_catalog',{q:S.q,g:S.g||null,lim:48});
+    return p.then(function(res){
+      if(res.error&&S.v2&&/search_cards|PGRST202|function/i.test((res.error.code||'')+' '+(res.error.message||''))){S.v2=false;return fetchPage(0);}
+      return res;});
+  }
+  function search(){
+    clearTimeout(timer);
+    timer=setTimeout(function(){
+      syncUrl();
+      if(!sb){metaText.textContent='Bağlantı kurulamadı. Sayfayı yenile.';return;}
+      var my=++S.seq;metaText.textContent='Aranıyor…';
+      fetchPage(0).then(function(res){
+        if(my!==S.seq)return;
+        if(res.error){metaText.textContent='Katalog henüz hazır değil.';S.rows=[];renderGrid();renderFacets(null);return;}
+        S.rows=res.data||[];S.total=S.rows.length?Number(S.rows[0].total||S.rows.length):0;
+        if(S.gid&&!S.gname&&S.rows[0]){setSet(S.gid,S.rows[0].set_name);}
+        clearTimeout(S.rqT);if(S.q&&S.rows.length){var q=S.q,g=S.g;S.rqT=setTimeout(function(){if(S.q===q)rememberQuery(q,g)},1500);}
+        var n=S.total.toLocaleString('tr-TR');
+        metaText.textContent=S.q||S.gid?(n+' kart'+(S.gid?' · '+S.gname:'')+(S.total>S.rows.length?' · ilk '+S.rows.length+' gösteriliyor':'')):'En değerli kartlar'+(S.g?' · '+gameLabel(S.g):'');
+        var d=S.rows.map(function(r){return r.price_date}).filter(Boolean).sort().pop();dateText.textContent=d?'Fiyatlar '+dfmt(d):'';
+        renderGrid();
+        if(S.v2&&S.q&&!S.gid&&S.total>12){sb.rpc('search_sets',{q:S.q,g:S.g||null,lim:40}).then(function(r2){if(my===S.seq)renderFacets(r2.data||[]);});}else renderFacets(null);
       });
-      if(focusName)setTimeout(function(){name.focus();name.select();},0);else if(!f)setTimeout(function(){name.focus();},0);
-    });
+    },S.q?250:0);
   }
+  document.getElementById('moreBtn').addEventListener('click',function(){
+    var my=S.seq,btn=this;btn.disabled=true;btn.textContent='Yükleniyor…';
+    fetchPage(S.rows.length).then(function(res){btn.disabled=false;btn.textContent='Daha fazla göster';if(my!==S.seq||res.error)return;
+      S.rows=S.rows.concat(res.data||[]);metaText.textContent=metaText.textContent.replace(/ilk [\d.]+ gösteriliyor/,'ilk '+S.rows.length+' gösteriliyor');if(S.rows.length>=S.total)metaText.textContent=metaText.textContent.replace(/ · ilk [\d.]+ gösteriliyor/,'');renderGrid();});
+  });
 
-  function folderChips(h){
-    if(!S.foldersOk)return null;
-    var box=el('div',{class:'fchips'});
-    function draw(){box.innerHTML='';S.folders.forEach(function(f){var on=S.fitems[f.id].has(h.id);
-      box.appendChild(el('button',{type:'button',class:'fchip','aria-pressed':String(on),text:(on?'✓ ':'+ ')+f.name,onclick:function(e){var b=e.currentTarget;b.disabled=true;
-        var op=on?sb.from('folder_items').delete().eq('folder_id',f.id).eq('holding_id',h.id):sb.from('folder_items').insert({folder_id:f.id,holding_id:h.id});
-        op.then(function(r){b.disabled=false;if(r.error)return;on?S.fitems[f.id].delete(h.id):S.fitems[f.id].add(h.id);if(S.folder===f.id)render();else{draw();var bar=document.querySelector('.fbar');if(bar)bar.parentNode.replaceWith(folderBar());}});}}));});
-      box.appendChild(el('button',{type:'button',class:'fchip',text:'+ Yeni klasör',onclick:function(){openFolder(null)}}));}
-    draw();
-    return el('div',null,[el('div',{class:'label',style:'margin-bottom:6px',text:'Klasörler'}),box]);
+  // Set seçici
+  var pop=document.getElementById('setPop'),setQ=document.getElementById('setQ'),setList=document.getElementById('setList'),setBtn=document.getElementById('setBtn');
+  function norm(x){return String(x||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
+  function drawSets(){
+    var all=S.sets[S.g||'*'];setList.innerHTML='';
+    if(!all){setList.appendChild(el('div',{class:'note',style:'padding:8px',text:'Setler yükleniyor…'}));return;}
+    var t=norm(setQ.value).split(/\s+/).filter(Boolean);
+    var hits=all.filter(function(x){var h=norm([x.set_name,x.set_code,yr(x.released),x.game].join(' '));return t.every(function(w){return h.indexOf(w)>=0});});
+    if(!hits.length){setList.appendChild(el('div',{class:'note',style:'padding:8px',text:'Set bulunamadı.'}));return;}
+    hits.slice(0,200).forEach(function(x){setList.appendChild(el('button',{type:'button',role:'option',onclick:function(){closeSets();setSet(x.group_id,x.set_name);search();}},[
+      el('span',{class:'sn',text:x.set_name}),el('span',{class:'sc',text:x.n+' kart'}),el('span',{class:'sm',text:[x.set_code,yr(x.released),S.g?'':gameLabel(x.game)].filter(Boolean).join(' · ')})]));});
   }
+  function openSets(){
+    if(!S.v2){metaText.textContent='Set filtresi yakında.';return;}
+    pop.hidden=false;setBtn.setAttribute('aria-expanded','true');setQ.value='';drawSets();setQ.focus();
+    var k=S.g||'*';if(!S.sets[k])sb.rpc('search_sets',{q:'',g:S.g||null,lim:2000}).then(function(r){if(!r.error){S.sets[k]=r.data||[];drawSets();}else{setList.innerHTML='';setList.appendChild(el('div',{class:'note',style:'padding:8px',text:'Setler alınamadı.'}));}});
+  }
+  function closeSets(){pop.hidden=true;setBtn.setAttribute('aria-expanded','false');}
+  setBtn.addEventListener('click',function(){pop.hidden?openSets():closeSets();});
+  setQ.addEventListener('input',drawSets);
+  setQ.addEventListener('keydown',function(e){if(e.key==='Escape'){closeSets();setBtn.focus();}if(e.key==='Enter'){var f=setList.querySelector('button');if(f)f.click();}});
+  document.addEventListener('click',function(e){if(!pop.hidden&&!e.target.closest('.setpick'))closeSets();});
+  document.getElementById('setClear').addEventListener('click',function(){setSet(null,'');search();});
+  var sortSel=document.getElementById('sort');sortSel.value=S.sort;if(sortSel.value!==S.sort){S.sort='relevance';sortSel.value='relevance';}
+  sortSel.addEventListener('change',function(){S.sort=sortSel.value;search();});
 
-  // ---------- portfolio ----------
-  function totals(L){var t={val:0,cost:0,fx:0,mix:{},pricedCost:0,n:0,waiting:0};var r=rateNow();
-    (L||S.holdings).forEach(function(h){var c=h.cost_usd*h.qty;t.cost+=c;if(!priced(h)){t.waiting++;return;}var v=price(h)*h.qty;t.val+=v;t.pricedCost+=c;t.n++;var br=h.buy_fx&&h.buy_fx[S.ccy];if(br&&isFinite(r))t.fx+=c*(r-Number(br));t.mix[h.grade]=(t.mix[h.grade]||0)+v;});return t;}
-  function portfolioSeries(L){var hs=(L||S.holdings).filter(priced),dates={},per={};hs.forEach(function(h){var s=series(h);per[h.id]=s;s.forEach(function(p){dates[p[0]]=1})});var ds=Object.keys(dates).sort(),last={};
-    return ds.map(function(d){var sum=0;hs.forEach(function(h){var s=per[h.id];for(var i=0;i<s.length;i++){if(s[i][0]===d){last[h.id]=s[i][1];break;}}if(last[h.id]!=null)sum+=last[h.id]*h.qty;});return [d,sum];});}
-  function clip(s){if(S.range==='all'||!s.length)return s;var days={'7':7,'30':30,'90':90}[S.range];var t=new Date(s[s.length-1][0]+'T00:00:00Z');t.setUTCDate(t.getUTCDate()-days);var cut=t.toISOString().slice(0,10);return s.filter(function(p){return p[0]>=cut});}
-
-  function niceTicks(lo,hi,n){if(lo===hi){lo=lo*0.95;hi=hi*1.05||1;}var span=hi-lo,step=Math.pow(10,Math.floor(Math.log10(span/n))),err=span/n/step;if(err>=7.5)step*=10;else if(err>=3.5)step*=5;else if(err>=1.5)step*=2;var a=Math.floor(lo/step)*step,b=Math.ceil(hi/step)*step,out=[];for(var v=a;v<=b+step/2;v+=step)out.push(Math.round(v*1e6)/1e6);return out;}
-  function tickLabel(v,step){var a=Math.abs(v);if(a>=1e4){var d=step>=1000?0:(step>=100?1:2);return '$'+(v/1e3).toFixed(d)+'k';}return '$'+v.toLocaleString('en-US',{minimumFractionDigits:step<1?2:0,maximumFractionDigits:step<1?2:0});}
-  function lineChart(box,data,opts){
-    box.innerHTML='';var W=box.clientWidth||600,H=box.clientHeight||200,ns='http://www.w3.org/2000/svg';
-    if(!data.length){box.appendChild(el('div',{class:'note',text:'Henüz fiyat kaydı yok.'}));return;}
-    var svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 '+W+' '+H);svg.setAttribute('role','img');svg.setAttribute('aria-label',opts.label||'Fiyat grafiği');
+  function lineChart(box,data){
+    box.innerHTML='';if(data.length<2){box.appendChild(el('div',{class:'note',text:data.length?'Fiyat geçmişi birikiyor.':'Fiyat geçmişi yok.'}));return;}
+    var W=box.clientWidth||500,H=box.clientHeight||150,ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 '+W+' '+H);svg.setAttribute('role','img');svg.setAttribute('aria-label','Fiyat geçmişi');
     function mk(t,a){var e=document.createElementNS(ns,t);for(var k in a)e.setAttribute(k,a[k]);svg.appendChild(e);return e;}
-    var padL=60,padR=10,padT=10,padB=24;
-    var vals=data.map(function(p){return p[1]}),ticks=niceTicks(Math.min.apply(null,vals),Math.max.apply(null,vals),4),y0=ticks[0],y1=ticks[ticks.length-1];
-    var t0=Date.parse(data[0][0]),t1=Date.parse(data[data.length-1][0]);if(t1===t0){t0-=864e5;t1+=864e5;}
-    var X=function(d){return padL+(Date.parse(d)-t0)/(t1-t0)*(W-padL-padR)},Y=function(v){return padT+(1-(v-y0)/(y1-y0||1))*(H-padT-padB)};
-    ticks.forEach(function(t){mk('line',{x1:padL,x2:W-padR,y1:Y(t),y2:Y(t),stroke:'var(--line)','stroke-width':1});var tx=mk('text',{x:padL-8,y:Y(t)+4,'text-anchor':'end','font-size':11,fill:'var(--faint)','font-family':'IBM Plex Mono, monospace'});tx.textContent=tickLabel(t,ticks.length>1?ticks[1]-ticks[0]:1);});
-    var lbl=[data[0][0]];if(data.length>2)lbl.push(data[Math.floor(data.length/2)][0]);if(data.length>1)lbl.push(data[data.length-1][0]);
-    lbl.forEach(function(d,i){var tx=mk('text',{x:X(d),y:H-6,'text-anchor':lbl.length===1?'middle':(i===0?'start':(i===lbl.length-1?'end':'middle')),'font-size':11,fill:'var(--faint)'});tx.textContent=dfmt(d).replace(/ \d{4}$/,'');});
-    if(data.length>1){var d='M'+data.map(function(p){return X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)}).join('L');
-      mk('path',{d:d+'L'+X(data[data.length-1][0]).toFixed(1)+' '+(H-padB)+'L'+X(data[0][0]).toFixed(1)+' '+(H-padB)+'Z',fill:'var(--chart-fill)',stroke:'none'});
-      mk('path',{d:d,fill:'none',stroke:'var(--chart)','stroke-width':2,'stroke-linejoin':'round','stroke-linecap':'round'});}
+    var padL=56,padR=8,padT=8,padB=22,vals=data.map(function(p){return p[1]}),lo=Math.min.apply(null,vals),hi=Math.max.apply(null,vals);if(lo===hi){lo*=0.95;hi*=1.05;}
+    var t0=Date.parse(data[0][0]),t1=Date.parse(data[data.length-1][0]),X=function(d){return padL+(Date.parse(d)-t0)/(t1-t0||1)*(W-padL-padR)},Y=function(v){return padT+(1-(v-lo)/(hi-lo))*(H-padT-padB)};
+    [lo,(lo+hi)/2,hi].forEach(function(v){mk('line',{x1:padL,x2:W-padR,y1:Y(v),y2:Y(v),stroke:'var(--line)'});var t=mk('text',{x:padL-6,y:Y(v)+4,'text-anchor':'end','font-size':11,fill:'var(--faint)','font-family':'IBM Plex Mono, monospace'});t.textContent=usd(v);});
+    [[data[0][0],'start'],[data[data.length-1][0],'end']].forEach(function(x){var t=mk('text',{x:X(x[0]),y:H-5,'text-anchor':x[1],'font-size':11,fill:'var(--faint)'});t.textContent=dfmt(x[0]).replace(/ \d{4}$/,'');});
+    var d='M'+data.map(function(p){return X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)}).join('L');
+    mk('path',{d:d+'L'+X(data[data.length-1][0])+' '+(H-padB)+'L'+X(data[0][0])+' '+(H-padB)+'Z',fill:'var(--chart-fill)'});
+    mk('path',{d:d,fill:'none',stroke:'var(--chart)','stroke-width':2,'stroke-linejoin':'round'});
     var lp=data[data.length-1];mk('circle',{cx:X(lp[0]),cy:Y(lp[1]),r:4,fill:'var(--chart)',stroke:'var(--surface)','stroke-width':2});
     box.appendChild(svg);
-    var tip=el('div',{class:'tip'});box.appendChild(tip);var guide=mk('line',{x1:0,x2:0,y1:padT,y2:H-padB,stroke:'var(--faint)','stroke-dasharray':'3 3',opacity:0}),dot=mk('circle',{r:4,fill:'var(--chart)',opacity:0});
-    function show(ev){var r=svg.getBoundingClientRect(),cx=ev.touches?ev.touches[0].clientX:ev.clientX,x=(cx-r.left)*(W/r.width),p=data[0],bd=1e18;data.forEach(function(q){var dd=Math.abs(X(q[0])-x);if(dd<bd){bd=dd;p=q}});
-      guide.setAttribute('x1',X(p[0]));guide.setAttribute('x2',X(p[0]));guide.setAttribute('opacity',1);dot.setAttribute('cx',X(p[0]));dot.setAttribute('cy',Y(p[1]));dot.setAttribute('opacity',1);
-      tip.textContent=dfmt(p[0])+' · '+usd(p[1])+' · '+sec(p[1]*fxOn(p[0]));tip.style.left=(X(p[0])*r.width/W)+'px';tip.style.top=(Y(p[1])*r.height/H)+'px';tip.classList.add('on');}
-    function hide(){tip.classList.remove('on');guide.setAttribute('opacity',0);dot.setAttribute('opacity',0);}
-    svg.addEventListener('mousemove',show);svg.addEventListener('touchmove',show,{passive:true});svg.addEventListener('mouseleave',hide);svg.addEventListener('touchend',hide);
-  }
-  function thumb(h,src){var t=el('div',{class:'thumb'+(/PSA|BGS|CGC/.test(h.grade)?' slab':'')}),img=src||(h.cards&&h.cards.image)||h.psa_front;if(img){var i=el('img',{src:img,alt:'',loading:'lazy',decoding:'async'});i.onerror=function(){i.replaceWith(el('div',{class:'ph'}))};t.appendChild(i);}else t.appendChild(el('div',{class:'ph'}));return t;}
-
-  function renderCcy(){var seg=document.getElementById('ccySeg');seg.innerHTML='';CCY.forEach(function(m){seg.appendChild(el('button',{type:'button','aria-pressed':String(S.ccy===m.c),text:m.c,onclick:function(){S.ccy=m.c;store.set('kr-ccy',m.c);render();}}));});}
-
-  function render(){
-    document.getElementById('ccyBox').hidden=false;document.getElementById('who').hidden=false;document.getElementById('whoMail').textContent=S.user.email;renderCcy();
-    var app=document.getElementById('app');app.innerHTML='';
-    if(!S.holdings.length){app.appendChild(el('section',{class:'panel empty',style:'margin-top:20px'},[el('h2',{text:'Portföyün boş'}),el('p',{class:'muted',style:'margin:0;max-width:60ch',text:'Kartlarını Excel dosyasından toplu olarak yükleyebilir ya da tek tek ekleyebilirsin. Eklediğin kartlar birkaç saat içinde katalogla eşleşir ve fiyatlanır.'}),el('div',{class:'cta'},[el('button',{class:'btn',type:'button',text:'Excel’den içe aktar',onclick:openImport}),el('button',{class:'btn ghost',type:'button',text:'Tek kart ekle',onclick:function(){openAdd()}})])]));return;}
-    if(S.foldersOk)app.appendChild(folderBar());
-    var V=view(),FD=curFolder();
-    var T=totals(V),r=rateNow(),pl=T.val-T.pricedCost;
-    var hero=el('section',{class:'hero'}),stats=el('div',{class:'panel stats'});
-    stats.appendChild(el('div',null,[el('div',{class:'label',text:FD?FD.name+' · değer':'Portföy değeri'}),el('div',{class:'value-big num',text:usd(T.val)}),el('div',{class:'value-sec num',text:'≈ '+sec(T.val*r)+(T.waiting?' · '+T.waiting+' kart fiyat bekliyor':'')})]));
-    function kpi(lab,v,s,c){return el('div',{class:'kpi'},[el('span',{class:'label',text:lab}),el('span',{class:'v num '+(c||''),text:v}),el('span',{class:'s num',text:s})]);}
-    var ps=portfolioSeries(V),chg=null,dd=null;if(ps.length>1){var a=ps[ps.length-2][1],b=ps[ps.length-1][1];dd=b-a;chg=a?dd/a*100:null;}
-    stats.appendChild(el('div',{class:'kpis'},[
-      kpi('Maliyet (fiyatlı kartlar)',usd(T.pricedCost),'Toplam: '+usd(T.cost)),
-      kpi('K/Z',usd(pl,true),pct(T.pricedCost?pl/T.pricedCost*100:null)+' · '+sec(pl*r,true),cls(pl)),
-      kpi('Son değişim',chg==null?'—':pct(chg),dd==null?'İkinci gün kaydından sonra':usd(dd,true),cls(chg)),
-      kpi('Kur etkisi · '+S.ccy,sec(T.fx,true),'alıştan bu yana USD/'+S.ccy,cls(T.fx))]));
-    var mix=el('div',{class:'mix'}),lg=el('div',{class:'legend'});
-    Object.keys(T.mix).sort(function(a,b){return T.mix[b]-T.mix[a]}).forEach(function(g){var sh=T.val?T.mix[g]/T.val*100:0,c=gradeColor(g),s=el('span');s.style.width=sh+'%';s.style.background=c;mix.appendChild(s);var i=el('i');i.style.background=c;lg.appendChild(el('span',null,[i,g+' '+sh.toFixed(0)+'%']));});
-    stats.appendChild(el('div',null,[el('div',{class:'label',style:'margin-bottom:6px',text:'Derece dağılımı'}),mix,lg]));
-    hero.appendChild(stats);
-    var cp=el('div',{class:'panel chartp'}),seg=el('div',{class:'seg',role:'group','aria-label':'Zaman aralığı'});
-    [['7','7G'],['30','30G'],['90','90G'],['all','Tümü']].forEach(function(o){seg.appendChild(el('button',{type:'button','aria-pressed':String(S.range===o[0]),text:o[1],onclick:function(){S.range=o[0];store.set('kr-range',o[0]);render();}}));});
-    var cb=el('div',{class:'chart-box'});
-    cp.appendChild(el('div',{class:'chart-head'},[el('h2',{text:(FD?FD.name:'Portföy')+' değeri, USD'}),seg]));cp.appendChild(cb);
-    cp.appendChild(el('div',{class:'note',text:ps.length<2?'Fiyat geçmişi her gün birikiyor; grafik birkaç gün içinde dolacak.':ps.length+' günlük kayıt · noktanın üzerine gel: o günün kuruyla '+S.ccy+' karşılığı'}));
-    hero.appendChild(cp);app.appendChild(hero);
-
-    var main=el('section',{class:'main'}),led=el('div',{class:'panel ledger'});
-    var sortSel=el('select',{id:'sortSel','aria-label':'Sırala'});[['value','Değere göre'],['pl','K/Z yüzdesine göre'],['d7','7 günlük değişime göre'],['name','Ada göre'],['status','Duruma göre']].forEach(function(o){var op=el('option',{value:o[0],text:o[1]});if(S.sort===o[0])op.selected=true;sortSel.appendChild(op);});
-    sortSel.addEventListener('change',function(){S.sort=sortSel.value;store.set('kr-sort',S.sort);render();});
-    led.appendChild(el('div',{class:'ledger-head'},[el('h2',{text:(FD?FD.name:'Kartlarım')+' · '+V.length}),el('div',{class:'ledger-tools'},[sortSel,el('button',{class:'btn quiet',type:'button',text:'Excel’den yükle',onclick:openImport}),el('button',{class:'btn',type:'button',text:'Kart ekle',onclick:function(){openAdd()}})])]));
-    var hs=V.slice(),val=function(h){return priced(h)?price(h)*h.qty:-1};
-    var rank={failed:0,unsupported:1,pending:2,matched:3};
-    hs.sort(function(a,b){if(S.sort==='name')return (a.name_input||'').localeCompare(b.name_input||'','tr');if(S.sort==='pl'){var pa=priced(a)&&a.cost_usd?price(a)/a.cost_usd:-1e9,pb=priced(b)&&b.cost_usd?price(b)/b.cost_usd:-1e9;return pb-pa;}if(S.sort==='d7')return (changeOver(b,7)||-1e9)-(changeOver(a,7)||-1e9);if(S.sort==='status')return (rank[a.match_status]||0)-(rank[b.match_status]||0);return val(b)-val(a);});
-    if(hs.length&&(!S.sel||!hs.some(function(h){return h.id===S.sel})))S.sel=hs[0].id;
-    var rows=el('div',{class:'rows'});
-    if(!hs.length){S.sel=null;rows.appendChild(el('div',{class:'empty',style:'border-top:1px solid var(--line)'},[el('h2',{style:'font-size:1.1rem',text:'Bu klasör boş'}),el('p',{class:'muted',style:'margin:0',text:'Kartlarını filtreleyip bu klasöre ekleyebilirsin.'}),el('button',{class:'btn',type:'button',text:'Kart ekle',onclick:function(){openFolder(FD)}})]));}
-    hs.forEach(function(h){var p=price(h),v=p!=null?p*h.qty:null,plp=p!=null&&h.cost_usd?(p-h.cost_usd)/h.cost_usd*100:null,c7=changeOver(h,7),card=h.cards||{};
-      rows.appendChild(el('button',{type:'button',class:'row','aria-current':String(S.sel===h.id),onclick:function(){S.sel=h.id;render();if(window.innerWidth<=980){var d=document.getElementById('dossier');if(d)d.scrollIntoView({behavior:'smooth',block:'start'});}}},[
-        thumb(h),
-        el('div',{style:'min-width:0'},[el('div',{class:'nm',text:card.name||h.name_input}),el('div',{class:'sub',text:(card.set_name||h.set_input||'—')+(card.number||h.number_input?' · '+(card.number||h.number_input):'')}),el('div',{class:'chips'},[el('span',{class:'chip grade',text:h.grade}),h.language==='japanese'?el('span',{class:'chip',text:'JP'}):null,h.qty>1?el('span',{class:'chip',text:'×'+h.qty}):null,statusChip(h)])]),
-        el('div',{class:'px'},[el('div',{class:'a num',text:usd(p)}),el('div',{class:'b num '+cls(c7),text:c7==null?'maliyet '+usd(h.cost_usd):'7G '+pct(c7)})]),
-        el('div',{class:'px val'},[el('div',{class:'a num',text:v==null?'—':sec(v*r)}),plp==null?el('span',{class:'note',text:'—'}):el('span',{class:'pill num '+cls(plp),text:pct(plp)})])
-      ]));});
-    led.appendChild(rows);
-    led.appendChild(el('div',{class:'ledger-foot'},[el('span',{text:'Fiyatlar her gün otomatik güncellenir. Yeni kartlar birkaç saat içinde eşleşir.'})]));
-    main.appendChild(led);if(hs.length)main.appendChild(renderDossier());else main.style.gridTemplateColumns='1fr';app.appendChild(main);
-    app.appendChild(el('footer',null,[el('span',{text:'Fiyatlar: PokemonPriceTracker aracılığıyla TCGplayer (ham) ve eBay satışları (PSA). PSA fiyatı son 7 günün ağırlıklı satış fiyatıdır; güven düzeyi satış adedine göre belirlenir. Kurlar: Avrupa Merkez Bankası (Frankfurter). Yatırım tavsiyesi değildir.'})]));
-    requestAnimationFrame(function(){lineChart(cb,clip(ps),{label:'Portföy değeri grafiği'});var mc=document.getElementById('miniChart'),h=S.holdings.find(function(x){return x.id===S.sel});if(mc&&h)lineChart(mc,series(h),{label:'Kart fiyat grafiği'});});
   }
 
-  function renderDossier(){
-    var h=S.holdings.find(function(x){return x.id===S.sel}),d=el('aside',{class:'panel dossier',id:'dossier'});if(!h)return d;
-    var card=h.cards||{},p=price(h),r=rateNow(),row=latest(h);
-    var info=el('div',{style:'min-width:0'},[el('h3',{text:card.name||h.name_input}),el('div',{class:'sub',style:'white-space:normal',text:(card.set_name||h.set_input||'—')+(card.number?' · '+card.number:'')}),el('div',{class:'chips'},[el('span',{class:'chip grade',text:h.grade}),statusChip(h)]),el('div',{class:'d-price num',text:usd(p)}),el('div',{class:'muted num',style:'font-size:.85rem',text:p==null?'':'≈ '+sec(p*r)+' · 30G '+pct(changeOver(h,30))})]);
-    if(card.url)info.appendChild(el('a',{href:card.url,target:'_blank',rel:'noopener',style:'font-size:.82rem',text:'TCGplayer’da gör'}));
-    var pics=[];if(h.cards&&h.cards.image)pics.push(['Katalog',h.cards.image]);if(h.psa_front)pics.push(['PSA ön',h.psa_front]);if(h.psa_back)pics.push(['PSA arka',h.psa_back]);
-    var picBox=el('div',{style:'display:flex;flex-direction:column;gap:6px;align-items:flex-start'}),cur=thumb(h,pics.length?pics[0][1]:null);picBox.appendChild(cur);
-    if(pics.length>1){var ps=el('div',{class:'seg',role:'group','aria-label':'Görsel'});pics.forEach(function(p,i){var b=el('button',{type:'button','aria-pressed':String(i===0),text:p[0],onclick:function(){var n=thumb(h,p[1]);cur.replaceWith(n);cur=n;Array.from(ps.children).forEach(function(x){x.setAttribute('aria-pressed',String(x===b))});}});ps.appendChild(b);});picBox.appendChild(ps);}
-    d.appendChild(el('div',{class:'d-top'},[picBox,info]));
-    if(h.match_status!=='matched'){d.appendChild(el('div',{class:'msg '+(h.match_status==='pending'?'info':'err'),text:h.match_status==='pending'?'Bu kart katalogla eşleştirilmeyi bekliyor. Görev iki saatte bir çalışır.':(h.match_note||'Kart eşleştirilemedi.')}));}
-    else if(h.match_note&&/birden fazla|kontrol et/.test(h.match_note))d.appendChild(el('div',{class:'msg info',text:'Eşleşme: '+h.match_note+'. Yanlışsa Düzenle ile set adını ya da numarayı düzelt; kart yeniden eşleştirilir.'}));
-    if(row){var g=el('div',{class:'grades'});
-      var mk=gradeKey(h.grade),cols=[['Ham','raw'],['PSA 9','psa9'],['PSA 10','psa10']];
-      if(mk&&mk!=='raw'&&mk!=='psa9'&&mk!=='psa10'&&!rawOnly(h))cols[1]=[h.grade,mk];   // kendi derecen ortada
-      cols.forEach(function(x){var k=x[1],v=k==='raw'?gval(row,k):(function(){var s=series({card_id:h.card_id,grade:x[0],cards:h.cards});return s.length?s[s.length-1][1]:null;})(),c=gconf(row,k),n=gcount(row,k);
-        g.appendChild(el('div',{class:h.grade===x[0]?'mine':null},[el('div',{class:'label',lang:'en',text:x[0]}),el('div',{class:'v num',text:v==null?'—':(Number(v)>=1000?'$'+Math.round(Number(v)).toLocaleString('en-US'):usd(Number(v)))}),el('div',{class:'c',text:k==='raw'?'TCGplayer':(v==null?'satış yok':(c?CONF[c]+' güven':'eBay')+(n?' · '+n+' satış':''))})]));});
-      d.appendChild(g);
-      if(premiumGrade(h.grade))d.appendChild(el('div',{class:'msg info',text:h.grade+' satışları fiyat kaynağımızda ayrı tutulmuyor; '+h.grade.split(' ').slice(0,2).join(' ')+' satışlarının ortalaması gösteriliyor. '+h.grade+' kartlar genellikle bunun belirgin üstünde işlem görür, bu yüzden değer temkinli tarafta kalır.'}));}
-    var f=el('div',{class:'facts'});
-    [['Adet',String(h.qty)],['Alış (adet)',usd(Number(h.cost_usd))],['Alış tarihi',dfmt(h.bought)]].forEach(function(x){f.appendChild(el('span',{text:x[0]}));f.appendChild(el('span',{class:'num',text:x[1]}));});
-    var co=String(h.grade||'').split(' ')[0].toUpperCase();
-    f.appendChild(el('span',{text:(/^(PSA|BGS|CGC|SGC|TAG|ACE)$/.test(co)?co+' ':'')+'sertifika no'}));
-    var certNum=String(h.cert||'').replace(/\D/g,''),VERIFY={PSA:'https://www.psacard.com/cert/',CGC:'https://www.cgccards.com/certlookup/'};
-    f.appendChild(certNum?el('span',{class:'num'},[certNum].concat(VERIFY[co]?[' · ',el('a',{href:VERIFY[co]+certNum+(co==='CGC'?'/':''),target:'_blank',rel:'noopener',text:co+'’da doğrula'})]:[])):el('span',{class:'num',text:'—'}));
-    d.appendChild(f);
-    if(h.psa&&h.psa.Subject){var P=h.psa,label=[P.Year,P.Brand,P.Subject,P.CardNumber?'#'+P.CardNumber:null,P.Variety].filter(Boolean).join(' · '),pg=el('div',{class:'facts'});
-      var g=(P.CardGrade||'').match(/(\d+(?:\.\d)?)\s*$/),pgr=g?'PSA '+g[1]:null;
-      [['PSA etiketi',label],['PSA derecesi',P.CardGrade||'—'],['Bu derecede popülasyon',P.TotalPopulation!=null?String(P.TotalPopulation):'—'],['Üst derecede',P.PopulationHigher!=null?String(P.PopulationHigher):'—']].forEach(function(x){pg.appendChild(el('span',{text:x[0]}));pg.appendChild(el('span',{class:x[0]==='PSA etiketi'?null:'num',style:'white-space:normal',text:x[1]}));});
-      d.appendChild(el('div',null,[el('div',{class:'label',style:'margin-bottom:6px',text:'PSA kaydı'}),pg]));
-      if(pgr&&pgr!==h.grade)d.appendChild(el('div',{class:'msg err',text:'PSA kaydında derece '+P.CardGrade+' görünüyor, portföyde '+h.grade+' girilmiş. Düzenle ile kontrol et.'}));}
-    else if(h.cert&&h.psa_status==='not_found')d.appendChild(el('div',{class:'msg info',text:'Bu PSA numarası için PSA kaydı bulunamadı. Numarayı kontrol et.'}));
-    if(h.cert)d.appendChild(el('div',{class:'note',text:'PSA numarası ve alış bilgileri yalnızca sana görünür. “PSA’da doğrula” kartın PSA kaydını, görsellerini ve popülasyonunu PSA’nın kendi sitesinde açar.'}));
-    if(series(h).length)d.appendChild(el('div',null,[el('div',{class:'label',style:'margin-bottom:4px',text:h.grade+' fiyat geçmişi, USD'}),el('div',{class:'mini-chart',id:'miniChart'})]));
-    if(row&&h.grade==='Ham'&&row.raw!=null)d.appendChild(desk(h,row));
-    var fc=folderChips(h);if(fc)d.appendChild(fc);
-    var acts=el('div',{class:'actions'}),del=el('button',{class:'btn danger',type:'button',text:'Kartı sil'});
-    del.addEventListener('click',function(){if(del.dataset.armed){del.disabled=true;sb.from('holdings').delete().eq('id',h.id).then(function(res){if(res.error){del.disabled=false;del.textContent='Silinemedi';return;}S.sel=null;load();});}else{del.dataset.armed='1';del.textContent='Silmek için tekrar bas';}});
-    acts.appendChild(el('button',{class:'btn quiet',type:'button',text:'Düzenle',onclick:function(){openAdd(h)}}));acts.appendChild(del);d.appendChild(acts);
-    return d;
-  }
-
-  function desk(h,row){
-    var raw=Number(row.raw),wrap=el('div',{class:'desk'});
-    wrap.appendChild(el('h3',{text:'Grading masası'}));
-    wrap.appendChild(el('p',{class:'note',style:'margin:-4px 0 0',text:'Ham, PSA 9 ve PSA 10 fiyatları güncel piyasadan gelir. Olasılıklar senin tahminin.'}));
-    var gr=el('div',{class:'grid'}),key='kr-desk-'+h.id,saved={};try{saved=JSON.parse(store.get(key)||'{}')}catch(e){}
-    function inp(id,lab,val,ro){var i=el('input',{id:id,type:'number',min:'0',step:'any',value:String(val)});if(ro){i.readOnly=true;i.tabIndex=-1;}gr.appendChild(el('label',{class:'f',for:id},[lab,i]));return i;}
-    inp('gRaw','Ham fiyat $',raw.toFixed(2),true);var iFee=inp('gFee','Grading + kargo $',saved.fee!=null?saved.fee:45);
-    var i10=inp('g10','PSA 10 fiyatı $',(row.psa10!=null?Number(row.psa10):raw*3).toFixed(2),row.psa10!=null),ip10=inp('p10','PSA 10 olasılığı %',saved.p10!=null?saved.p10:35);
-    var i9=inp('g9','PSA 9 fiyatı $',(row.psa9!=null?Number(row.psa9):raw*1.3).toFixed(2),row.psa9!=null),ip9=inp('p9','PSA 9 olasılığı %',saved.p9!=null?saved.p9:45);
-    var i8=inp('g8','PSA 8 ve altı $',saved.g8!=null?saved.g8:(raw*0.85).toFixed(2)),ip8=inp('p8','PSA 8 ve altı %','',true);
-    wrap.appendChild(gr);var v=el('div',{class:'verdict','aria-live':'polite'});wrap.appendChild(v);
-    function n(i){var x=parseFloat(i.value);return isFinite(x)?x:0;}
-    function calc(){var p10=Math.min(1,n(ip10)/100),p9=Math.min(1-p10,n(ip9)/100),p8=Math.max(0,1-p10-p9);ip8.value=(p8*100).toFixed(0);
-      var ev=p10*n(i10)+p9*n(i9)+p8*n(i8),gain=ev-raw-n(iFee),den=n(i10)-n(i8),be=den>0?(raw+n(iFee)-p9*n(i9)-(1-p9)*n(i8))/den*100:NaN,go=gain>0;
-      v.className='verdict '+(go?'go':'no');v.innerHTML='';
-      v.appendChild(el('div',{class:'kv'},[el('span',{class:'label',text:'Beklenen kazanç'}),el('strong',{class:go?'pos':'neg',text:go?'Grade ettir':'Ham sat'})]));
-      v.appendChild(el('div',{class:'big num '+cls(gain),text:usd(gain,true)}));
-      v.appendChild(el('div',{class:'kv'},[el('span',{class:'muted',text:'Beklenen satış değeri'}),el('span',{class:'num',text:usd(ev)})]));
-      v.appendChild(el('div',{class:'kv'},[el('span',{class:'muted',text:'Başa baş PSA 10 olasılığı'}),el('span',{class:'num',text:isFinite(be)?(be<0?'%0':(be>100?'%100 üstü':'%'+be.toFixed(0))):'—'})]));
-      store.set(key,JSON.stringify({fee:iFee.value,p10:ip10.value,p9:ip9.value,g8:i8.value}));}
-    [iFee,ip10,ip9,i8].forEach(function(i){i.addEventListener('input',calc)});calc();return wrap;
-  }
-
-  // ---------- sheets ----------
-  function sheet(title,body){var ov=el('div',{class:'sheet',role:'dialog','aria-modal':'true','aria-label':title}),p=el('div',{class:'panel'});
+  function openCard(r){
+    if(S.q)rememberQuery(S.q,S.g);rememberView(r);
+    var ov=el('div',{class:'sheet',role:'dialog','aria-modal':'true','aria-label':r.name}),p=el('div',{class:'panel'});
     function close(){ov.remove();document.removeEventListener('keydown',esc);}function esc(e){if(e.key==='Escape')close();}
-    p.appendChild(el('div',{class:'sheet-head'},[el('h2',{text:title}),el('button',{class:'x',type:'button','aria-label':'Kapat',text:'×',onclick:close})]));
-    body(p,close);ov.appendChild(p);ov.addEventListener('click',function(e){if(e.target===ov)close();});document.addEventListener('keydown',esc);document.body.appendChild(ov);var f=p.querySelector('input,select,button.btn');if(f)f.focus();}
-
-  function openAdd(h,pre){
-    sheet(h?'Kartı düzenle':'Kart ekle',function(p,close){
-      var x=h||Object.assign({game:'Pokemon',language:'english',grade:'PSA 10',qty:1},pre||{});
-      function field(id,lab,node,span){return el('label',{class:'f'+(span?' span2':''),for:id},[lab,node]);}
-      function sel(id,opts,val){var s=el('select',{id:id});opts.forEach(function(o){var op=el('option',{value:o[0],text:o[1]});if(o[0]===val)op.selected=true;s.appendChild(op);});return s;}
-      var fGame=sel('aGame',[['Pokemon','Pokemon'],['One Piece','One Piece'],['Magic','Magic'],['Yu-Gi-Oh!','Yu-Gi-Oh!'],['Lorcana','Lorcana']],x.game),
-          fSet=el('input',{id:'aSet',value:x.set_input||'',placeholder:'ör. Terastal Festival'}),
-          fName=el('input',{id:'aName',required:true,value:x.name_input||'',placeholder:'ör. Umbreon ex'}),
-          fNum=el('input',{id:'aNum',value:x.number_input||'',placeholder:'ör. 217'}),
-          fLang=sel('aLang',[['english','İngilizce'],['japanese','Japonca']],x.language),
-          fGrade=sel('aGrade',GRADE_OPTS.concat(GRADE_OPTS.some(function(o){return o[0]===x.grade})||!x.grade?[]:[[x.grade,x.grade]]),x.grade),
-          fCert=el('input',{id:'aCert',value:x.cert||'',placeholder:'isteğe bağlı'}),
-          fQty=el('input',{id:'aQty',type:'number',min:'1',value:String(x.qty||1)}),
-          fCost=el('input',{id:'aCost',type:'number',min:'0',step:'0.01',required:true,value:x.cost_usd!=null?String(x.cost_usd):''}),
-          fDate=el('input',{id:'aDate',type:'date',value:x.bought||''});
-      var msg=el('div',{class:'msg',hidden:true});
-      var form=el('form',{class:'form-grid'},[field('aName','Kart adı',fName,true),field('aSet','Set',fSet,true),field('aNum','Kart numarası',fNum),field('aLang','Dil',fLang),field('aGame','Oyun',fGame),field('aGrade','Derece',fGrade),field('aCert','Sertifika no',fCert),field('aQty','Adet',fQty),field('aCost','Alış fiyatı $ (adet)',fCost),field('aDate','Alış tarihi',fDate)]);
-      var save=el('button',{class:'btn span2',type:'submit',text:h?'Kaydet':'Ekle'});form.appendChild(save);
-      form.addEventListener('submit',function(e){e.preventDefault();save.disabled=true;
-        var row={game:fGame.value,set_input:fSet.value.trim()||null,name_input:fName.value.trim(),number_input:fNum.value.trim()||null,language:fLang.value,grade:fGrade.value,cert:fCert.value.trim()||null,qty:Math.max(1,parseInt(fQty.value,10)||1),cost_usd:Number(fCost.value)||0,bought:fDate.value||null};
-        var q=h?sb.from('holdings').update(row).eq('id',h.id):sb.from('holdings').insert(row);
-        q.then(function(r){save.disabled=false;if(r.error){msg.className='msg err';msg.textContent=r.error.message;msg.hidden=false;return;}close();load();});});
-      p.appendChild(form);p.appendChild(msg);
-      p.appendChild(el('p',{class:'note',style:'margin:0',text:'Kartın sol ya da sağ alt köşesindeki numarayı yazmak eşleşmeyi hızlandırır. Kart birkaç saat içinde fiyatlanır.'}));
-    });
+    p.appendChild(el('button',{class:'x',type:'button','aria-label':'Kapat',text:'×',onclick:close}));
+    var foil=/holo|foil|secret|special|illustration|alternate|manga|enchanted/i.test((r.sub_type||'')+' '+(r.rarity||'')+' '+r.name);
+    p.appendChild(el('div',{class:'big'+(foil?' foil':'')},[art(r)]));
+    var info=el('div',{class:'dinfo'});
+    info.appendChild(el('div',null,[el('div',{class:'label',text:r.game}),el('h3',{text:r.name}),el('div',{class:'muted',style:'font-size:.9rem;margin-top:2px',text:(r.set_name||'')+(r.number?' · '+r.number:'')})]));
+    var pr=el('div',{class:'prices'});
+    function cell(lab,v,c){return el('div',null,[el('div',{class:'label',text:lab}),el('div',{class:'v',text:usd(v)}),el('div',{class:'c',text:c})]);}
+    pr.appendChild(cell('Ham · piyasa',r.market,sec(r.market)||'TCGplayer'));
+    pr.appendChild(cell('PSA 9',r.psa9,r.psa9!=null?(r.psa9_conf?CONF[r.psa9_conf]+' güven':'')+(r.psa9_n?' · '+r.psa9_n+' satış':''):'takip edilmiyor'));
+    pr.appendChild(cell('PSA 10',r.psa10,r.psa10!=null?(r.psa10_conf?CONF[r.psa10_conf]+' güven':'')+(r.psa10_n?' · '+r.psa10_n+' satış':''):'takip edilmiyor'));
+    info.appendChild(pr);
+    var f=el('div',{class:'facts'});
+    [['Nadirlik',r.rarity||'—'],['Baskı',r.sub_type||'—'],['En düşük ilan',usd(r.low),1],['Fiyat tarihi',dfmt(r.price_date),1]].forEach(function(x){f.appendChild(el('span',{text:x[0]}));f.appendChild(el('span',{class:x[2]?'num':null,text:x[1]}));});
+    info.appendChild(f);
+    if(r.tracked){var mini=el('div',{class:'mini'});info.appendChild(el('div',null,[el('div',{class:'label',style:'margin-bottom:4px',text:(r.psa10!=null?'PSA 10':'Ham')+' fiyat geçmişi, USD'}),mini]));
+      sb.rpc('card_history',{pid:r.product_id}).then(function(res){var rows=(res.data||[]),k=r.psa10!=null?'psa10':'raw';lineChart(mini,rows.filter(function(x){return x[k]!=null}).map(function(x){return [x.date,Number(x[k])]}));});}
+    else info.appendChild(el('p',{class:'note',style:'margin:0',text:'PSA fiyatları ve fiyat geçmişi, kart bir Holotique portföyüne eklendiğinde takip edilmeye başlar.'}));
+    var lang=r.game==='Pokemon JP'?'japanese':'english',game=r.game==='Pokemon JP'?'Pokemon':r.game;
+    var pre=Object.assign({},{game:game,set_input:r.set_name,name_input:(r.name||'').replace(/\s*-\s*[\w\/-]+$/,'').replace(/\s*\(\d+\)\s*$/,''),number_input:r.number?String(r.number).split('/')[0]:null,language:lang});
+    info.appendChild(el('div',{class:'actions'},[el('a',{class:'btn',href:'portfoy.html?ekle='+encodeURIComponent(JSON.stringify(pre)),text:'Portföyüme ekle'}),r.url?el('a',{class:'btn ghost',href:r.url,target:'_blank',rel:'noopener',text:'TCGplayer’da gör'}):null]));
+    p.appendChild(info);ov.appendChild(p);ov.addEventListener('click',function(e){if(e.target===ov)close();});document.addEventListener('keydown',esc);document.body.appendChild(ov);p.querySelector('.x').focus();
   }
 
-  // ---------- Excel import ----------
-  function nk(s){return String(s==null?'':s).toLowerCase().replace(/ı/g,'i').replace(/ş/g,'s').replace(/ğ/g,'g').replace(/ü/g,'u').replace(/ö/g,'o').replace(/ç/g,'c').replace(/[^a-z0-9]/g,'');}
-  var ALIAS={grade:['grade','derece','kondisyon','condition','psagrade'],cert:['psaid','cert','certno','sertifika','sertifikano','psano','psanumarasi','certnumber'],game:['tcgtype','game','oyun','tcg'],set:['series','set','seri','setadi','setname','expansion'],name:['pokemoncard','cardname','kartadi','kart','name','isim','ad'],language:['dil','language','lang'],number:['kod','cardnumber','number','numara','kartno','kartnumarasi','collectornumber'],cost:['alisfiyati','alis','cost','maliyet','buyprice','purchaseprice','fiyat','price'],bought:['alistarihi','tarih','date','purchasedate','bought','buydate'],qty:['adet','qty','quantity','miktar']};
-  function detect(rows){
-    for(var i=0;i<Math.min(rows.length,20);i++){var r=rows[i]||[],map={},hits=0;
-      r.forEach(function(c,j){var k=nk(c);if(!k)return;for(var f in ALIAS){if(map[f]==null&&ALIAS[f].indexOf(k)>=0){map[f]=j;hits++;return;}}if(k==='card'){map._card=j;}});
-      if(map._card!=null){var vals=rows.slice(i+1,i+8).map(function(x){return String((x||[])[map._card]||'')});var gradeLike=vals.filter(function(v){return /psa|bgs|cgc|ham|raw|ungraded/i.test(v)}).length>=Math.max(1,vals.filter(Boolean).length/2);
-        if(gradeLike&&map.grade==null){map.grade=map._card;hits++;}else if(!gradeLike&&map.name==null){map.name=map._card;hits++;}}
-      if(map.name!=null&&hits>=3)return {header:i,map:map};}
-    return null;}
-  function toISO(v){if(v==null||v==='')return null;if(v instanceof Date&&!isNaN(v))return new Date(Date.UTC(v.getFullYear(),v.getMonth(),v.getDate())).toISOString().slice(0,10);if(typeof v==='number'&&v>20000&&v<80000){return new Date(Date.UTC(1899,11,30)+v*864e5).toISOString().slice(0,10);}var s=String(v).trim(),m=s.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);if(m)return m[3]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2);m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);return m?m[0]:null;}
-  function toNum(v){if(typeof v==='number')return v;var s=String(v==null?'':v).replace(/[^\d,.\-]/g,'');if(/,\d{1,2}$/.test(s))s=s.replace(/\./g,'').replace(',','.');else s=s.replace(/,/g,'');var n=parseFloat(s);return isFinite(n)?n:null;}
-  function normGrade(v){var s=String(v||'').trim(),m=s.match(/\b(PSA|BGS|CGC|SGC|TAG|ACE)\s*-?\s*(\d{1,2}(?:[.,]5)?)\b/i);if(m&&Number(m[2].replace(',','.'))<=10){var gg=m[1].toUpperCase()+' '+m[2].replace(',','.');if(m[2]==='10'&&/black\s*label|\bBL\b/i.test(s)&&gg==='BGS 10')return 'BGS 10 Black Label';if(m[2]==='10'&&/pristine|\bPRI\b/i.test(s))return gg+' Pristine';return gg;}if(!s||/ham|raw|ungraded/i.test(s))return 'Ham';return s;}
-  function normGame(v){var k=nk(v);if(!k||k.indexOf('pokemon')>=0)return 'Pokemon';if(k.indexOf('onepiece')>=0)return 'One Piece';if(k.indexOf('magic')>=0||k==='mtg')return 'Magic';if(k.indexOf('yugioh')>=0)return 'Yu-Gi-Oh!';if(k.indexOf('lorcana')>=0)return 'Lorcana';return String(v).trim();}
-  function parseRows(rows,det){var m=det.map,out=[],warn=[];
-    rows.slice(det.header+1).forEach(function(r,i){r=r||[];var g=function(f){return m[f]!=null?r[m[f]]:null};var name=String(g('name')||'').trim();if(!name)return;
-      var set=String(g('set')||'').trim(),langRaw=nk(g('language')),num=g('number');
-      var row={game:normGame(g('game')),set_input:set||null,name_input:name,number_input:num==null||num===''?null:String(typeof num==='number'?Math.round(num):num).trim(),
-        language:(/^(jp|ja|jpn|japanese|japonca)$/.test(langRaw)||(!langRaw&&/japanese/i.test(set)))?'japanese':'english',
-        grade:normGrade(g('grade')),cert:g('cert')==null||g('cert')===''?null:String(typeof g('cert')==='number'?Math.round(g('cert')):g('cert')).trim(),
-        qty:Math.max(1,parseInt(g('qty'),10)||1),cost_usd:toNum(g('cost'))||0,bought:toISO(g('bought'))};
-      if(toNum(g('cost'))==null)warn.push('Satır '+(det.header+i+2)+': alış fiyatı yok, 0 kabul edildi.');
-      if(!gradeKey(row.grade))warn.push('Satır '+(det.header+i+2)+': "'+row.grade+'" derecesi için fiyat yok.');
-      out.push(row);});
-    return {rows:out,warn:warn};}
-
-  function openImport(){
-    sheet('Excel’den içe aktar',function(p,close){
-      var state={rows:[]},body=el('div',{style:'display:flex;flex-direction:column;gap:14px'});
-      var file=el('input',{id:'xlsFile',type:'file',accept:'.xlsx,.xls,.csv',style:'max-width:320px'});
-      var drop=el('div',{class:'drop'},[el('strong',{text:'Excel ya da CSV dosyanı seç'}),el('span',{class:'note',text:'Sütun adları ve sırası önemli değil: kart adı, set, numara, dil, derece, PSA numarası, adet, alış fiyatı (USD) ve alış tarihini otomatik tanırız.'}),file]);
-      ['dragover','dragenter'].forEach(function(t){drop.addEventListener(t,function(e){e.preventDefault();drop.classList.add('over');});});
-      ['dragleave','drop'].forEach(function(t){drop.addEventListener(t,function(e){e.preventDefault();drop.classList.remove('over');});});
-      drop.addEventListener('drop',function(e){if(e.dataTransfer.files[0])read(e.dataTransfer.files[0]);});
-      file.addEventListener('change',function(){if(file.files[0])read(file.files[0]);});
-      p.appendChild(drop);p.appendChild(body);
-      function read(f){body.innerHTML='';if(!window.XLSX){body.appendChild(el('div',{class:'msg err',text:'Excel okuyucu yüklenemedi. Sayfayı yenileyip tekrar dene.'}));return;}
-        var fr=new FileReader();fr.onload=function(){try{var wb=XLSX.read(fr.result,{type:'array',cellDates:false}),ws=wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null}),det=detect(rows);
-          if(!det){body.appendChild(el('div',{class:'msg err',text:'Kart adı sütunu bulunamadı. İlk satırda "Kart adı" ya da "Card name" gibi bir başlık olduğundan emin ol.'}));return;}
-          var res=parseRows(rows,det),existing={};S.holdings.forEach(function(h){if(h.cert)existing[h.cert]=1;});
-          var fresh=res.rows.filter(function(r){return !(r.cert&&existing[r.cert])}),dup=res.rows.length-fresh.length;state.rows=fresh;
-          var tot=fresh.reduce(function(a,r){return a+r.cost_usd*r.qty},0);
-          body.appendChild(el('div',{class:'msg ok',text:fresh.length+' kart bulundu · toplam maliyet '+usd(tot)+(dup?' · '+dup+' kart zaten portföyünde (PSA numarasına göre), atlanacak':'')}));
-          var tb=el('tbody');fresh.slice(0,8).forEach(function(r){tb.appendChild(el('tr',null,[r.name_input,r.set_input||'—',r.number_input||'—',r.language==='japanese'?'JP':'EN',r.grade,r.cert||'—',String(r.qty),usd(r.cost_usd),r.bought||'—'].map(function(t){return el('td',{text:t})})));});
-          body.appendChild(el('div',{class:'preview'},[el('table',null,[el('thead',null,[el('tr',null,['Kart','Set','No','Dil','Derece','PSA no','Adet','Alış','Tarih'].map(function(t){return el('th',{text:t})}))]),tb])]));
-          if(fresh.length>8)body.appendChild(el('div',{class:'note',text:'İlk 8 satır gösteriliyor.'}));
-          if(res.warn.length)body.appendChild(el('div',{class:'msg info',text:res.warn.slice(0,5).join(' ')+(res.warn.length>5?' (+'+(res.warn.length-5)+' uyarı)':'')}));
-          body.appendChild(el('div',{class:'note',text:'Alış fiyatlarının USD olduğu varsayılır.'}));
-          var go=el('button',{class:'btn',type:'button',text:fresh.length+' kartı içe aktar',disabled:!fresh.length});
-          go.addEventListener('click',function(){go.disabled=true;go.textContent='Aktarılıyor…';var chunks=[];for(var i=0;i<state.rows.length;i+=100)chunks.push(state.rows.slice(i,i+100));
-            chunks.reduce(function(pr,c){return pr.then(function(){return sb.from('holdings').insert(c).then(function(r){if(r.error)throw r.error;});});},Promise.resolve())
-              .then(function(){close();load();}).catch(function(e){go.disabled=false;go.textContent='Tekrar dene';body.appendChild(el('div',{class:'msg err',text:'Aktarılamadı: '+(e.message||e)}));});});
-          body.appendChild(go);
-        }catch(e){body.appendChild(el('div',{class:'msg err',text:'Dosya okunamadı: '+(e.message||e)}));}};fr.readAsArrayBuffer(f);}
-    });
-  }
-
-  // ---------- boot ----------
-  document.getElementById('signOut').addEventListener('click',function(){sb.auth.signOut();});
-  if(!sb){renderAuth(['err','Bağlantı kütüphanesi yüklenemedi. Sayfayı yenile.']);return;}
-  var booted=false;
-  sb.auth.onAuthStateChange(function(ev,session){var u=session&&session.user;if(u&&(!S.user||S.user.id!==u.id)){S.user=u;load();}else if(!u&&(S.user||!booted)){S.user=null;S.holdings=[];renderAuth(ev==='SIGNED_OUT'?['info','Çıkış yaptın.']:null);}booted=true;});
-  var t;window.addEventListener('resize',function(){clearTimeout(t);t=setTimeout(function(){if(S.user&&S.holdings.length)render();},150);});
+  qi.value=S.q;qi.addEventListener('input',function(){var had=!!S.q;S.q=qi.value.trim();if(had!==!!S.q)renderShelf();search();});
+  renderCcy();renderGames();setSet(S.gid,'');renderRecentQ();renderShelf();search();
+  if(sb)sb.rpc('latest_fx').then(function(res){if(res.data&&res.data[0]){S.fx=res.data[0];renderGrid();}});
 })();
 </script>
 </body>
