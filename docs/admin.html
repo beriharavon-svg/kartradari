@@ -136,6 +136,25 @@ details.pf[open] summary{background:var(--surface-2)}
 @media (max-width:900px){.strips,.two{grid-template-columns:1fr}}
 @media (max-width:560px){td,th{padding-left:10px;padding-right:10px}.hide-s{display:none}}
 </style>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#EEF1F5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B1018" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Holotique">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<script>
+if('serviceWorker' in navigator)addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})});
+/* Android ve bilgisayarda Chrome/Edge "uygulamayı yükle" teklif ettiğinde başlıkta bir düğme göster */
+addEventListener('beforeinstallprompt',function(ev){ev.preventDefault();var host=document.querySelector('.top .wrap');if(!host||host.querySelector('.install'))return;
+ var b=document.createElement('button');b.type='button';b.className='btn install';b.textContent='Uygulamayı yükle';
+ b.style.cssText='font-size:.8rem;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);cursor:pointer';
+ b.onclick=function(){ev.prompt();ev.userChoice.finally(function(){b.remove()})};host.appendChild(b);});
+addEventListener('appinstalled',function(){var b=document.querySelector('.install');if(b)b.remove()});
+</script>
 </head>
 <body>
 <header class="top">

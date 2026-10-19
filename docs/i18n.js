@@ -143,6 +143,7 @@
       'Fiyatlar: PokemonPriceTracker aracılığıyla TCGplayer (ham) ve eBay satışları (PSA). PSA fiyatı son 7 günün ağırlıklı satış fiyatıdır; güven düzeyi satış adedine göre belirlenir. Kurlar: Avrupa Merkez Bankası (Frankfurter). Yatırım tavsiyesi değildir.':
         'Prices: TCGplayer (raw) and eBay sales (PSA) via PokemonPriceTracker. The PSA price is the weighted sale price of the last 7 days; confidence depends on the number of sales. FX rates: European Central Bank (Frankfurter). Not investment advice.',
       '· Alış fiyatların ve sertifika numaraların yalnızca sana görünür.': '· Your purchase prices and cert numbers are visible only to you.',
+      'Uygulamayı yükle': 'Install app',
       'Veriler okunamadı': 'Could not load data', 'Tümü ▾': 'All ▾',
 
       // gizlilik sayfası
