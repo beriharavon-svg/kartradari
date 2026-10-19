@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Holotique</title>
+<script>
+// holotique.com/v/kullanici → vitrin sayfası
+(function(){var m=location.pathname.match(/^\/v\/([^\/?#]+)\/?$/);if(m)location.replace('/vitrin.html?u='+encodeURIComponent(decodeURIComponent(m[1]))+location.hash);})();
+</script>
+<style>
+:root{--bg:#EEF1F5;--ink:#121A26;--muted:#5A6577;--accent:#2B47D6}
+@media (prefers-color-scheme:dark){:root{--bg:#0B1018;--ink:#E8EDF4;--muted:#A0AABA;--accent:#7C93FF}}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif;padding:16px;box-sizing:border-box}
+main{max-width:420px;text-align:center}
+a{color:var(--accent);font-weight:600}
+</style>
+</head>
+<body>
+<main>
+<h1>Sayfa bulunamadı · Page not found</h1>
+<p style="color:var(--muted)">Aradığın sayfa yok ya da taşınmış.</p>
+<p><a href="/">Holotique ana sayfa · Home</a></p>
+</main>
+</body>
+</html>

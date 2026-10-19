@@ -387,9 +387,19 @@ def grade_price(g):
     return (round(float(price), 2) if price else None), sm.get("confidence"), g.get("count")
 
 
-def price_cards(budget, cap=None):
+def tracked_card_ids():
+    """Portföylerdeki eşleşmiş kartlar + istek listelerindeki kartlar."""
     matched = sb("GET", "holdings", {"select": "card_id", "match_status": "eq.matched", "card_id": "not.is.null"}) or []
-    ids = sorted({r["card_id"] for r in matched})
+    ids = {r["card_id"] for r in matched}
+    try:
+        ids |= {r["card_id"] for r in (sb("GET", "wishlist", {"select": "card_id", "card_id": "not.is.null"}) or [])}
+    except RuntimeError:
+        pass  # 011_wishlist_showcase.sql henüz çalıştırılmamış
+    return ids
+
+
+def price_cards(budget, cap=None):
+    ids = sorted(tracked_card_ids())
     if not ids:
         return 0
     cards = sb("GET", "cards", {"select": "id,ext_id,language,last_priced,source", "id": f"in.({','.join(map(str, ids))})"}) or []
@@ -679,8 +689,7 @@ def backfill_history(budget):
     done_ids = set(st[0]["value"].get("done", [])) if st else set()
     # Geçmişi okunamayan kartlar günde en fazla bir kez yeniden denenir.
     tried = {int(k): v for k, v in (st[0]["value"].get("tried", {}) if st else {}).items()}
-    matched = sb("GET", "holdings", {"select": "card_id", "match_status": "eq.matched", "card_id": "not.is.null"}) or []
-    ids = sorted(i for i in {r["card_id"] for r in matched} - done_ids if tried.get(i) != TODAY)
+    ids = sorted(i for i in tracked_card_ids() - done_ids if tried.get(i) != TODAY)
     if not ids:
         return 0
     cards = sb("GET", "cards", {"select": "id,ext_id,language", "source": "eq.ppt", "id": f"in.({','.join(map(str, ids))})"}) or []

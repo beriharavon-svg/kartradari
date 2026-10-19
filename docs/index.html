@@ -426,7 +426,8 @@ if(/access_token=|type=(signup|recovery|magiclink)|error_description=/.test(loca
     else info.appendChild(el('p',{class:'note',style:'margin:0',text:'PSA fiyatları ve fiyat geçmişi, kart bir Holotique portföyüne eklendiğinde takip edilmeye başlar.'}));
     var lang=r.game==='Pokemon JP'?'japanese':'english',game=r.game==='Pokemon JP'?'Pokemon':r.game;
     var pre=Object.assign({},{game:game,set_input:r.set_name,name_input:(r.name||'').replace(/\s*-\s*[\w\/-]+$/,'').replace(/\s*\(\d+\)\s*$/,''),number_input:r.number?String(r.number).split('/')[0]:null,language:lang});
-    info.appendChild(el('div',{class:'actions'},[el('a',{class:'btn',href:'portfoy.html?ekle='+encodeURIComponent(JSON.stringify(pre)),text:'Portföyüme ekle'}),r.url?el('a',{class:'btn ghost',href:r.url,target:'_blank',rel:'noopener',text:'TCGplayer’da gör'}):null]));
+    var wish={product_id:r.product_id,name:r.name,set_name:r.set_name,number:r.number,image:r.image,game:r.game};
+    info.appendChild(el('div',{class:'actions'},[el('a',{class:'btn',href:'portfoy.html?ekle='+encodeURIComponent(JSON.stringify(pre)),text:'Portföyüme ekle'}),el('a',{class:'btn ghost',href:'portfoy.html?istek='+encodeURIComponent(JSON.stringify(wish)),text:'☆ İstek listeme ekle'}),r.url?el('a',{class:'btn ghost',href:r.url,target:'_blank',rel:'noopener',text:'TCGplayer’da gör'}):null]));
     p.appendChild(info);ov.appendChild(p);ov.addEventListener('click',function(e){if(e.target===ov)close();});document.addEventListener('keydown',esc);document.body.appendChild(ov);p.querySelector('.x').focus();
   }
 
