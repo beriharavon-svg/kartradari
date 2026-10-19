@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Gizlilik · Holotique</title>
+<meta name="description" content="Holotique gizlilik bildirimi">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a catalog counter — one big search line, game chips, a grid of cards like a binder page, a dossier sheet on tap. */
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --surface-2:#F6F8FB; --ink:#121A26; --muted:#5A6577; --faint:#8A94A6; --line:#DDE2EA;
+  --accent:#2B47D6; --accent-ink:#FFFFFF; --accent-soft:#E5E9FC; --chart:#2B47D6; --chart-fill:rgba(43,71,214,.12);
+  --good:#127A47; --good-soft:#E1F3E9; --bad:#B7322A; --bad-soft:#F9E4E2; --warn:#9A6200; --warn-soft:#FBEFD9;
+  --foil:conic-gradient(from 210deg,#7AD3F0,#B79CF5,#F3A6C8,#F6D58A,#9BE3C4,#7AD3F0);
+  --shadow:0 1px 2px rgba(18,26,38,.06),0 6px 20px rgba(18,26,38,.06);
+  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0B1018; --surface:#131A25; --surface-2:#18212E; --ink:#E8EDF4; --muted:#A0AABA; --faint:#6E7889; --line:#253041;
+  --accent:#93A6FF; --accent-ink:#0B1018; --accent-soft:#1D2849; --chart:#93A6FF; --chart-fill:rgba(147,166,255,.14);
+  --good:#5ACB8C; --good-soft:#123020; --bad:#F2897F; --bad-soft:#3A1B19; --warn:#E9B65A; --warn-soft:#33270F; --shadow:none; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B1018; --surface:#131A25; --surface-2:#18212E; --ink:#E8EDF4; --muted:#A0AABA; --faint:#6E7889; --line:#253041;
+  --accent:#93A6FF; --accent-ink:#0B1018; --accent-soft:#1D2849; --chart:#93A6FF; --chart-fill:rgba(147,166,255,.14);
+  --good:#5ACB8C; --good-soft:#123020; --bad:#F2897F; --bad-soft:#3A1B19; --warn:#E9B65A; --warn-soft:#33270F; --shadow:none; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 56px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1200px;margin:0 auto}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.label{font-size:.7rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)}
+.pos{color:var(--good)} .neg{color:var(--bad)}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+a{color:var(--accent)}
+.btn{display:inline-flex;align-items:center;justify-content:center;font:600 .88rem var(--f-body);background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:9px 14px;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);margin:0 calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px))}
+.top .wrap{display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto;text-decoration:none;color:inherit}
+.mark{width:30px;height:30px;border-radius:50%;background:radial-gradient(circle,var(--accent) 0 3px,transparent 4px),repeating-radial-gradient(circle,transparent 0 5px,var(--line) 5px 6px);position:relative;overflow:hidden;border:1px solid var(--line)}
+.mark::after{content:"";position:absolute;inset:0;background:conic-gradient(from 0deg,transparent 0 300deg,color-mix(in srgb,var(--accent) 55%,transparent) 360deg);animation:sweep 4s linear infinite}
+@keyframes sweep{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.mark::after{animation:none}}
+.brand h1{font-size:1.3rem;font-weight:800;letter-spacing:-.02em}
+.nav{display:flex;gap:4px}
+.nav a{color:var(--muted);text-decoration:none;font-weight:600;font-size:.88rem;padding:6px 10px;border-radius:7px}
+.nav a:hover{background:var(--surface)}
+.nav a[aria-current="page"]{color:var(--ink);background:var(--surface);border:1px solid var(--line)}
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:5px 9px;border-radius:6px;cursor:pointer;font:600 .78rem var(--f-mono);color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.ccy-fixed{font:600 .78rem var(--f-mono);background:var(--accent);color:var(--accent-ink);border-radius:6px;padding:7px 9px}
+.ccy{display:flex;align-items:center;gap:6px}
+
+
+.doc{max-width:760px;margin:28px auto 0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:26px 28px;box-shadow:var(--shadow)}
+.doc h2{font-size:1.6rem;margin-bottom:6px}.doc h3{font-size:1.05rem;margin:22px 0 6px}
+.doc p,.doc li{color:var(--ink);max-width:68ch}.doc .muted{font-size:.85rem}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="./"><span class="mark" aria-hidden="true"></span><h1>Holotique</h1></a>
+  <nav class="nav" aria-label="Sayfalar"><a href="./">Kart ara</a><a href="portfoy.html">Portföyüm</a></nav>
+</div></header>
+<main class="wrap">
+<article class="doc">
+  <h2>Gizlilik bildirimi</h2>
+  <p class="muted">Son güncelleme: 19 Ekim 2026</p>
+
+  <h3>Portföy bilgilerin</h3>
+  <p>Hesabına eklediğin kartlar, alış fiyatların, alış tarihlerin ve sertifika numaraların yalnızca sana görünür. Bu kural veritabanı düzeyinde uygulanır: başka hiçbir kullanıcı bu bilgilere erişemez. Site yöneticisi de kişisel portföyleri görmez; yalnızca toplu ve anonim sayılar görür (örneğin "bir kart kaç portföyde var").</p>
+
+  <h3>Anonim kullanım istatistikleri</h3>
+  <p>Siteyi geliştirmek için şunları sayıyoruz: arama kutusuna yazılan kelimeler ve kaç sonuç bulunduğu, detayı açılan kartlar ve zamanı. Bu kayıtlar seni tanımlayan hiçbir bilgiyle (hesap, e-posta, IP adresi) ilişkilendirilmez. Amaç, katalogda eksik kartları bulmak ve ilgi gören kartları öne çıkarmaktır.</p>
+
+  <h3>Hesap bilgileri</h3>
+  <p>Giriş için e-posta adresin ve şifren (şifrelenmiş olarak) Supabase altyapısında saklanır. E-posta adresin yalnızca hesap onayı ve şifre sıfırlama için kullanılır; üçüncü taraflarla paylaşılmaz, pazarlama için kullanılmaz.</p>
+
+  <h3>Tarayıcında saklananlar</h3>
+  <p>Seçtiğin para birimi, son aramaların ve son baktığın kartlar yalnızca kendi tarayıcında saklanır; sunucuya gönderilmez. Tarayıcı verilerini sildiğinde kaybolur.</p>
+
+  <h3>Veri kaynakları</h3>
+  <p>Fiyatlar TCGplayer (TCGCSV aracılığıyla) ve eBay satışlarından (PokemonPriceTracker) gelir. Gösterilen fiyatlar bilgi amaçlıdır, yatırım tavsiyesi değildir.</p>
+
+  <h3>Hesabını silmek</h3>
+  <p>Hesabının ve bütün portföy verilerinin silinmesini istersen bize yazman yeterli; kalıcı olarak sileriz.</p>
+</article>
+</main>
+</body>
+</html>

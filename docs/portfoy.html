@@ -479,7 +479,9 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
 
   function renderCcy(){var seg=document.getElementById('ccySeg');seg.innerHTML='';CCY.forEach(function(m){seg.appendChild(el('button',{type:'button','aria-pressed':String(S.ccy===m.c),text:m.c,onclick:function(){S.ccy=m.c;store.set('kr-ccy',m.c);render();}}));});}
 
+  function adminLink(){if(S.adminChecked||!sb)return;S.adminChecked=true;sb.rpc('is_admin').then(function(r){if(r.data===true){var nav=document.querySelector('.nav');if(nav&&!nav.querySelector('[href="admin.html"]'))nav.appendChild(el('a',{href:'admin.html',text:'Yönetim'}));}});}
   function render(){
+    adminLink();
     document.getElementById('ccyBox').hidden=false;document.getElementById('who').hidden=false;document.getElementById('whoMail').textContent=S.user.email;renderCcy();
     var app=document.getElementById('app');app.innerHTML='';
     if(!S.holdings.length){app.appendChild(el('section',{class:'panel empty',style:'margin-top:20px'},[el('h2',{text:'Portföyün boş'}),el('p',{class:'muted',style:'margin:0;max-width:60ch',text:'Kartlarını Excel dosyasından toplu olarak yükleyebilir ya da tek tek ekleyebilirsin. Eklediğin kartlar birkaç saat içinde katalogla eşleşir ve fiyatlanır.'}),el('div',{class:'cta'},[el('button',{class:'btn',type:'button',text:'Excel’den içe aktar',onclick:openImport}),el('button',{class:'btn ghost',type:'button',text:'Tek kart ekle',onclick:function(){openAdd()}})])]));return;}
@@ -526,7 +528,7 @@ footer{margin-top:22px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
     led.appendChild(rows);
     led.appendChild(el('div',{class:'ledger-foot'},[el('span',{text:'Fiyatlar her gün otomatik güncellenir. Yeni kartlar birkaç saat içinde eşleşir.'})]));
     main.appendChild(led);if(hs.length)main.appendChild(renderDossier());else main.style.gridTemplateColumns='1fr';app.appendChild(main);
-    app.appendChild(el('footer',null,[el('span',{text:'Fiyatlar: PokemonPriceTracker aracılığıyla TCGplayer (ham) ve eBay satışları (PSA). PSA fiyatı son 7 günün ağırlıklı satış fiyatıdır; güven düzeyi satış adedine göre belirlenir. Kurlar: Avrupa Merkez Bankası (Frankfurter). Yatırım tavsiyesi değildir.'})]));
+    app.appendChild(el('footer',null,[el('span',{text:'Fiyatlar: PokemonPriceTracker aracılığıyla TCGplayer (ham) ve eBay satışları (PSA). PSA fiyatı son 7 günün ağırlıklı satış fiyatıdır; güven düzeyi satış adedine göre belirlenir. Kurlar: Avrupa Merkez Bankası (Frankfurter). Yatırım tavsiyesi değildir.'}),el('span',null,[el('a',{href:'gizlilik.html',text:'Gizlilik'}),' · Alış fiyatların ve sertifika numaraların yalnızca sana görünür.'])]));
     requestAnimationFrame(function(){lineChart(cb,clip(ps),{label:'Portföy değeri grafiği'});var mc=document.getElementById('miniChart'),h=S.holdings.find(function(x){return x.id===S.sel});if(mc&&h)lineChart(mc,series(h),{label:'Kart fiyat grafiği'});});
   }
 

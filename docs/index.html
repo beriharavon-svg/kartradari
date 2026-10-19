@@ -208,6 +208,7 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
   <div class="more" id="more" hidden><button type="button" class="btn ghost" id="moreBtn">Daha fazla göster</button></div>
   <footer>
     <span>Ham fiyatlar: TCGplayer piyasa fiyatı (TCGCSV aracılığıyla), günlük. PSA fiyatları: eBay satışları (PokemonPriceTracker), yalnızca Holotique portföylerinde takip edilen kartlar için. Yatırım tavsiyesi değildir.</span>
+    <span><a href="gizlilik.html">Gizlilik</a> · Aramalar ve görüntülenen kartlar kişiyle ilişkilendirilmeden, anonim olarak sayılır.</span>
   </footer>
 </main>
 <script>
@@ -324,6 +325,8 @@ if(/access_token=|type=(signup|recovery|magiclink)|error_description=/.test(loca
         S.rows=res.data||[];S.total=S.rows.length?Number(S.rows[0].total||S.rows.length):0;
         if(S.gid&&!S.gname&&S.rows[0]){setSet(S.gid,S.rows[0].set_name);}
         clearTimeout(S.rqT);if(S.q&&S.rows.length){var q=S.q,g=S.g;S.rqT=setTimeout(function(){if(S.q===q)rememberQuery(q,g)},1500);}
+        // Anonim kullanım sayacı: yazmayı bıraktıktan sonra bir kez (kimin aradığı tutulmaz)
+        clearTimeout(S.lgT);if(S.q&&S.q.length>=2&&!S.gid){var lq=S.q,lg=S.g,ln=S.total;S.lgT=setTimeout(function(){if(S.q===lq&&S.lastLogged!==lq+'|'+lg){S.lastLogged=lq+'|'+lg;sb.rpc('log_event',{kind:'search',q:lq,g:lg||null,pid:null,results:ln}).then(function(){},function(){});}},1500);}
         var n=S.total.toLocaleString('tr-TR');
         metaText.textContent=S.q||S.gid?(n+' kart'+(S.gid?' · '+S.gname:'')+(S.total>S.rows.length?' · ilk '+S.rows.length+' gösteriliyor':'')):'En değerli kartlar'+(S.g?' · '+gameLabel(S.g):'');
         var d=S.rows.map(function(r){return r.price_date}).filter(Boolean).sort().pop();dateText.textContent=d?'Fiyatlar '+dfmt(d):'';
@@ -380,6 +383,7 @@ if(/access_token=|type=(signup|recovery|magiclink)|error_description=/.test(loca
   }
 
   function openCard(r){
+    if(sb&&r.product_id)sb.rpc('log_event',{kind:'view',q:null,g:r.game||null,pid:r.product_id,results:null}).then(function(){},function(){});
     if(S.q)rememberQuery(S.q,S.g);rememberView(r);
     var ov=el('div',{class:'sheet',role:'dialog','aria-modal':'true','aria-label':r.name}),p=el('div',{class:'panel'});
     function close(){ov.remove();document.removeEventListener('keydown',esc);}function esc(e){if(e.key==='Escape')close();}
