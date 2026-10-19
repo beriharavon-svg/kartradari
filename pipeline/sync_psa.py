@@ -529,6 +529,7 @@ def sync_psa_certs():
         days = (datetime.fromisoformat(TODAY) - datetime.fromisoformat(since)).days if since else 99
         if days < 7:
             log(f"PSA erişimi onay bekliyor ({since}'den beri). PSA adımı atlandı; haftada bir yeniden denenir.")
+            STATUS["psa"] = {"skipped": f"onay bekliyor ({since})"}
             return 0
     try:
         rows = sb("GET", "holdings", {"select": "id,cert,grade,match_status", "cert": "not.is.null",
@@ -536,6 +537,7 @@ def sync_psa_certs():
     except RuntimeError as e:
         log("PSA alanları veritabanında yok (supabase/migrations/002_psa.sql çalıştırılmalı). PSA adımı atlandı.", str(e)[:120])
         return 0
+    STATUS["psa"] = {"waiting": len(rows), "ok": 0, "not_found": 0}
     if not rows:
         return 0
     st = sb("GET", "job_state", {"key": f"eq.psa:{TODAY}", "select": "value"}) or []
@@ -553,6 +555,7 @@ def sync_psa_certs():
             if not cert_data:
                 sb("PATCH", "holdings", {"id": f"eq.{h['id']}"}, {"psa_checked": TODAY, "psa_status": "not_found"})
                 log("PSA kaydı yok:", cert)
+                STATUS["psa"]["not_found"] += 1
                 continue
             front = back = None
             try:
@@ -570,8 +573,10 @@ def sync_psa_certs():
             log("PSA OK", cert, "·", cert_data.get("Subject"), cert_data.get("CardNumber"), "·", cert_data.get("CardGrade"),
                 "· görsel", "var" if front else "yok", "· derece farkı!" if g and h.get("grade") and g != h["grade"] else "")
             done += 1
+            STATUS["psa"]["ok"] += 1
     except PsaStop as e:
         log("PSA adımı durdu:", e)
+        STATUS["psa"]["stopped"] = str(e)[:300]
         if "approved customers" in str(e):
             sb("POST", "job_state", {"on_conflict": "key"},
                [{"key": "psa:blocked", "value": {"since": TODAY}, "updated_at": datetime.now(timezone.utc).isoformat()}],
@@ -834,6 +839,7 @@ def main():
             log(f"PSA verisi alınan kart: {n}")
     except Exception as e:  # noqa: BLE001
         log("PSA adımı hata verdi:", e)
+        note_error("PSA", e)
     STATUS.update({"run_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "credits_before": budget.used})
     m = p = 0
     try:
