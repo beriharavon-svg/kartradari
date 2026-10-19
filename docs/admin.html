@@ -116,6 +116,23 @@ td:first-child{width:100%;max-width:0}
 .gate{max-width:520px;margin:60px auto;padding:26px;text-align:center}
 .gate h2{margin-bottom:8px}
 .note{font-size:.78rem;color:var(--muted)}
+details.pf{border-top:1px solid var(--line)}
+details.pf summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:90px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 16px}
+details.pf summary::-webkit-details-marker{display:none}
+details.pf summary:hover{background:var(--surface-2)}
+details.pf .code{font:600 .82rem var(--f-mono);color:var(--muted)}
+details.pf .mix{display:flex;gap:4px;flex-wrap:wrap;min-width:0}
+details.pf .tag{font-size:.7rem;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+details.pf .tot{text-align:right;white-space:nowrap}
+details.pf .tot b{font-family:var(--f-mono);font-size:.92rem}
+details.pf .tot span{display:block;font-size:.72rem;color:var(--muted)}
+details.pf[open] summary{background:var(--surface-2)}
+.items{padding:4px 0 8px}
+.items .it{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:6px 16px 6px 118px;font-size:.84rem}
+.items .it .g{font-size:.74rem;color:var(--muted);white-space:nowrap}
+.items .it .v{font-family:var(--f-mono);font-size:.8rem;white-space:nowrap;text-align:right;min-width:72px}
+.more-note{padding:8px 16px 12px;font-size:.78rem;color:var(--muted)}
+@media (max-width:640px){details.pf summary{grid-template-columns:70px minmax(0,1fr) auto}.items .it{padding-left:16px}}
 @media (max-width:900px){.strips,.two{grid-template-columns:1fr}}
 @media (max-width:560px){td,th{padding-left:10px;padding-right:10px}.hide-s{display:none}}
 </style>
@@ -191,7 +208,7 @@ td:first-child{width:100%;max-width:0}
 
   function render(o,daily,held,views,searches,zero,mix){
     app.innerHTML='';var per=DAYS+' gün';
-    app.appendChild(el('div',{class:'head'},[el('div',null,[el('h2',{text:'Yönetim paneli'}),el('p',{text:'Toplu ve anonim veriler. Kimsenin alış fiyatı, sertifika numarası ya da kişisel portföyü burada görünmez.'})])]));
+    app.appendChild(el('div',{class:'head'},[el('div',null,[el('h2',{text:'Yönetim paneli'}),el('p',{text:'Toplu veriler ve isimsiz portföyler. Kimsenin e-postası portföyüyle eşleşmez; alış fiyatı, alış tarihi ve sertifika numarası burada görünmez.'})])]));
     var gain=o.cost_total?((o.portfolio_value-o.cost_total)/o.cost_total*100):null;
     app.appendChild(el('section',{class:'kpis'},[
       kpi('Kullanıcı',n(o.users),'+'+n(o.users_new)+' yeni · son '+per),
@@ -222,7 +239,41 @@ td:first-child{width:100%;max-width:0}
      ['Desteklenmeyen',n(ms.unsupported||0),null]].forEach(function(x){
       sys.appendChild(el('div',null,[el('div',{class:'k',text:x[0]}),el('div',{class:'v'},[x[1]+' ',x[2]?el('span',{class:'chip '+x[2][0],text:x[2][1]}):null])]));});
     app.appendChild(el('section',{class:'section panel'},[el('div',{class:'card-h'},[el('h3',{text:'Sistem sağlığı'}),el('span',{text:'fiyat görevi 15 dakikada bir, katalog her gece'})]),sys]));
+    var extra=el('div');app.appendChild(extra);loadExtra(extra);
     app.appendChild(el('p',{class:'note',style:'margin-top:14px',text:'Arama ve görüntüleme sayıları 19 Ekim 2026\'dan itibaren tutuluyor; kimin aradığı kaydedilmez.'}));
+  }
+
+  // İsimsiz portföyler, büyüklük dağılımı ve kullanıcı listesi (010_admin_portfolios.sql)
+  function loadExtra(box){
+    Promise.all([sb.rpc('admin_buckets'),sb.rpc('admin_portfolios',{lim:100}),sb.rpc('admin_users',{lim:300})]).then(function(R){
+      if(R.some(function(x){return x.error})){box.appendChild(el('section',{class:'section panel'},[el('div',{class:'empty',text:'İsimsiz portföyler ve kullanıcı listesi için supabase/migrations/010_admin_portfolios.sql dosyasının çalıştırılması gerekiyor.'})]));return;}
+      var bk=R[0].data||[],pf=R[1].data||[],us=R[2].data||[];
+      var cnt=bk.filter(function(b){return b.dim==='cards'}).map(function(b){return {label:b.bucket+' kart',v:b.users}});
+      var val=bk.filter(function(b){return b.dim==='value'}).map(function(b){return {label:b.bucket,v:b.users}});
+      var kf=function(r){return n(r.v)+' kişi'};
+      box.appendChild(el('section',{class:'section two'},[hbars('Portföy büyüklüğü (kart adedi)',cnt,kf),hbars('Portföy değeri',val,kf)]));
+      // isimsiz portföyler
+      var list=el('div');
+      pf.forEach(function(p){
+        var mix=el('div',{class:'mix'});
+        Object.keys(p.games||{}).forEach(function(g){mix.appendChild(el('span',{class:'tag',text:g+' '+p.games[g]}))});
+        Object.keys(p.graders||{}).forEach(function(g){mix.appendChild(el('span',{class:'tag',text:g+' '+p.graders[g]}))});
+        var items=el('div',{class:'items'}),all=p.items||[];
+        all.slice(0,25).forEach(function(it){items.appendChild(el('div',{class:'it'},[el('div',{class:'cardcell'},[it.image?el('img',{src:it.image,alt:'',loading:'lazy'}):el('div',{class:'ph'}),el('div',null,[el('div',{class:'nm',text:it.name||'—'}),el('div',{class:'sb',text:[it.set,it.number].filter(Boolean).join(' · ')})])]),
+          el('span',{class:'g',text:it.grade+(it.qty>1?' ×'+it.qty:'')}),el('span',{class:'v',text:usd(it.value)})]))});
+        if(all.length>25)items.appendChild(el('div',{class:'more-note',text:'+'+(all.length-25)+' kart daha (en değerli 25 kart gösteriliyor)'}));
+        list.appendChild(el('details',{class:'pf'},[el('summary',null,[el('span',{class:'code',text:'#'+p.code}),mix,el('div',{class:'tot'},[el('b',{text:usd(p.value)}),el('span',{text:n(p.qty)+' kart'})])]),items]));
+      });
+      box.appendChild(el('section',{class:'section panel'},[el('div',{class:'card-h'},[el('h3',{text:'İsimsiz portföyler'}),el('span',{text:'değere göre · satıra tıkla, kartları gör'})]),
+        pf.length?list:el('div',{class:'empty',text:'Henüz portföy yok.'}),
+        el('div',{class:'more-note',text:'Kodlar rastgeledir ve e-postayla eşleştirilemez. Alış fiyatı, alış tarihi ve sertifika numarası gösterilmez.'})]));
+      // kullanıcılar
+      box.appendChild(el('section',{class:'section'},[table('Kullanıcılar',n(us.length)+' hesap · yeniden eskiye',[
+        {h:'E-posta',f:function(r){return r.email||'—'}},
+        {h:'Kayıt',r:1,f:function(r){return dfmt(r.created_at)}},
+        {h:'Son giriş',r:1,hideS:1,f:function(r){return r.last_sign_in_at?dfmt(r.last_sign_in_at):'hiç'}},
+        {h:'Onay',r:1,hideS:1,f:function(r){return r.confirmed?'✓':'bekliyor'}}],us,'Henüz kullanıcı yok.')]));
+    });
   }
 
   renderRange();
