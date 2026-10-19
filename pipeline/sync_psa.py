@@ -527,8 +527,8 @@ def sync_psa_certs():
     if blocked:
         since = blocked[0]["value"].get("since", "")
         days = (datetime.fromisoformat(TODAY) - datetime.fromisoformat(since)).days if since else 99
-        if days < 7:
-            log(f"PSA erişimi onay bekliyor ({since}'den beri). PSA adımı atlandı; haftada bir yeniden denenir.")
+        if days < 1:
+            log(f"PSA erişimi onay bekliyor ({since}'den beri). PSA adımı atlandı; günde bir yeniden denenir.")
             STATUS["psa"] = {"skipped": f"onay bekliyor ({since})"}
             return 0
     try:
@@ -574,6 +574,8 @@ def sync_psa_certs():
                 "· görsel", "var" if front else "yok", "· derece farkı!" if g and h.get("grade") and g != h["grade"] else "")
             done += 1
             STATUS["psa"]["ok"] += 1
+            if blocked and done == 1:
+                sb("DELETE", "job_state", {"key": "eq.psa:blocked"})
     except PsaStop as e:
         log("PSA adımı durdu:", e)
         STATUS["psa"]["stopped"] = str(e)[:300]
