@@ -158,6 +158,7 @@ a{color:var(--accent)}
 footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-direction:column;gap:4px}
 @media (max-width:720px){.sheet .panel{grid-template-columns:1fr}.big{max-width:240px}.grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}.top{position:static}}
 </style>
+<script src="i18n.js"></script>
 </head>
 <body>
 <header class="top">
@@ -230,7 +231,7 @@ if(/access_token=|type=(signup|recovery|magiclink)|error_description=/.test(loca
   function el(tag,attrs,kids){var e=document.createElement(tag);if(attrs)for(var k in attrs){var v=attrs[k];if(v==null||v===false)continue;if(k==='text')e.textContent=v;else if(k==='class')e.className=v;else if(k.slice(0,2)==='on')e.addEventListener(k.slice(2),v);else e.setAttribute(k,v===true?'':v);}(kids||[]).forEach(function(c){if(c!=null)e.appendChild(typeof c==='string'?document.createTextNode(c):c)});return e;}
   function meta(c){for(var i=0;i<CCY.length;i++)if(CCY[i].c===c)return CCY[i];return CCY[0];}
   function usd(v){if(v==null||!isFinite(v))return '—';v=Number(v);return '$'+v.toLocaleString('en-US',{minimumFractionDigits:v>=1000?0:2,maximumFractionDigits:v>=1000?0:2});}
-  function sec(v){var r=S.fx&&Number(S.fx.rates[S.ccy]);if(v==null||!r)return '';var m=meta(S.ccy);return '≈ '+m.s+(Number(v)*r).toLocaleString('tr-TR',{minimumFractionDigits:m.d,maximumFractionDigits:m.d});}
+  function sec(v){var r=S.fx&&Number(S.fx.rates[S.ccy]);if(v==null||!r)return '';var m=meta(S.ccy);return '≈ '+m.s+(Number(v)*r).toLocaleString(window.HQ_LANG==='en'?'en-US':'tr-TR',{minimumFractionDigits:m.d,maximumFractionDigits:m.d});}
   function dfmt(iso){if(!iso)return '—';var p=String(iso).slice(0,10).split('-');return Number(p[2])+' '+MONTHS[Number(p[1])-1]+' '+p[0];}
   function jget(k){try{var v=JSON.parse(store.get(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return []}}
   function jset(k,v){store.set(k,JSON.stringify(v))}
@@ -327,7 +328,7 @@ if(/access_token=|type=(signup|recovery|magiclink)|error_description=/.test(loca
         clearTimeout(S.rqT);if(S.q&&S.rows.length){var q=S.q,g=S.g;S.rqT=setTimeout(function(){if(S.q===q)rememberQuery(q,g)},1500);}
         // Anonim kullanım sayacı: yazmayı bıraktıktan sonra bir kez (kimin aradığı tutulmaz)
         clearTimeout(S.lgT);if(S.q&&S.q.length>=2&&!S.gid){var lq=S.q,lg=S.g,ln=S.total;S.lgT=setTimeout(function(){if(S.q===lq&&S.lastLogged!==lq+'|'+lg){S.lastLogged=lq+'|'+lg;sb.rpc('log_event',{kind:'search',q:lq,g:lg||null,pid:null,results:ln}).then(function(){},function(){});}},1500);}
-        var n=S.total.toLocaleString('tr-TR');
+        var n=S.total.toLocaleString(window.HQ_LANG==='en'?'en-US':'tr-TR');
         metaText.textContent=S.q||S.gid?(n+' kart'+(S.gid?' · '+S.gname:'')+(S.total>S.rows.length?' · ilk '+S.rows.length+' gösteriliyor':'')):'En değerli kartlar'+(S.g?' · '+gameLabel(S.g):'');
         var d=S.rows.map(function(r){return r.price_date}).filter(Boolean).sort().pop();dateText.textContent=d?'Fiyatlar '+dfmt(d):'';
         renderGrid();
