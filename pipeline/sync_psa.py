@@ -463,6 +463,55 @@ def price_cards(budget, cap=None):
     return done
 
 
+# ---------- Kart görsellerini kendi depomuza kopyala (vitrin görseli için) ----------
+
+IMG_BUCKET = "card-images"
+
+
+def cache_images(limit=150):
+    """Takip edilen kartların görsellerini Supabase Storage'a kopyalar; tarayıcı bunları güvenle çizebilir."""
+    ids = sorted(tracked_card_ids())
+    if not ids:
+        return 0
+    try:
+        cards = sb("GET", "cards", {"select": "id,image", "image_cached": "is.null", "image": "not.is.null",
+                                    "id": f"in.({','.join(map(str, ids))})", "limit": str(limit)}) or []
+    except RuntimeError as e:
+        if "image_cached" in str(e):
+            STATUS["note_images"] = "012_card_images.sql henüz çalıştırılmamış."
+            return 0
+        raise
+    done, fails = 0, []
+    for c in cards:
+        src = c["image"]
+        try:
+            req = urllib.request.Request(src, headers={"User-Agent": UA, "Accept": "image/*"})
+            with urllib.request.urlopen(req, timeout=30) as r:
+                ctype = (r.headers.get("Content-Type") or "image/jpeg").split(";")[0].strip()
+                data = r.read(2_000_000)
+            if not ctype.startswith("image/") or len(data) < 500:
+                raise RuntimeError(f"görsel değil ({ctype}, {len(data)} bayt)")
+            ext = {"image/png": "png", "image/webp": "webp"}.get(ctype, "jpg")
+            path = f"{c['id']}.{ext}"
+            up = urllib.request.Request(f"{SUPA}/storage/v1/object/{IMG_BUCKET}/{path}", data=data, method="POST",
+                                        headers={"apikey": SKEY, "Content-Type": ctype, "x-upsert": "true",
+                                                 "Cache-Control": "max-age=31536000", "User-Agent": UA})
+            urllib.request.urlopen(up, timeout=30).read()
+            sb("PATCH", "cards", {"id": f"eq.{c['id']}"},
+               {"image_cached": f"{SUPA}/storage/v1/object/public/{IMG_BUCKET}/{path}"})
+            done += 1
+        except urllib.error.HTTPError as e:
+            fails.append(f"kart {c['id']}: {e.code} {e.read().decode('utf-8', 'replace')[:120]}")
+        except Exception as e:  # noqa: BLE001
+            fails.append(f"kart {c['id']}: {str(e)[:120]}")
+        if len(fails) >= 5 and not done:
+            break  # depo ya da kaynak hiç çalışmıyorsa boşuna deneme
+    STATUS["images"] = {"cached": done, "failed": len(fails), "examples": fails[:3]}
+    if done:
+        log(f"Depoya kopyalanan kart görseli: {done}")
+    return done
+
+
 # ---------- PSA sertifika verisi ----------
 
 class PsaStop(Exception):
@@ -860,6 +909,10 @@ def main():
         p = price_cards(budget, cap=budget.used + int(budget.left * PRICE_SHARE))
         m = match_pending(budget)
         p += price_cards(budget)
+        try:
+            cache_images()
+        except Exception as e:  # noqa: BLE001
+            note_error("görsel kopyalama", e)
         STATUS["history_backfilled"] = backfill_history(budget)
         probe_grade_keys(budget)
     except Exception as e:  # noqa: BLE001

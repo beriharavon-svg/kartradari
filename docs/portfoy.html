@@ -830,9 +830,10 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     var v=S.show,set=v&&v.folder_id&&S.fitems[v.folder_id];
     var L=S.holdings.filter(function(h){return !set||set.has(h.id)});
     var count=L.reduce(function(a,h){return a+h.qty},0),total=0;
-    var cards=L.map(function(h){var p=priced(h)?price(h):null,val=p!=null?p*h.qty:null;if(val!=null)total+=val;return {name:hname(h),image:h.cards&&h.cards.image,grade:h.grade,qty:h.qty,value:val};});
+    var cards=L.map(function(h){var p=priced(h)?price(h):null,val=p!=null?p*h.qty:null;if(val!=null)total+=val;return {name:hname(h),image:h.cards&&(h.cards.image_cached||h.cards.image),grade:h.grade,qty:h.qty,value:val};});
     cards.sort(function(a,b){return (b.value||-1)-(a.value||-1)});
-    return {title:v.title||v.slug,slug:v.slug,host:location.host,count:count,total:v.show_values?total:null,cards:cards};
+    var ti=document.getElementById('vTitle'),title=ti&&ti.value.trim()?ti.value.trim():(v.title||v.slug);
+    return {title:title,slug:v.slug,host:location.host,count:count,total:v.show_values?total:null,cards:cards};
   }
   function shareImagePanel(){
     var fmt=store.get('kr-imgfmt')||'post',cv=null;
@@ -846,6 +847,7 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     function out(share){if(!cv)return;window.HQShareImageExport(cv,'holotique-'+S.show.slug+(fmt==='story'?'-hikaye':'')+'.png',share).then(function(r){if(r==='error'){msg.className='msg err';msg.textContent='Görsel kaydedilemedi. Sayfayı yenileyip tekrar dene.';msg.hidden=false;}});}
     var canShareFiles=!!(navigator.canShare&&window.File&&navigator.canShare({files:[new File([''],'x.png',{type:'image/png'})]}));
     drawSeg();
+    setTimeout(function(){var ti=document.getElementById('vTitle'),tt=null;if(ti)ti.addEventListener('input',function(){clearTimeout(tt);tt=setTimeout(make,600);});},0);
     panel.appendChild(el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;align-items:center'},[seg,el('button',{class:'btn',type:'button',text:'Görseli indir',onclick:function(){out(false)}}),canShareFiles?el('button',{class:'btn quiet',type:'button',text:'Paylaş',onclick:function(){out(true)}}):null]));
     panel.appendChild(prev);panel.appendChild(msg);
     make();
