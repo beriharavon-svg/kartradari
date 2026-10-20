@@ -83,7 +83,7 @@
       logo(c, P + 26, y - 14, 26);
       c.fillStyle = '#E8EDF4'; c.font = '800 40px ' + FD; c.fillText('Holotique', P + 68, y);
       c.font = '600 22px ' + FB; c.fillStyle = '#A0AABA'; c.textAlign = 'right';
-      c.fillText(T(opts.badge || 'VİTRİN'), W - P, y - 4); c.textAlign = 'left';
+      var badge = opts.badge != null ? opts.badge : 'VİTRİN'; if (badge) c.fillText(T(badge), W - P, y - 4); c.textAlign = 'left';
       y += story ? 110 : 86;
       c.font = '800 ' + (story ? 76 : 64) + 'px ' + FD; c.fillStyle = '#FFFFFF';
       var tl = wrap(c, opts.title || opts.slug, W - 2 * P, 2);

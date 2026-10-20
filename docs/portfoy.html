@@ -889,7 +889,7 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
   function saleCards(){var base=showcaseCards(),L=S.holdings.filter(onSale);
     var cards=L.map(function(h){return {name:hname(h),image:h.cards&&(h.cards.image_cached||h.cards.image),grade:h.grade,qty:h.qty,value:priced(h)?price(h)*h.qty:null,priceText:h.ask_price!=null?money(Number(h.ask_price),h.ask_ccy):''};});
     cards.sort(function(a,b){return (b.value||-1)-(a.value||-1)});
-    return Object.assign(base,{cards:cards,badge:'SATILIK',statText:'',footNote:'Satıcı fiyatı · alım satım taraflar arasında',total:null});}
+    return Object.assign(base,{cards:cards,badge:'',statText:'',footNote:'',total:null});}
   function shareImagePanel(){
     var fmt=store.get('kr-imgfmt')||'post',mode='top',cv=null,saleN=S.holdings.filter(onSale).length;
     var panel=el('section',{class:'panel showp'});
