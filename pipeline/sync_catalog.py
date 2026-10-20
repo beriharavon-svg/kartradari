@@ -26,7 +26,7 @@ UA = "Holotique/0.3 (+https://holotique.com)"
 FORCE = os.environ.get("CATALOG_FORCE") == "1"
 BATCH = 500
 # Katalog satır biçimi değişince artırılır; böylece kaynak aynı olsa bile bir kez yeniden yüklenir.
-SYNC_VERSION = 3
+SYNC_VERSION = 4
 EXTRA_COLS = {"ok": True}
 
 # Oyun adı (sitede görünen) -> TCGCSV kategori adı adayları
@@ -108,8 +108,29 @@ def pick_price(rows):
 
 def upsert(rows):
     for i in range(0, len(rows), BATCH):
-        sb("POST", "catalog", {"on_conflict": "product_id"}, rows[i:i + BATCH],
-           prefer="resolution=merge-duplicates,return=minimal")
+        _upsert_chunk(rows[i:i + BATCH])
+
+
+def _upsert_chunk(chunk, depth=0):
+    """Veritabanı yavaş kalırsa (zaman aşımı) aynı satırları daha küçük parçalarla yeniden dener."""
+    for attempt in range(3):
+        try:
+            sb("POST", "catalog", {"on_conflict": "product_id"}, chunk,
+               prefer="resolution=merge-duplicates,return=minimal")
+            return
+        except Exception as e:  # noqa: BLE001
+            msg = str(e)
+            if "timed out" in msg or "timeout" in msg.lower() or " 5" in msg[:40]:
+                if len(chunk) > 50 and depth < 4:
+                    half = len(chunk) // 2
+                    _upsert_chunk(chunk[:half], depth + 1)
+                    _upsert_chunk(chunk[half:], depth + 1)
+                    return
+                log("yeniden deneniyor:", msg[:120])
+                time.sleep(5 * (attempt + 1))
+                continue
+            raise
+    raise RuntimeError("katalog yazımı tekrar tekrar zaman aşımına uğradı")
 
 
 def sync_game(label, aliases, cats, price_date):
@@ -159,7 +180,7 @@ def sync_game(label, aliases, cats, price_date):
                     "released": (g.get("publishedOn") or "")[:10] or None} if EXTRA_COLS["ok"] else {}),
                 "price_date": price_date, "updated_at": datetime.now(timezone.utc).isoformat(),
             })
-        if len(buffer) >= BATCH * 4:
+        if len(buffer) >= BATCH * 2:
             upsert(buffer)
             total += len(buffer)
             buffer = []
