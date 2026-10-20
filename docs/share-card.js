@@ -90,9 +90,8 @@
       tl.forEach(function (l, i) { c.fillText(l, P, y + i * (story ? 84 : 72)); });
       y += (tl.length - 1) * (story ? 84 : 72) + (story ? 70 : 58);
       c.font = '500 32px ' + FM; c.fillStyle = '#A0AABA';
-      var stat = opts.statText || (opts.count + ' ' + T('kart') + (showVal ? '  ·  ' + usd(opts.total) : ''));
-      c.fillText(stat, P, y);
-      y += story ? 70 : 50;
+      var stat = opts.statText != null ? opts.statText : (opts.count + ' ' + T('kart') + (showVal ? '  ·  ' + usd(opts.total) : ''));
+      if (stat) { c.fillText(stat, P, y); y += story ? 70 : 50; } else y -= story ? 20 : 10;
 
       // kart ızgarası
       var footH = story ? 170 : 120, gap = 26;
