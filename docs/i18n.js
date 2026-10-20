@@ -286,8 +286,9 @@
       'Fiyatlar TCGplayer (TCGCSV aracılığıyla) ve eBay satışlarından (PokemonPriceTracker) gelir. Gösterilen fiyatlar bilgi amaçlıdır, yatırım tavsiyesi değildir.':
         'Prices come from TCGplayer (via TCGCSV) and eBay sales (PokemonPriceTracker). Prices shown are for information only and are not investment advice.',
       'Hesabını silmek': 'Deleting your account',
-      'Hesabının ve bütün portföy verilerinin silinmesini istersen bize yazman yeterli; kalıcı olarak sileriz.':
-        'If you want your account and all portfolio data deleted, just write to us and we will delete it permanently.'
+      'Hesabının ve bütün portföy verilerinin silinmesini istersen':'If you want your account and all portfolio data deleted, write to',
+      'adresine yazman yeterli; kalıcı olarak sileriz.':'and we will delete it permanently.',
+      'İletişim':'Contact','Soru, öneri ve talepler için:':'Questions, suggestions and requests:'
     },
     // Dinamik metinler: sırayla uygulanır (yalnızca Türkçe kalıplar eşleşir)
     patterns: [
