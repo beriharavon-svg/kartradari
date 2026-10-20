@@ -164,6 +164,7 @@ footer{margin-top:26px;font-size:.8rem;color:var(--muted);display:flex;flex-dire
 @media (max-width:720px){.sheet .panel{grid-template-columns:1fr}.big{max-width:240px}.grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}.top{position:static}}
 </style>
 <script src="i18n.js"></script>
+<script src="share-card.js" defer></script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -247,8 +248,10 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     if(d.wishlist&&d.wishlist.length)stat('Aradığı kart',String(d.wishlist.length));
     hero.appendChild(stats);
     var url=location.origin+'/v/'+d.slug;
-    var share=el('button',{class:'btn ghost',type:'button',style:'align-self:flex-start;margin-top:4px',text:'Vitrini paylaş',onclick:function(){if(navigator.share)navigator.share({title:name,url:url}).catch(function(){});else if(navigator.clipboard)navigator.clipboard.writeText(url).then(function(){share.textContent='Bağlantı kopyalandı'});}});
-    hero.appendChild(share);app.appendChild(hero);
+    var share=el('button',{class:'btn ghost',type:'button',text:'Vitrini paylaş',onclick:function(){if(navigator.share)navigator.share({title:name,url:url}).catch(function(){});else if(navigator.clipboard)navigator.clipboard.writeText(url).then(function(){share.textContent='Bağlantı kopyalandı'});}});
+    var img=el('button',{class:'btn ghost',type:'button',text:'Görsel olarak paylaş',onclick:function(){if(!window.HQShareImage)return;img.disabled=true;
+      window.HQShareImage({title:name,slug:d.slug,host:location.host,count:d.count||0,total:d.show_values?d.total:null,cards:(d.cards||[]).slice(),format:'post'}).then(function(cv){return window.HQShareImageExport(cv,'holotique-'+d.slug+'.png',true);}).then(function(){img.disabled=false;},function(){img.disabled=false;});}});
+    hero.appendChild(el('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:4px'},[share,img]));app.appendChild(hero);
 
     var cards=d.cards||[],filt='',sort='value';
     var tools=el('div',{class:'vtools'}),grid=el('div',{class:'grid'});

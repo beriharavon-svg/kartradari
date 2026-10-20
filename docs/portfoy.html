@@ -237,6 +237,9 @@ a.btn{text-decoration:none}
 .slugbox{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:7px;background:var(--surface-2);overflow:hidden}
 .slugbox span{padding:8px 0 8px 10px;color:var(--muted);font-size:.82rem;white-space:nowrap;align-self:center}
 .slugbox input{border:0;background:transparent;padding-left:2px}
+.imgprev{display:flex}
+.imgcanvas{width:100%;max-width:360px;height:auto;border-radius:12px;border:1px solid var(--line);box-shadow:var(--shadow)}
+.imgcanvas.story{max-width:270px}
 .tog{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:.9rem}
 .tog input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--accent);flex:none}
 @media (max-width:980px){.main{grid-template-columns:1fr}.dossier{position:static}}
@@ -244,6 +247,7 @@ a.btn{text-decoration:none}
 @media (max-width:420px){.d-top{grid-template-columns:96px minmax(0,1fr)}.d-top .thumb{width:96px}.grades{grid-template-columns:repeat(3,minmax(0,1fr))}.form-grid{grid-template-columns:1fr}.span2{grid-column:auto}}
 </style>
 <script src="i18n.js"></script>
+<script src="share-card.js" defer></script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -818,6 +822,34 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
         S.show=r.data;render();});});
     panel.appendChild(form);
     app.appendChild(panel);
+    if(S.show)app.appendChild(shareImagePanel());
+  }
+
+  // Vitrin görseli: en değerli kartların kolajı (Instagram gönderisi / hikâyesi)
+  function showcaseCards(){
+    var v=S.show,set=v&&v.folder_id&&S.fitems[v.folder_id];
+    var L=S.holdings.filter(function(h){return !set||set.has(h.id)});
+    var count=L.reduce(function(a,h){return a+h.qty},0),total=0;
+    var cards=L.map(function(h){var p=priced(h)?price(h):null,val=p!=null?p*h.qty:null;if(val!=null)total+=val;return {name:hname(h),image:h.cards&&h.cards.image,grade:h.grade,qty:h.qty,value:val};});
+    cards.sort(function(a,b){return (b.value||-1)-(a.value||-1)});
+    return {title:v.title||v.slug,slug:v.slug,host:location.host,count:count,total:v.show_values?total:null,cards:cards};
+  }
+  function shareImagePanel(){
+    var fmt=store.get('kr-imgfmt')||'post',cv=null;
+    var panel=el('section',{class:'panel showp'});
+    panel.appendChild(el('div',null,[el('h2',{style:'font-size:1.2rem',text:'Vitrin görseli'}),el('p',{class:'muted',style:'margin:6px 0 0;max-width:68ch',text:'En değerli kartlarından otomatik bir görsel: Instagram’da gönderi ya da hikâye olarak paylaşabilirsin. Vitrin ayarların (klasör, değerleri göster) görsele de uygulanır.'})]));
+    var seg=el('div',{class:'seg',role:'group','aria-label':'Görsel boyutu'}),prev=el('div',{class:'imgprev'}),msg=el('div',{class:'msg',hidden:true});
+    function drawSeg(){seg.innerHTML='';[['post','Gönderi 4:5'],['story','Hikâye 9:16']].forEach(function(o){seg.appendChild(el('button',{type:'button','aria-pressed':String(fmt===o[0]),text:o[1],onclick:function(){fmt=o[0];store.set('kr-imgfmt',fmt);drawSeg();make();}}));});}
+    function make(){prev.innerHTML='';prev.appendChild(el('p',{class:'note',text:'Görsel hazırlanıyor…'}));cv=null;
+      if(!window.HQShareImage){setTimeout(make,300);return;}
+      window.HQShareImage(Object.assign(showcaseCards(),{format:fmt})).then(function(c){cv=c;prev.innerHTML='';c.className='imgcanvas'+(fmt==='story'?' story':'');prev.appendChild(c);});}
+    function out(share){if(!cv)return;window.HQShareImageExport(cv,'holotique-'+S.show.slug+(fmt==='story'?'-hikaye':'')+'.png',share).then(function(r){if(r==='error'){msg.className='msg err';msg.textContent='Görsel kaydedilemedi. Sayfayı yenileyip tekrar dene.';msg.hidden=false;}});}
+    var canShareFiles=!!(navigator.canShare&&window.File&&navigator.canShare({files:[new File([''],'x.png',{type:'image/png'})]}));
+    drawSeg();
+    panel.appendChild(el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;align-items:center'},[seg,el('button',{class:'btn',type:'button',text:'Görseli indir',onclick:function(){out(false)}}),canShareFiles?el('button',{class:'btn quiet',type:'button',text:'Paylaş',onclick:function(){out(true)}}):null]));
+    panel.appendChild(prev);panel.appendChild(msg);
+    make();
+    return panel;
   }
 
   // ---------- Excel import ----------
