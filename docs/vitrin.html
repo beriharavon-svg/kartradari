@@ -206,6 +206,18 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
 .cta-box{margin-top:32px;padding:20px;border-radius:14px;border:1px dashed var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .vmsg{margin-top:40px;padding:34px 24px;border-radius:14px;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;gap:12px;align-items:flex-start}
 .contact{display:inline-flex;gap:6px;align-items:center;font-size:.88rem;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 12px;align-self:flex-start;overflow-wrap:anywhere}
+.forsale{border-color:color-mix(in srgb,var(--good) 45%,var(--line))}
+.salebx{display:flex;flex-direction:column;gap:5px;border-top:1px dashed var(--line);padding-top:8px}
+.salebx .ask{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.salebx .av{font:700 1.05rem var(--f-mono);color:var(--good);white-space:nowrap}
+.sold .salebx .av{color:var(--muted);text-decoration:line-through}
+.sold .art{opacity:.55}
+.mref{font-size:.74rem;color:var(--muted)}
+.snote{font-size:.76rem;color:var(--ink);overflow-wrap:anywhere}
+.cbtns{display:flex;flex-direction:column;gap:5px;margin-top:2px}
+.cbtn{display:flex;align-items:center;justify-content:center;gap:6px;font:600 .8rem var(--f-body);padding:7px 8px;border-radius:8px;text-decoration:none;white-space:nowrap}
+.cbtn.wa{background:#1F9D55;color:#fff}
+.cbtn.ig{background:var(--surface-2);color:var(--ink);border:1px solid var(--line)}
 </style>
 </head>
 <body>
@@ -228,9 +240,25 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
   function art(c){var a=el('div',{class:'art'});if(c.image){var i=el('img',{src:c.image,alt:c.name||'',loading:'lazy',referrerpolicy:'no-referrer'});i.onerror=function(){a.innerHTML='';a.appendChild(el('span',{class:'ph',text:'Görsel yok'}))};a.appendChild(i);}else a.appendChild(el('span',{class:'ph',text:'Görsel yok'}));return a;}
   function isSlab(g){return /^(PSA|BGS|CGC|SGC|TAG|ACE)\b/.test(g||'');}
   function company(g){return g==='Ham'?'Ham':String(g||'').split(' ')[0];}
-  function cardEl(c,showVal){return el('div',{class:'card vcard'+(isSlab(c.grade)?' slab':'')},[art(c),
-    el('div',null,[el('div',{class:'nm',text:c.name||'—'}),el('div',{class:'sb',text:(c.set||'')+(c.number?' · '+c.number:'')})]),
-    el('div',{class:'ft'},[el('span',{class:'gchip'+(c.grade==='Ham'?' raw':''),text:c.grade+(c.jp?' · JP':'')}),c.qty>1?el('span',{class:'qty',text:'×'+c.qty}):null,showVal?el('span',{class:'price',style:'font-size:.9rem',text:usd(c.value)}):null])]);}
+  var CSYM={TRY:'₺',USD:'$',EUR:'€',GBP:'£'},D=null;
+  function money(v,c){if(v==null||!isFinite(v))return '—';c=c||'USD';var dd=(c==='TRY'||v>=100)?0:2;return (CSYM[c]||'')+Number(v).toLocaleString(LOC,{minimumFractionDigits:dd,maximumFractionDigits:dd});}
+  function usdTo(v,c){if(v==null)return null;if(!c||c==='USD')return Number(v);var r=D&&D.fx&&Number(D.fx[c]);return r?Number(v)*r:null;}
+  function contactBtns(c){var box=el('div',{class:'cbtns'}),url=location.href.split('#')[0];
+    function hit(ch){try{sb.rpc('showcase_contact',{s:D.code,ch:ch}).then(function(){},function(){});}catch(e){}}
+    if(D.whatsapp){var msg=(window.HQ_LANG==='en'?'Hi, I’m writing about this card on your Holotique showcase: ':'Merhaba, Holotique vitrinindeki şu kart için yazıyorum: ')+c.name+' ('+c.grade+(c.ask!=null?', '+money(c.ask,c.ccy):'')+')\n'+url;
+      box.appendChild(el('a',{class:'cbtn wa',href:'https://wa.me/'+D.whatsapp+'?text='+encodeURIComponent(msg),target:'_blank',rel:'noopener',onclick:function(){hit('wa')}},[el('span',{'aria-hidden':'true',text:'💬'}),el('span',{text:'WhatsApp’tan sor'})]));}
+    if(D.instagram)box.appendChild(el('a',{class:'cbtn ig',href:'https://ig.me/m/'+D.instagram,target:'_blank',rel:'noopener',onclick:function(){hit('ig')}},[el('span',{'aria-hidden':'true',text:'✉'}),el('span',{text:'Instagram’dan yaz'})]));
+    return box.childNodes.length?box:null;}
+  function cardEl(c,showVal){
+    var kids=[art(c),el('div',null,[el('div',{class:'nm',text:c.name||'—'}),el('div',{class:'sb',text:(c.set||'')+(c.number?' · '+c.number:'')})]),
+      el('div',{class:'ft'},[el('span',{class:'gchip'+(c.grade==='Ham'?' raw':''),text:c.grade+(c.jp?' · JP':'')}),c.qty>1?el('span',{class:'qty',text:'×'+c.qty}):null,showVal&&!c.sale?el('span',{class:'price',style:'font-size:.9rem',text:usd(c.value)}):null])];
+    if(c.sale){var m=usdTo(c.market,c.ccy),box=el('div',{class:'salebx'});
+      box.appendChild(el('div',{class:'ask'},[el('span',{class:'label',text:c.sold?'Satıldı':'Satış fiyatı'}),el('span',{class:'av',text:money(c.ask,c.ccy)})]));
+      if(m!=null&&!c.sold){var diff=c.ask!=null&&m?(c.ask/m-1)*100:null;box.appendChild(el('div',{class:'mref',text:'Piyasa ≈ '+money(m,c.ccy)+(diff==null?'':' · '+(Math.abs(diff)<1?'piyasa fiyatında':(diff<0?'%'+Math.abs(diff).toFixed(0)+' altında':'%'+diff.toFixed(0)+' üstünde')))}));}
+      if(c.note)box.appendChild(el('div',{class:'snote',text:c.note}));
+      if(!c.sold){var cb=contactBtns(c);if(cb)box.appendChild(cb);}
+      kids.push(box);}
+    return el('div',{class:'card vcard'+(isSlab(c.grade)?' slab':'')+(c.sale?' forsale':'')+(c.sold?' sold':'')},kids);}
   function notFound(){app.innerHTML='';app.appendChild(el('div',{class:'vmsg'},[el('h2',{text:'Vitrin bulunamadı'}),el('p',{class:'muted',style:'margin:0',text:'Bu vitrin yok ya da sahibi tarafından yayından kaldırılmış.'}),el('a',{class:'btn',href:'./',text:'Kart aramaya git'})]));}
   var slug=slugFrom();
   if(!slug||!window.supabase){notFound();return;}
@@ -245,7 +273,8 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     if(d.contact)hero.appendChild(el('span',{class:'contact'},[el('span',{'aria-hidden':'true',text:'✉'}),el('span',{text:d.contact})]));
     var stats=el('div',{class:'vstats'});
     function stat(l,v){stats.appendChild(el('div',{class:'vstat'},[el('div',{class:'label',text:l}),el('div',{class:'v',text:v})]));}
-    stat('Kart sayısı',String(d.count||0));
+    if(d.for_sale)stat('Satılık',String(d.for_sale));
+    if(!d.only_for_sale)stat('Kart sayısı',String(d.count||0));
     if(d.show_values)stat('Toplam değer',usd(d.total));
     if(d.wishlist&&d.wishlist.length)stat('Aradığı kart',String(d.wishlist.length));
     hero.appendChild(stats);
@@ -255,18 +284,18 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
       window.HQShareImage({title:name,slug:path,host:location.host,count:d.count||0,total:d.show_values?d.total:null,cards:(d.cards||[]).slice(),format:'post'}).then(function(cv){return window.HQShareImageExport(cv,'holotique-'+(namePart(d.title)||d.code||'vitrin')+'.png',true,url);}).then(function(){img.disabled=false;},function(){img.disabled=false;});}});
     hero.appendChild(el('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:4px'},[share,img]));app.appendChild(hero);
 
-    var cards=d.cards||[],filt='',sort='value';
+    D=d;var cards=d.cards||[],filt=d.for_sale&&!d.only_for_sale?'__sale':'',sort='value';
     var tools=el('div',{class:'vtools'}),grid=el('div',{class:'grid'});
     var cos=[];cards.forEach(function(c){var k=company(c.grade);if(cos.indexOf(k)<0)cos.push(k)});
-    tools.appendChild(el('h3',{text:'Koleksiyon'}));
+    tools.appendChild(el('h3',{text:d.only_for_sale?'Satılık kartlar':'Koleksiyon'}));
     var chips=el('div',{class:'chips',role:'group','aria-label':'Dereceye göre'});
-    function drawChips(){chips.innerHTML='';[['','Tümü']].concat(cos.length>1?cos.map(function(k){return [k,k]}):[]).forEach(function(o){chips.appendChild(el('button',{type:'button',class:'chip','aria-pressed':String(filt===o[0]),text:o[1],onclick:function(){filt=o[0];drawChips();draw();}}));});}
+    function drawChips(){chips.innerHTML='';(d.for_sale&&!d.only_for_sale?[['__sale','Satılık · '+d.for_sale]]:[]).concat([['','Tümü']]).concat(cos.length>1?cos.map(function(k){return [k,k]}):[]).forEach(function(o){chips.appendChild(el('button',{type:'button',class:'chip','aria-pressed':String(filt===o[0]),text:o[1],onclick:function(){filt=o[0];drawChips();draw();}}));});}
     var sel=el('select',{'aria-label':'Sırala',style:'border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 10px;font:600 .84rem var(--f-body)'});
     (d.show_values?[['value','En değerli'],['name','Ada göre']]:[['name','Ada göre']]).forEach(function(o){sel.appendChild(el('option',{value:o[0],text:o[1]}))});
     if(!d.show_values)sort='name';
     sel.onchange=function(){sort=sel.value;draw();};
     drawChips();tools.appendChild(chips);tools.appendChild(sel);
-    function draw(){grid.innerHTML='';var L=cards.filter(function(c){return !filt||company(c.grade)===filt});
+    function draw(){grid.innerHTML='';var L=cards.filter(function(c){return !filt||(filt==='__sale'?c.sale:company(c.grade)===filt)});
       if(sort==='name')L=L.slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name),LOC)});
       if(!L.length)grid.appendChild(el('p',{class:'muted',text:'Bu vitrinde henüz kart yok.'}));
       L.forEach(function(c){grid.appendChild(cardEl(c,d.show_values))});}
@@ -277,7 +306,7 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
       var wg=el('div',{class:'grid'});d.wishlist.forEach(function(c){wg.appendChild(cardEl(c,false))});app.appendChild(wg);
     }
     app.appendChild(el('div',{class:'cta-box'},[el('div',null,[el('b',{text:'Kendi vitrinini oluştur'}),el('div',{class:'muted',style:'font-size:.88rem',text:'Koleksiyonunu ücretsiz takip et, istersen bir bağlantıyla paylaş.'})]),el('a',{class:'btn',href:'portfoy.html',text:'Ücretsiz başla'})]));
-    app.appendChild(el('footer',null,[el('span',{text:'Değerler TCGplayer piyasa fiyatlarından ve eBay satışlarından hesaplanan tahminlerdir. Kartların sahipliği ve durumu Holotique tarafından doğrulanmaz. Yatırım tavsiyesi değildir.'}),el('span',null,[el('a',{href:'gizlilik.html',text:'Gizlilik'})])]));
+    app.appendChild(el('footer',null,[el('span',{text:'Değerler TCGplayer piyasa fiyatlarından ve eBay satışlarından hesaplanan tahminlerdir. Satış fiyatlarını satıcı belirler; Holotique alım satıma aracılık etmez, ödeme almaz, kartların sahipliğini ve durumunu doğrulamaz. Yatırım tavsiyesi değildir.'}),el('span',null,[el('a',{href:'gizlilik.html',text:'Gizlilik'})])]));
   },notFound);
 })();
 </script>

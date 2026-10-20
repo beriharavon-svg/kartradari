@@ -83,14 +83,14 @@
       logo(c, P + 26, y - 14, 26);
       c.fillStyle = '#E8EDF4'; c.font = '800 40px ' + FD; c.fillText('Holotique', P + 68, y);
       c.font = '600 22px ' + FB; c.fillStyle = '#A0AABA'; c.textAlign = 'right';
-      c.fillText(T('VİTRİN'), W - P, y - 4); c.textAlign = 'left';
+      c.fillText(T(opts.badge || 'VİTRİN'), W - P, y - 4); c.textAlign = 'left';
       y += story ? 110 : 86;
       c.font = '800 ' + (story ? 76 : 64) + 'px ' + FD; c.fillStyle = '#FFFFFF';
       var tl = wrap(c, opts.title || opts.slug, W - 2 * P, 2);
       tl.forEach(function (l, i) { c.fillText(l, P, y + i * (story ? 84 : 72)); });
       y += (tl.length - 1) * (story ? 84 : 72) + (story ? 70 : 58);
       c.font = '500 32px ' + FM; c.fillStyle = '#A0AABA';
-      var stat = opts.count + ' ' + T('kart') + (showVal ? '  ·  ' + usd(opts.total) : '');
+      var stat = opts.statText || (opts.count + ' ' + T('kart') + (showVal ? '  ·  ' + usd(opts.total) : ''));
       c.fillText(stat, P, y);
       y += story ? 70 : 50;
 
@@ -98,12 +98,16 @@
       var footH = story ? 170 : 120, gap = 26;
       var gridH = H - y - footH, cellW = (W - 2 * P - gap * (cols - 1)) / cols, cellH = (gridH - gap * (rows - 1)) / rows;
       var textH = 104, artH = Math.min(cellH - textH, cellW * 88 / 63), artW = artH * 63 / 88;
+      // az kart varsa ızgarayı dikeyde ortala
+      var usedRows = Math.max(1, Math.ceil(cards.length / cols)), usedH = usedRows * (artH + textH) + (usedRows - 1) * gap;
+      if (usedRows < rows) y += Math.max(0, (gridH - usedH) / 2);
+      cellH = Math.min(cellH, artH + textH);
       if (!cards.length) {
         c.font = '500 34px ' + FB; c.fillStyle = '#A0AABA'; c.textAlign = 'center';
         c.fillText(T('Bu vitrinde henüz kart yok.'), W / 2, y + gridH / 2); c.textAlign = 'left';
       }
       cards.forEach(function (k, i) {
-        var cx = P + (i % cols) * (cellW + gap), cy = y + Math.floor(i / cols) * (cellH + gap);
+        var xoff = cards.length < cols ? (cols - cards.length) * (cellW + gap) / 2 : 0, cx = P + xoff + (i % cols) * (cellW + gap), cy = y + Math.floor(i / cols) * (cellH + gap);
         var ax = cx + (cellW - artW) / 2, ay = cy;
         var slab = isSlab(k.grade), b = slab ? 7 : 0;
         if (slab) { rr(c, ax - b, ay - b, artW + 2 * b, artH + 2 * b, 18); c.fillStyle = foil(c, ax, ay, artW, artH); c.fill(); }
@@ -120,7 +124,7 @@
         }
         c.restore();
         // derece rozeti + değer
-        var ty = ay + artH + 7 + 40, lx = cx + 4, vtxt = showVal && k.value != null ? usd(k.value) : '', vw = 0;
+        var ty = ay + artH + 7 + 40, lx = cx + 4, vtxt = k.priceText || (showVal && k.value != null ? usd(k.value) : ''), vw = 0;
         if (vtxt) { c.font = '600 26px ' + FM; vw = c.measureText(vtxt).width + 14; }
         c.font = '700 22px ' + FB;
         var g0 = k.grade === 'Ham' ? T('Ham') : String(k.grade).replace(/\s*Black Label$/i, ' BL');
@@ -139,8 +143,12 @@
       var fy = H - (story ? 90 : 60);
       c.strokeStyle = '#253041'; c.lineWidth = 2; c.beginPath(); c.moveTo(P, fy - 56); c.lineTo(W - P, fy - 56); c.stroke();
       c.font = '600 ' + (story ? 30 : 28) + 'px ' + FM; c.fillStyle = '#E8EDF4';
-      c.fillText(fit(c, (opts.host || 'holotique.com') + '/v/' + opts.slug, W - 2 * P - 250), P, fy);
-      if (showVal) { c.font = '400 20px ' + FB; c.fillStyle = '#6E7889'; c.textAlign = 'right'; c.fillText(T('Tahmini piyasa değeri'), W - P, fy - 4); c.textAlign = 'left'; }
+      var note = opts.footNote || showVal ? T(opts.footNote || 'Tahmini piyasa değeri') : '', nw = 0;
+      if (note) { c.save(); c.font = '400 20px ' + FB; nw = c.measureText(note).width; c.restore(); }
+      var url = (opts.host || 'holotique.com') + '/v/' + opts.slug, uw = c.measureText(url).width, side = note && uw + nw + 30 <= W - 2 * P;
+      c.fillText(fit(c, url, W - 2 * P), P, fy);
+      // not sığarsa bağlantının sağına, sığmazsa çizginin üstüne yazılır
+      if (note) { c.font = '400 20px ' + FB; c.fillStyle = '#6E7889'; c.textAlign = 'right'; c.fillText(fit(c, note, W - 2 * P), W - P, side ? fy - 4 : fy - 70); c.textAlign = 'left'; }
       return cv;
     });
   };
