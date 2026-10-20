@@ -167,7 +167,8 @@ def upsert_card(c, game, language):
 
 # ---------- Pokemon dışı oyunlar: TCGCSV kataloğundan ham fiyat ----------
 
-CATALOG_GAMES = {"onepiece": "One Piece", "lorcana": "Lorcana", "disneylorcana": "Lorcana"}
+CATALOG_GAMES = {"onepiece": "One Piece", "lorcana": "Lorcana", "disneylorcana": "Lorcana",
+                 "magic": "Magic", "magicthegathering": "Magic", "mtg": "Magic", "riftbound": "Riftbound"}
 
 
 def catalog_game(game):

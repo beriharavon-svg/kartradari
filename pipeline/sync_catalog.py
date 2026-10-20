@@ -26,7 +26,7 @@ UA = "Holotique/0.3 (+https://holotique.com)"
 FORCE = os.environ.get("CATALOG_FORCE") == "1"
 BATCH = 500
 # Katalog satır biçimi değişince artırılır; böylece kaynak aynı olsa bile bir kez yeniden yüklenir.
-SYNC_VERSION = 2
+SYNC_VERSION = 3
 EXTRA_COLS = {"ok": True}
 
 # Oyun adı (sitede görünen) -> TCGCSV kategori adı adayları
@@ -35,7 +35,11 @@ GAMES = [
     ("Pokemon JP", ["pokemonjapan"]),
     ("One Piece", ["onepiececardgame"]),
     ("Lorcana", ["lorcanatcg", "disneylorcana", "lorcana"]),
+    ("Magic", ["magic", "magicthegathering"]),
+    ("Riftbound", ["riftboundleagueoflegendstradingcardgame", "riftboundleagueoflegendstcg", "riftbound"]),
 ]
+# Bu oyunlarda yalnızca numarası olan tekli kartlar yüklenir (kutu/paket/aksesuar çok fazla, aramada zaten gizli)
+SINGLES_ONLY = {"Magic"}
 VARIANT_ORDER = ["Normal", "Holofoil", "Foil", "Unlimited Holofoil", "1st Edition Holofoil",
                  "Unlimited", "1st Edition", "Reverse Holofoil"]
 STATUS = {"errors": [], "games": {}}
@@ -114,6 +118,9 @@ def sync_game(label, aliases, cats, price_date):
         cat = next((c for c in cats if norm(c.get("name")) == a or norm(c.get("displayName")) == a), None)
         if cat:
             break
+    if not cat:  # adı biraz farklıysa baş kısmından yakala (ör. "Riftbound: League of Legends ...")
+        a = aliases[-1]
+        cat = next((c for c in cats if norm(c.get("name")).startswith(a) or norm(c.get("displayName")).startswith(a)), None)
     if not cat:
         STATUS["errors"].append(f"{label}: kategori bulunamadı")
         return 0
@@ -136,6 +143,8 @@ def sync_game(label, aliases, cats, price_date):
             by_pid.setdefault(int(p["productId"]), []).append(p)
         for p in products:
             ext = {e.get("name"): e.get("value") for e in (p.get("extendedData") or [])}
+            if label in SINGLES_ONLY and not ext.get("Number"):
+                continue
             pr = pick_price(by_pid.get(int(p["productId"]), []))
             img = p.get("imageUrl") or ""
             buffer.append({
@@ -197,6 +206,8 @@ def main():
         return
     price_date = (last or STATUS["run_at"])[:10]
     cats = tcg("categories") or []
+    # Hangi kategoriler var: yeni oyun eklerken bakmak için özet dosyasına yazılır
+    STATUS["categories"] = sorted(f"{c.get('categoryId')}:{c.get('displayName') or c.get('name')}" for c in cats)
     for label, aliases in GAMES:
         try:
             STATUS["games"][label] = sync_game(label, aliases, cats, price_date)

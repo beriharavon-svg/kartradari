@@ -37,8 +37,8 @@
 
       // arama sayfası
       'Kartın ne kadar ediyor?': 'What is your card worth?',
-      'Pokemon, Japon Pokemon, One Piece ve Lorcana kartlarını adıyla, setiyle ya da numarasıyla ara. Fiyatlar her gün güncellenir, üyelik gerekmez.':
-        'Search Pokemon, Japanese Pokemon, One Piece and Lorcana cards by name, set or number. Prices update daily, no sign-up needed.',
+      'Pokemon, Japon Pokemon, One Piece, Magic, Riftbound ve Lorcana kartlarını adıyla, setiyle ya da numarasıyla ara. Fiyatlar her gün güncellenir, üyelik gerekmez.':
+        'Search Pokemon, Japanese Pokemon, One Piece, Magic, Riftbound and Lorcana cards by name, set or number. Prices update daily, no sign-up needed.',
       'Kart adı, set ya da numara': 'Card name, set or number',
       'Set / seri: tümü ▾': 'Set / series: all ▾', 'Set adı, kodu ya da yılı': 'Set name, code or year', 'Set ara': 'Search sets',
       'Set filtresini kaldır': 'Remove set filter', 'Setler': 'Sets', 'Sonuçlar': 'Results',

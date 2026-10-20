@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Holotique · Kart fiyatları ve arama</title>
-<meta name="description" content="Pokemon, Japon Pokemon, One Piece ve Lorcana kartlarının güncel piyasa fiyatları, görselleri ve PSA fiyatları. Üyelik gerekmez.">
+<meta name="description" content="Pokemon, Japon Pokemon, One Piece, Magic, Riftbound ve Lorcana kartlarının güncel piyasa fiyatları, görselleri ve PSA fiyatları. Üyelik gerekmez.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -190,7 +190,7 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
 <main class="wrap">
   <section class="searchbar">
     <h2>Kartın ne kadar ediyor?</h2>
-    <p>Pokemon, Japon Pokemon, One Piece ve Lorcana kartlarını adıyla, setiyle ya da numarasıyla ara. Fiyatlar her gün güncellenir, üyelik gerekmez.</p>
+    <p>Pokemon, Japon Pokemon, One Piece, Magic, Riftbound ve Lorcana kartlarını adıyla, setiyle ya da numarasıyla ara. Fiyatlar her gün güncellenir, üyelik gerekmez.</p>
     <label class="qbox" for="q">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Kart adı, set ya da numara" aria-label="Kart ara">
@@ -239,7 +239,7 @@ if(/access_token=|type=(signup|recovery|magiclink)|error_description=/.test(loca
 (function(){
   'use strict';
   var SB_URL='https://bsifvfcnktofugaspsls.supabase.co',SB_KEY='sb_publishable_IFtbpaxlRhYiB7kjJydiIA_ilx0aRI1';
-  var GAMES=[['','Tümü'],['Pokemon','Pokemon'],['Pokemon JP','Pokemon (Japonca)'],['One Piece','One Piece'],['Lorcana','Lorcana']];
+  var GAMES=[['','Tümü'],['Pokemon','Pokemon'],['Pokemon JP','Pokemon (Japonca)'],['One Piece','One Piece'],['Magic','Magic'],['Riftbound','Riftbound'],['Lorcana','Lorcana']];
   var CCY=[{c:'TRY',s:'₺',d:0},{c:'EUR',s:'€',d:2},{c:'GBP',s:'£',d:2},{c:'JPY',s:'¥',d:0},{c:'CNY',s:'CN¥',d:0}];
   var CONF={high:'yüksek',medium:'orta',low:'düşük'},MONTHS=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
   var store={get:function(k){try{return localStorage.getItem(k)}catch(e){return null}},set:function(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
