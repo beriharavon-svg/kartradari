@@ -138,20 +138,20 @@
       // alt bilgi
       var fy = H - (story ? 90 : 60);
       c.strokeStyle = '#253041'; c.lineWidth = 2; c.beginPath(); c.moveTo(P, fy - 56); c.lineTo(W - P, fy - 56); c.stroke();
-      c.font = '600 34px ' + FM; c.fillStyle = '#E8EDF4';
-      c.fillText(fit(c, (opts.host || 'holotique.com') + '/v/' + opts.slug, W - 2 * P - 260), P, fy);
+      c.font = '600 ' + (story ? 30 : 28) + 'px ' + FM; c.fillStyle = '#E8EDF4';
+      c.fillText(fit(c, (opts.host || 'holotique.com') + '/v/' + opts.slug, W - 2 * P - 250), P, fy);
       if (showVal) { c.font = '400 20px ' + FB; c.fillStyle = '#6E7889'; c.textAlign = 'right'; c.fillText(T('Tahmini piyasa değeri'), W - P, fy - 4); c.textAlign = 'left'; }
       return cv;
     });
   };
 
   // İndir ya da (telefonda) doğrudan paylaş
-  window.HQShareImageExport = function (cv, name, share) {
+  window.HQShareImageExport = function (cv, name, share, url) {
     return new Promise(function (res) {
       try { cv.toBlob(function (blob) {
         var file = new File([blob], name, { type: 'image/png' });
         if (share && navigator.canShare && navigator.canShare({ files: [file] })) {
-          navigator.share({ files: [file] }).then(function () { res('shared'); }, function () { res('cancel'); });
+          navigator.share(url ? { files: [file], text: url } : { files: [file] }).then(function () { res('shared'); }, function () { res('cancel'); });
           return;
         }
         var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;

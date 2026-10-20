@@ -224,6 +224,7 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
   function el(tag,attrs,kids){var e=document.createElement(tag);if(attrs)for(var k in attrs){var v=attrs[k];if(v==null||v===false)continue;if(k==='text')e.textContent=v;else if(k.slice(0,2)==='on')e.addEventListener(k.slice(2),v);else e.setAttribute(k,v===true?'':v);}(kids||[]).forEach(function(c){if(c!=null)e.appendChild(typeof c==='string'?document.createTextNode(c):c)});return e;}
   function usd(v){if(v==null||!isFinite(v))return '—';return '$'+Number(v).toLocaleString(LOC,{minimumFractionDigits:v>=1000?0:2,maximumFractionDigits:v>=1000?0:2});}
   function slugFrom(){var q=new URLSearchParams(location.search).get('u');if(q)return q;var m=location.pathname.match(/\/v\/([^\/?#]+)/);return m?decodeURIComponent(m[1]):'';}
+  function namePart(t){return String(t||'').toLowerCase().replace(/ı/g,'i').replace(/ş/g,'s').replace(/ğ/g,'g').replace(/ü/g,'u').replace(/ö/g,'o').replace(/ç/g,'c').replace(/[^a-z0-9_-]+/g,'-').replace(/^[-_]+|[-_]+$/g,'').slice(0,40).replace(/[-_]+$/,'');}
   function art(c){var a=el('div',{class:'art'});if(c.image){var i=el('img',{src:c.image,alt:c.name||'',loading:'lazy',referrerpolicy:'no-referrer'});i.onerror=function(){a.innerHTML='';a.appendChild(el('span',{class:'ph',text:'Görsel yok'}))};a.appendChild(i);}else a.appendChild(el('span',{class:'ph',text:'Görsel yok'}));return a;}
   function isSlab(g){return /^(PSA|BGS|CGC|SGC|TAG|ACE)\b/.test(g||'');}
   function company(g){return g==='Ham'?'Ham':String(g||'').split(' ')[0];}
@@ -238,7 +239,8 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     var d=r.data;if(r.error||!d){notFound();return;}
     var name=d.title||d.slug;document.title=name+' · Holotique';
     app.innerHTML='';
-    var hero=el('section',{class:'vhero'},[el('div',{class:'label',text:'Vitrin · @'+d.slug}),el('h2',{text:name})]);
+    var path=(d.code||d.slug)+(namePart(d.title)?'/'+namePart(d.title):'');try{history.replaceState(null,'','/v/'+path);}catch(e){}
+    var hero=el('section',{class:'vhero'},[el('div',{class:'label',text:'Vitrin'}),el('h2',{text:name})]);
     if(d.bio)hero.appendChild(el('p',{class:'bio',text:d.bio}));
     if(d.contact)hero.appendChild(el('span',{class:'contact'},[el('span',{'aria-hidden':'true',text:'✉'}),el('span',{text:d.contact})]));
     var stats=el('div',{class:'vstats'});
@@ -247,10 +249,10 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     if(d.show_values)stat('Toplam değer',usd(d.total));
     if(d.wishlist&&d.wishlist.length)stat('Aradığı kart',String(d.wishlist.length));
     hero.appendChild(stats);
-    var url=location.origin+'/v/'+d.slug;
-    var share=el('button',{class:'btn ghost',type:'button',text:'Vitrini paylaş',onclick:function(){if(navigator.share)navigator.share({title:name,url:url}).catch(function(){});else if(navigator.clipboard)navigator.clipboard.writeText(url).then(function(){share.textContent='Bağlantı kopyalandı'});}});
+    var url=location.origin+'/v/'+path;
+    var share=el('button',{class:'btn ghost',type:'button',text:'Vitrini paylaş',onclick:function(){if(navigator.share)navigator.share({title:name,text:name,url:url}).catch(function(){});else if(navigator.clipboard)navigator.clipboard.writeText(url).then(function(){share.textContent='Bağlantı kopyalandı'});}});
     var img=el('button',{class:'btn ghost',type:'button',text:'Görsel olarak paylaş',onclick:function(){if(!window.HQShareImage)return;img.disabled=true;
-      window.HQShareImage({title:name,slug:d.slug,host:location.host,count:d.count||0,total:d.show_values?d.total:null,cards:(d.cards||[]).slice(),format:'post'}).then(function(cv){return window.HQShareImageExport(cv,'holotique-'+d.slug+'.png',true);}).then(function(){img.disabled=false;},function(){img.disabled=false;});}});
+      window.HQShareImage({title:name,slug:path,host:location.host,count:d.count||0,total:d.show_values?d.total:null,cards:(d.cards||[]).slice(),format:'post'}).then(function(cv){return window.HQShareImageExport(cv,'holotique-'+(namePart(d.title)||d.code||'vitrin')+'.png',true,url);}).then(function(){img.disabled=false;},function(){img.disabled=false;});}});
     hero.appendChild(el('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:4px'},[share,img]));app.appendChild(hero);
 
     var cards=d.cards||[],filt='',sort='value';
