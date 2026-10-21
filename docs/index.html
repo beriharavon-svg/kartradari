@@ -152,6 +152,9 @@ a{color:var(--accent)}
 .mini{height:150px;position:relative}
 .mini svg{width:100%;height:100%;display:block}
 .actions{display:flex;gap:8px;flex-wrap:wrap}
+.gchips{display:flex;gap:6px;flex-wrap:wrap}
+.gch{font:500 .8rem var(--f-mono);background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:3px 9px;white-space:nowrap}
+.gch b{font-family:var(--f-body);font-weight:700;margin-right:2px}
 .note{font-size:.8rem;color:var(--muted)}
 .tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font:500 .76rem var(--f-mono);padding:6px 8px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-115%);opacity:0}
 .tip.on{opacity:1}
@@ -415,15 +418,38 @@ if(/access_token=|type=(signup|recovery|magiclink)|error_description=/.test(loca
     var pr=el('div',{class:'prices'});
     function cell(lab,v,c){return el('div',null,[el('div',{class:'label',text:lab}),el('div',{class:'v',text:usd(v)}),el('div',{class:'c',text:c})]);}
     pr.appendChild(cell('Ham · piyasa',r.market,sec(r.market)||'TCGplayer'));
-    pr.appendChild(cell('PSA 9',r.psa9,r.psa9!=null?(r.psa9_conf?CONF[r.psa9_conf]+' güven':'')+(r.psa9_n?' · '+r.psa9_n+' satış':''):'takip edilmiyor'));
-    pr.appendChild(cell('PSA 10',r.psa10,r.psa10!=null?(r.psa10_conf?CONF[r.psa10_conf]+' güven':'')+(r.psa10_n?' · '+r.psa10_n+' satış':''):'takip edilmiyor'));
+    function gnote(p,c,n,none){return p!=null?(c&&CONF[c]?CONF[c]+' güven':'')+(n?' · '+n+' satış':''):none;}
+    var c9=cell('PSA 9',r.psa9,gnote(r.psa9,r.psa9_conf,r.psa9_n,'takip edilmiyor')),c10=cell('PSA 10',r.psa10,gnote(r.psa10,r.psa10_conf,r.psa10_n,'takip edilmiyor'));
+    pr.appendChild(c9);pr.appendChild(c10);
     info.appendChild(pr);
+    // Takip edilmeyen Pokemon kartlarında PSA fiyatını o an çek
+    var gradeBox=el('div',{class:'gradebox'});
+    function showGrades(g){gradeBox.innerHTML='';var ks=Object.keys(g||{}).filter(function(k){return k!=='psa10'&&k!=='psa9'&&g[k]&&g[k].p!=null});
+      ks.sort(function(a,b){return g[b].p-g[a].p});if(!ks.length)return;
+      gradeBox.appendChild(el('div',{class:'label',style:'margin-bottom:6px',text:'Diğer dereceler'}));
+      var wrap=el('div',{class:'gchips'});ks.slice(0,16).forEach(function(k){var m=k.match(/^([a-z]+)(\d+)(?:_(5))?/);var lab=m?m[1].toUpperCase()+' '+m[2]+(m[3]?'.5':''):k;wrap.appendChild(el('span',{class:'gch'},[el('b',{text:lab}),' '+usd(g[k].p)]));});
+      gradeBox.appendChild(wrap);}
+    if(!r.tracked&&(r.game==='Pokemon'||r.game==='Pokemon JP')&&r.product_id){
+      var fetchBtn=el('button',{type:'button',class:'btn ghost',style:'margin-top:2px',text:'PSA fiyatlarını getir'}),fmsg=el('span',{class:'note'});
+      fetchBtn.onclick=function(){fetchBtn.disabled=true;fetchBtn.textContent='Getiriliyor…';
+        fetch(SB_URL+'/functions/v1/ppt-price',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({pid:r.product_id})})
+        .then(function(x){return x.json()}).then(function(d){
+          if(d.error){fetchBtn.disabled=false;fetchBtn.textContent='PSA fiyatlarını getir';fmsg.textContent=d.error;return;}
+          if(d.empty){fetchBtn.remove();fmsg.textContent='Bu kart için eBay’de dereceli satış bulunamadı.';return;}
+          r.psa9=d.psa9;r.psa10=d.psa10;
+          var n9=cell('PSA 9',d.psa9,gnote(d.psa9,d.psa9_conf,d.psa9_n,'satış yok')),n10=cell('PSA 10',d.psa10,gnote(d.psa10,d.psa10_conf,d.psa10_n,'satış yok'));
+          pr.replaceChild(n9,c9);pr.replaceChild(n10,c10);c9=n9;c10=n10;
+          showGrades(d.grades);fetchBtn.remove();fmsg.textContent='Fiyatlar eBay satışlarından, bugün itibarıyla.';})
+        .catch(function(){fetchBtn.disabled=false;fetchBtn.textContent='PSA fiyatlarını getir';fmsg.textContent='Bağlantı kurulamadı, tekrar dene.';});};
+      info.appendChild(el('div',{style:'display:flex;gap:10px;align-items:center;flex-wrap:wrap'},[fetchBtn,fmsg]));
+    }
+    info.appendChild(gradeBox);
     var f=el('div',{class:'facts'});
     [['Nadirlik',r.rarity||'—'],['Baskı',r.sub_type||'—'],['En düşük ilan',usd(r.low),1],['Fiyat tarihi',dfmt(r.price_date),1]].forEach(function(x){f.appendChild(el('span',{text:x[0]}));f.appendChild(el('span',{class:x[2]?'num':null,text:x[1]}));});
     info.appendChild(f);
     if(r.tracked){var mini=el('div',{class:'mini'});info.appendChild(el('div',null,[el('div',{class:'label',style:'margin-bottom:4px',text:(r.psa10!=null?'PSA 10':'Ham')+' fiyat geçmişi, USD'}),mini]));
       sb.rpc('card_history',{pid:r.product_id}).then(function(res){var rows=(res.data||[]),k=r.psa10!=null?'psa10':'raw';lineChart(mini,rows.filter(function(x){return x[k]!=null}).map(function(x){return [x.date,Number(x[k])]}));});}
-    else info.appendChild(el('p',{class:'note',style:'margin:0',text:'PSA fiyatları ve fiyat geçmişi, kart bir Holotique portföyüne eklendiğinde takip edilmeye başlar.'}));
+    else if(!(r.game==='Pokemon'||r.game==='Pokemon JP'))info.appendChild(el('p',{class:'note',style:'margin:0',text:'Bu oyun için dereceli (PSA) fiyat kaynağı henüz yok; ham piyasa fiyatı gösteriliyor.'}));
     var lang=r.game==='Pokemon JP'?'japanese':'english',game=r.game==='Pokemon JP'?'Pokemon':r.game;
     var pre=Object.assign({},{game:game,set_input:r.set_name,name_input:(r.name||'').replace(/\s*-\s*[\w\/-]+$/,'').replace(/\s*\(\d+\)\s*$/,''),number_input:r.number?String(r.number).split('/')[0]:null,language:lang});
     var wish={product_id:r.product_id,name:r.name,set_name:r.set_name,number:r.number,image:r.image,game:r.game};
