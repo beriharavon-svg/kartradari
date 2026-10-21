@@ -28,7 +28,11 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "method" }, 405);
 
   const SUPA = Deno.env.get("SUPABASE_URL")!;
-  const KEY = Deno.env.get("SB_SECRET_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  // Yeni anahtar sistemi: SUPABASE_SECRET_KEYS = {"default":"sb_secret_..."}; eski sistem: SUPABASE_SERVICE_ROLE_KEY
+  let KEY = Deno.env.get("SB_SECRET_KEY") || "";
+  if (!KEY) { try { const m = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}"); KEY = m.default || Object.values(m)[0] as string || ""; } catch (_) { /* yok */ } }
+  if (!KEY) KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  if (!KEY) return json({ error: "Sunucu anahtarı bulunamadı" }, 500);
   const PKEY = Deno.env.get("PPT_API_KEY");
   if (!PKEY) return json({ error: "PPT_API_KEY tanımlı değil" }, 500);
   const H: Record<string, string> = { apikey: KEY, "Content-Type": "application/json" };
