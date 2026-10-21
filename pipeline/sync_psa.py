@@ -513,6 +513,92 @@ def cache_images(limit=150):
     return done
 
 
+# ---------- Fiyat alarmı (istek listesi hedef fiyata inince mail) ----------
+
+SMTP_HOST = os.environ.get("SMTP_HOST", "smtpout.secureserver.net")
+SMTP_USER = os.environ.get("SMTP_USER", "info@holotique.com")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+
+
+def _alert_html(rows):
+    import html as _h
+    def money(v):
+        return "—" if v is None else "$" + f"{float(v):,.2f}"
+    items = ""
+    for r in rows:
+        img = f'<img src="{_h.escape(r["image"])}" width="56" style="border-radius:6px;display:block" alt="">' if r.get("image") else ""
+        sub = " · ".join(x for x in [r.get("set_name"), r.get("number"), r.get("grade")] if x)
+        items += f"""<tr><td style="padding:10px 0;border-top:1px solid #DDE2EA;width:64px;vertical-align:top">{img}</td>
+<td style="padding:10px 0 10px 10px;border-top:1px solid #DDE2EA;vertical-align:top">
+<div style="font-weight:600;font-size:15px">{_h.escape(r.get("name") or "")}</div>
+<div style="font-size:13px;color:#5A6577">{_h.escape(sub)}</div>
+<div style="font-size:14px;margin-top:4px"><b style="color:#127A47">{money(r.get("price"))}</b>
+<span style="color:#5A6577"> · hedef / target {money(r.get("target"))}</span></div></td></tr>"""
+    return f"""<!doctype html><html><body style="margin:0;background:#EEF1F5;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#121A26">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:24px 12px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fff;border:1px solid #DDE2EA;border-radius:14px;overflow:hidden">
+<tr><td style="height:6px;background-color:#B79CF5;background:linear-gradient(90deg,#7AD3F0,#B79CF5,#F3A6C8,#F6D58A,#9BE3C4)"></td></tr>
+<tr><td style="padding:24px 28px 0"><div style="font-size:20px;font-weight:800">Holotique</div>
+<h1 style="font-size:19px;margin:14px 0 4px">Takip ettiğin kart hedef fiyatına indi</h1>
+<div style="font-size:14px;color:#5A6577" lang="en">A card on your wishlist reached your target price</div></td></tr>
+<tr><td style="padding:14px 28px 4px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">{items}</table></td></tr>
+<tr><td style="padding:12px 28px 4px"><a href="https://holotique.com/portfoy.html" style="display:inline-block;background:#2B47D6;color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 20px;border-radius:8px">İstek listemi aç · Open my wishlist</a></td></tr>
+<tr><td style="padding:16px 28px 24px;font-size:12px;color:#8A94A6;line-height:1.5">
+Fiyatlar tahmini piyasa değeridir, yatırım tavsiyesi değildir. Bu maili almak istemiyorsan istek listende kartın ayarlarından “Hedef fiyata inince bana mail at” seçeneğini kapat.<br>
+<span lang="en">Prices are estimated market values, not investment advice. To stop these emails, turn off “Email me when it hits my target price” for the card on your wishlist.</span><br><br>
+Holotique · <a href="https://holotique.com" style="color:#8A94A6">holotique.com</a></td></tr>
+</table></td></tr></table></body></html>"""
+
+
+def send_alerts():
+    if not SMTP_PASSWORD:
+        STATUS["alerts"] = {"skipped": "SMTP_PASSWORD tanımlı değil"}
+        return 0
+    try:
+        rows = sb("POST", "rpc/alerts_due", body={}) or []
+    except RuntimeError as e:
+        if "alerts_due" in str(e) or "PGRST202" in str(e):
+            STATUS["alerts"] = {"skipped": "015_price_alerts.sql henüz çalıştırılmamış"}
+            return 0
+        raise
+    if not rows:
+        STATUS["alerts"] = {"sent": 0}
+        return 0
+    import smtplib
+    import ssl
+    from email.message import EmailMessage
+    from email.utils import formataddr, make_msgid
+    by = {}
+    for r in rows:
+        by.setdefault(r["email"], []).append(r)
+    sent, fails = 0, []
+    ctx = ssl.create_default_context()
+    with smtplib.SMTP_SSL(SMTP_HOST, 465, context=ctx, timeout=30) as srv:
+        srv.login(SMTP_USER, SMTP_PASSWORD)
+        for email, items in list(by.items())[:200]:
+            first = items[0].get("name") or "Kart"
+            subj = (f"{first} hedef fiyatına indi" if len(items) == 1 else f"{len(items)} kart hedef fiyatına indi") \
+                + " · Holotique"
+            m = EmailMessage()
+            m["Subject"] = subj
+            m["From"] = formataddr(("Holotique", SMTP_USER))
+            m["To"] = email
+            m["Message-ID"] = make_msgid(domain="holotique.com")
+            lines = [f"- {r.get('name')} ({r.get('grade')}): ${float(r['price']):,.2f} (hedef/target ${float(r['target']):,.2f})" for r in items]
+            m.set_content("Takip ettiğin kart hedef fiyatına indi / A card on your wishlist reached your target price\n\n"
+                          + "\n".join(lines) + "\n\nhttps://holotique.com/portfoy.html")
+            m.add_alternative(_alert_html(items), subtype="html")
+            try:
+                srv.send_message(m)
+                sb("POST", "rpc/alerts_mark_sent", body={"ids": [r["wish_id"] for r in items]})
+                sent += 1
+            except Exception as e:  # noqa: BLE001
+                fails.append(str(e)[:120])
+    STATUS["alerts"] = {"sent": sent, "cards": len(rows), "failed": len(fails), "examples": fails[:2]}
+    log(f"Fiyat alarmı maili: {sent}")
+    return sent
+
+
 # ---------- PSA sertifika verisi ----------
 
 class PsaStop(Exception):
@@ -914,6 +1000,10 @@ def main():
             cache_images()
         except Exception as e:  # noqa: BLE001
             note_error("görsel kopyalama", e)
+        try:
+            send_alerts()
+        except Exception as e:  # noqa: BLE001
+            note_error("fiyat alarmı", e)
         STATUS["history_backfilled"] = backfill_history(budget)
         probe_grade_keys(budget)
     except Exception as e:  # noqa: BLE001

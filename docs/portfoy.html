@@ -774,12 +774,16 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     var fGrade=el('select',{id:'wGrade'});(isRaw?[['Ham','Ham (derecesiz)']]:GRADE_OPTS).forEach(function(o){var op=el('option',{value:o[0],text:o[1]});if(o[0]===(w?w.grade:'Ham'))op.selected=true;fGrade.appendChild(op);});
     var fTarget=el('input',{id:'wTarget',type:'number',min:'0',step:'0.01',placeholder:'isteğe bağlı',value:w&&w.target_usd!=null?String(w.target_usd):''});
     var fNote=el('input',{id:'wNote',type:'text',maxlength:'120',placeholder:'isteğe bağlı',value:w&&w.note?w.note:''});
+    var alertOk=S.wish.some(function(x){return 'notify' in x})||(w&&'notify' in w);
+    var fNotify=el('input',{id:'wNotify',type:'checkbox'});fNotify.checked=!w||w.notify!==false;
+    var notifyBox=alertOk?el('label',{class:'tog span2',for:'wNotify',style:'grid-column:1/-1'},[fNotify,el('span',null,[el('b',{text:'Hedef fiyata inince bana mail at'}),el('span',{class:'note',style:'display:block',text:'Kart hedef fiyatına ya da altına indiğinde bir kez haber veririz. Fiyat yeniden yükselip tekrar inerse yine haber veririz.'})])]):null;
     var msg=el('div',{class:'msg',hidden:true});
     var form=el('form',{class:'form-grid'},[el('label',{class:'f span2',for:'wGrade'},['Derece',fGrade]),el('label',{class:'f span2',for:'wTarget'},['Hedef fiyat $',fTarget]),el('label',{class:'f span2',for:'wNote'},['Not',fNote])]);
+    if(notifyBox)form.appendChild(notifyBox);
     if(isRaw)form.appendChild(el('p',{class:'note span2',style:'margin:0;align-self:end',text:'Bu oyun için yalnızca ham fiyat takip edilebiliyor.'}));
     var save=el('button',{class:'btn span2',type:'submit',text:w?'Kaydet':'İstek listeme ekle'});form.appendChild(save);
     form.addEventListener('submit',function(e){e.preventDefault();save.disabled=true;
-      var row={grade:fGrade.value,target_usd:fTarget.value===''?null:Number(fTarget.value),note:fNote.value.trim()||null};
+      var row={grade:fGrade.value,target_usd:fTarget.value===''?null:Number(fTarget.value),note:fNote.value.trim()||null};if(notifyBox){row.notify=fNotify.checked;if(w&&Number(w.target_usd)!==row.target_usd)row.alert_sent_at=null;}
       var q=w?sb.from('wishlist').update(row).eq('id',w.id):sb.from('wishlist').insert(Object.assign({product_id:pre.product_id},row));
       q.then(function(r){save.disabled=false;if(r.error){msg.className='msg err';msg.textContent=/duplicate|unique/i.test(r.error.message)?'Bu kart bu dereceyle zaten istek listende.':r.error.message;msg.hidden=false;return;}close();S.tab='wish';store.set('kr-tab','wish');load();});});
     p.appendChild(form);p.appendChild(msg);

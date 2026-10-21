@@ -144,6 +144,8 @@
         'Prices: TCGplayer (raw) and eBay sales (PSA) via PokemonPriceTracker. The PSA price is the weighted sale price of the last 7 days; confidence depends on the number of sales. FX rates: European Central Bank (Frankfurter). Not investment advice.',
       '· Alış fiyatların ve sertifika numaraların yalnızca sana görünür.': '· Your purchase prices and cert numbers are visible only to you.',
       'Uygulamayı yükle': 'Install app',
+      'Hedef fiyata inince bana mail at': 'Email me when it hits my target price',
+      'Kart hedef fiyatına ya da altına indiğinde bir kez haber veririz. Fiyat yeniden yükselip tekrar inerse yine haber veririz.': 'We’ll let you know once when the card drops to or below your target. If the price rises and drops again, we’ll tell you again.',
       'Satılık': 'For sale',
       'Satıldı': 'Sold',
       'Satış fiyatı': 'Asking price',
