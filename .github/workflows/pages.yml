@@ -1,0 +1,62 @@
+name: Site (GitHub Pages)
+
+# docs/ klasörü + her gece üretilen kart/set sayfaları ve site haritası birlikte yayınlanır.
+# Üretilen sayfalar depoya commit edilmez (depo şişmesin diye).
+# Gerekli ayar: Settings → Pages → Source: "GitHub Actions"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "pipeline/build_pages.py"
+      - ".github/workflows/pages.yml"
+  schedule:
+    # Her gece 01:31 Türkiye saati (katalog güncellemesinden sonra)
+    - cron: "31 22 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Kart ve set sayfalarını üret
+        continue-on-error: true
+        env:
+          SUPABASE_URL: https://bsifvfcnktofugaspsls.supabase.co
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          OUT_DIR: _site
+        run: python pipeline/build_pages.py
+      - name: Site dosyalarını ekle
+        run: |
+          mkdir -p _site
+          cp -r docs/. _site/
+          touch _site/.nojekyll
+          echo "Sayfa sayısı: $(find _site -name '*.html' | wc -l)"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
