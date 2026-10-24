@@ -1,0 +1,29 @@
+{
+ "errors": [],
+ "price_samples": [],
+ "psa": {
+  "skipped": "onay bekliyor (2026-10-24)"
+ },
+ "run_at": "2026-10-24T19:51:01+00:00",
+ "credits_before": 122,
+ "images": {
+  "cached": 0,
+  "failed": 0,
+  "examples": []
+ },
+ "alerts": {
+  "sent": 0
+ },
+ "history_backfilled": 0,
+ "holdings": {
+  "pending": 0,
+  "matched": 67,
+  "failed": 0,
+  "unsupported": 0
+ },
+ "cards_priced_ever": 6,
+ "price_rows_today": 62,
+ "matched_this_run": 0,
+ "priced_this_run": 0,
+ "credits_after": 122
+}
