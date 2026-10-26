@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     let q = [name, numFull || setWords, gradeText].filter(Boolean).join(" ");
     q += " -pocket -digital -proxy -custom -orica -replica -lot -bundle";
     if (!graded) q += " -PSA -BGS -CGC -SGC -TAG -graded -slab";
-    const key = `${q}|${set}|${CAMPAIGN ? "a" : ""}`.toLowerCase();
+    const key = `v3|${q}|${set}|${CAMPAIGN ? "a" : ""}`.toLowerCase();
 
     // Önbellek
     if (KEY) {
@@ -100,6 +100,10 @@ Deno.serve(async (req) => {
         if (/\b(pocket|digital|proxy|custom|orica|replica)\b/.test(t)) return false;
         // Aynı numarayı kullanan yeni baskılar (ör. Celebrations Classic Collection 4/102) ve baskı türleri
         if (!/celebration|classic collection/i.test(set) && /celebration|classic collection/.test(t)) return false;
+        // Yeniden baskı / hatıra / büyük boy ürünler (kartın kendi seti bunlardan biri değilse)
+        for (const w of ["reprint", "anniversary", "gold", "metal", "jumbo", "oversize", "graded card guard"]) {
+          if (t.includes(w) && !(set + " " + name).toLowerCase().includes(w)) return false;
+        }
         if (/1st edition/i.test(set + " " + name)) { if (!/\b1st\b|first edition/.test(t)) return false; }
         else if (/\b1st ed|\b1st edition|first edition/.test(t)) return false;
         if (/shadowless/i.test(set + " " + name)) { if (!/shadowless/.test(t)) return false; }
