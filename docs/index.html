@@ -153,6 +153,17 @@ a{color:var(--accent)}
 .mini svg{width:100%;height:100%;display:block}
 .actions{display:flex;gap:8px;flex-wrap:wrap}
 .gchips{display:flex;gap:6px;flex-wrap:wrap}
+.ebay{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px}
+.ebay-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.echips{display:flex;gap:4px;flex-wrap:wrap}
+.ebay-sum{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.ebay-sum b{font-size:1.05rem}
+.ebay-list{display:flex;flex-direction:column;gap:4px}
+.ebay-item{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:10px;align-items:center;text-decoration:none;color:var(--ink);padding:6px;border-radius:8px;border:1px solid var(--line)}
+.ebay-item:hover{border-color:var(--accent)}
+.ebay-item img,.ebay-item .ph{width:40px;height:40px;object-fit:cover;border-radius:5px;background:var(--surface-2)}
+.ebay-item .t{font-size:.8rem;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.ebay-item .p{font-size:.82rem;white-space:nowrap;text-align:right}
+.ebay-foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:.85rem}
 .gch{font:500 .8rem var(--f-mono);background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:3px 9px;white-space:nowrap}
 .gch b{font-family:var(--f-body);font-weight:700;margin-right:2px}
 .note{font-size:.8rem;color:var(--muted)}
@@ -413,6 +424,26 @@ if(/access_token=|type=(signup|recovery|magiclink)|error_description=/.test(loca
     box.appendChild(svg);
   }
 
+  // eBay'de şu an satıştaki ilanlar (Supabase Edge Function: ebay-listings, 6 saat önbellek)
+  function ebayBox(r){
+    var box=el('section',{class:'ebay'}),head=el('div',{class:'ebay-head'}),body=el('div',{class:'ebay-body'});
+    var pk=r.game==='Pokemon'||r.game==='Pokemon JP',grades=pk?[['raw','Ham'],['PSA 10','PSA 10'],['PSA 9','PSA 9']]:[['raw','Ham']],cur='raw',seq=0;
+    var chips=el('div',{class:'echips',role:'group','aria-label':'Derece'});
+    head.appendChild(el('div',{class:'label',text:'eBay’de şu an'}));head.appendChild(chips);
+    function drawChips(){chips.innerHTML='';if(grades.length<2)return;grades.forEach(function(g){chips.appendChild(el('button',{type:'button',class:'chip x2','aria-pressed':String(cur===g[0]),text:g[1],onclick:function(){cur=g[0];drawChips();load();}}));});}
+    function load(){var my=++seq;body.innerHTML='';body.appendChild(el('p',{class:'note',text:'eBay ilanları yükleniyor…'}));
+      fetch(SB_URL+'/functions/v1/ebay-listings',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({name:r.name,number:r.number,set:r.set_name,grade:cur})})
+      .then(function(x){return x.json()}).then(function(d){if(my!==seq)return;body.innerHTML='';
+        if(d.error){body.appendChild(el('p',{class:'note',text:'eBay ilanları şu an alınamadı.'}));return;}
+        if(!d.total){body.appendChild(el('p',{class:'note',text:'eBay’de bu karta uyan satıştaki ilan bulunamadı.'}));if(d.search_url)body.appendChild(el('a',{href:d.search_url,target:'_blank',rel:'sponsored noopener',text:'eBay’de ara →'}));return;}
+        body.appendChild(el('div',{class:'ebay-sum'},[el('b',{class:'num',text:usd(d.min)+(d.max!=null&&d.max!==d.min?' – '+usd(d.max):'')}),el('span',{class:'note',text:d.total+' ilan · ortanca '+usd(d.median)})]));
+        var list=el('div',{class:'ebay-list'});(d.items||[]).slice(0,4).forEach(function(it){
+          list.appendChild(el('a',{class:'ebay-item',href:it.url,target:'_blank',rel:'sponsored noopener'},[it.image?el('img',{src:it.image,alt:'',loading:'lazy',referrerpolicy:'no-referrer'}):el('span',{class:'ph'}),
+            el('span',{class:'t',text:it.title}),el('span',{class:'p num',text:usd(it.price)+(it.ship?' + '+usd(it.ship)+' kargo':'')})]));});
+        body.appendChild(list);
+        body.appendChild(el('div',{class:'ebay-foot'},[el('a',{href:d.search_url,target:'_blank',rel:'sponsored noopener',text:'Tüm ilanları eBay’de gör →'}),el('span',{class:'note',text:'Satıştaki ilanlar; satılmış fiyat değildir.'})]));
+      }).catch(function(){if(my!==seq)return;body.innerHTML='';body.appendChild(el('p',{class:'note',text:'eBay ilanları şu an alınamadı.'}));});}
+    drawChips();box.appendChild(head);box.appendChild(body);load();return box;}
   function openCard(r){
     if(sb&&r.product_id)sb.rpc('log_event',{kind:'view',q:null,g:r.game||null,pid:r.product_id,results:null}).then(function(){},function(){});
     if(S.q)rememberQuery(S.q,S.g);rememberView(r);
@@ -452,6 +483,7 @@ if(/access_token=|type=(signup|recovery|magiclink)|error_description=/.test(loca
       info.appendChild(el('div',{style:'display:flex;gap:10px;align-items:center;flex-wrap:wrap'},[fetchBtn,fmsg]));
     }
     info.appendChild(gradeBox);
+    info.appendChild(ebayBox(r));
     var f=el('div',{class:'facts'});
     [['Nadirlik',r.rarity||'—'],['Baskı',r.sub_type||'—'],['En düşük ilan',usd(r.low),1],['Fiyat tarihi',dfmt(r.price_date),1]].forEach(function(x){f.appendChild(el('span',{text:x[0]}));f.appendChild(el('span',{class:x[2]?'num':null,text:x[1]}));});
     info.appendChild(f);
