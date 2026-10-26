@@ -53,16 +53,19 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const name = String(body.name || "").replace(/\s*\(\d+\)\s*$/, "").replace(/\s+-\s+[\w\/-]+$/, "").trim().slice(0, 80);
-    const number = String(body.number || "").split("/")[0].trim().slice(0, 20);
+    const numFull = String(body.number || "").trim().slice(0, 20);          // "4/102", "OP05-119", "TG03/TG30"
+    const number = numFull.split("/")[0];
     const set = String(body.set || "").trim().slice(0, 60);
     const grade = String(body.grade || "raw").trim();
     if (!name) return json({ error: "name" }, 400);
     const graded = /^(PSA|BGS|CGC|SGC|TAG|ACE)\s*\d/i.test(grade);
     const gradeText = graded ? grade.replace(/\s+(pristine|black\s*label)/i, "") : "";
     // Arama metni: ad + numara (+ derece). Ham için dereceli ilanları dışarıda bırak.
-    let q = [name, number, gradeText].filter(Boolean).join(" ");
-    if (!graded) q += " -PSA -BGS -CGC -SGC -graded -slab -lot";
-    else q += " -lot";
+    // Arama: ad + tam numara (+ derece). Dijital/sahte/toplu ilanları ve (ham için) dereceli ilanları dışarıda bırak.
+    const setWords = set.replace(/[^\p{L}\p{N} ]/gu, " ").split(/\s+/).filter((w) => w.length > 2).slice(0, 3).join(" ");
+    let q = [name, numFull || setWords, gradeText].filter(Boolean).join(" ");
+    q += " -pocket -digital -proxy -custom -orica -replica -lot -bundle";
+    if (!graded) q += " -PSA -BGS -CGC -SGC -TAG -graded -slab";
     const key = `${q}|${set}|${CAMPAIGN ? "a" : ""}`.toLowerCase();
 
     // Önbellek
@@ -76,7 +79,7 @@ Deno.serve(async (req) => {
 
     const token = await ebayToken(ID, SECRET);
     const params = new URLSearchParams({
-      q, category_ids: CATEGORY, limit: "50", sort: "price",
+      q, category_ids: CATEGORY, limit: "100",
       filter: "buyingOptions:{FIXED_PRICE},priceCurrency:USD,price:[1..]",
     });
     const headers: Record<string, string> = { Authorization: `Bearer ${token}`, "X-EBAY-C-MARKETPLACE-ID": "EBAY_US" };
@@ -84,12 +87,17 @@ Deno.serve(async (req) => {
     const r = await fetch(`https://api.ebay.com/buy/browse/v1/item_summary/search?${params}`, { headers });
     if (!r.ok) return json({ error: `eBay yanıt vermedi (${r.status})`, detail: (await r.text()).slice(0, 200) }, 502);
     const j = await r.json();
-    const words = name.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+    const words = name.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, " ").split(/\s+/).filter((w) => w.length > 2);
+    // Numara eşleşmesi: "4/102" = "04/102" = "004/102"; "OP05-119" olduğu gibi
+    const norm = (t: string) => t.toLowerCase().replace(/(^|[^0-9a-z])0+(\d)/g, "$1$2");
+    const numPat = numFull ? norm(numFull).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : "";
+    const numRe = numPat ? new RegExp(`(^|[^0-9a-z])${numPat}($|[^0-9a-z])`) : null;
     const items = (j.itemSummaries || [])
       .filter((it: any) => {
         const t = String(it.title || "").toLowerCase();
         if (!words.every((w) => t.includes(w))) return false;
-        if (number && !t.includes(number.toLowerCase().replace(/^0+/, ""))) return false;
+        if (numRe && !numRe.test(norm(t))) return false;
+        if (/\b(pocket|digital|proxy|custom|orica|replica)\b/.test(t)) return false;
         if (graded && !t.includes(gradeText.toLowerCase().split(" ")[0])) return false;
         return true;
       })
@@ -101,6 +109,11 @@ Deno.serve(async (req) => {
         country: it.itemLocation?.country || null,
       }))
       .filter((it: any) => it.price);
+    // Aykırı fiyatları ayıkla (ortancanın 1/4'ünden ucuz ya da 4 katından pahalı ilanlar genelde başka ürün)
+    const med0 = median(items.map((i: any) => i.price as number));
+    const clean = med0 ? items.filter((i: any) => i.price >= med0 / 4 && i.price <= med0 * 4) : items;
+    clean.sort((a: any, b: any) => (a.price + a.ship) - (b.price + b.ship));
+    items.length = 0; items.push(...clean);
     const prices = items.map((i: any) => i.price as number);
     const data = {
       q, total: items.length, min: prices.length ? Math.min(...prices) : null,
