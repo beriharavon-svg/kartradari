@@ -98,6 +98,12 @@ Deno.serve(async (req) => {
         if (!words.every((w) => t.includes(w))) return false;
         if (numRe && !numRe.test(norm(t))) return false;
         if (/\b(pocket|digital|proxy|custom|orica|replica)\b/.test(t)) return false;
+        // Aynı numarayı kullanan yeni baskılar (ör. Celebrations Classic Collection 4/102) ve baskı türleri
+        if (!/celebration|classic collection/i.test(set) && /celebration|classic collection/.test(t)) return false;
+        if (/1st edition/i.test(set + " " + name)) { if (!/\b1st\b|first edition/.test(t)) return false; }
+        else if (/\b1st ed|\b1st edition|first edition/.test(t)) return false;
+        if (/shadowless/i.test(set + " " + name)) { if (!/shadowless/.test(t)) return false; }
+        else if (/shadowless/.test(t)) return false;
         if (graded && !t.includes(gradeText.toLowerCase().split(" ")[0])) return false;
         return true;
       })
