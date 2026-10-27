@@ -11,7 +11,9 @@ const CORS = {
 };
 const CACHE_HOURS = 6;
 // eBay kategorileri: CCG tekli kartlar (Pokemon, Magic, One Piece, Lorcana, Riftbound...)
-const CATEGORY = "183454";
+const CATEGORY_TCG = "183454";
+// Spor kartları: Sports Mem, Cards & Fan Shop > Sports Trading Cards > Trading Card Singles
+const CATEGORY_SPORTS = "261328";
 let TOKEN: { v: string; exp: number } | null = null;
 
 function json(body: unknown, status = 200) {
@@ -57,16 +59,21 @@ Deno.serve(async (req) => {
     const number = numFull.split("/")[0];
     const set = String(body.set || "").trim().slice(0, 60);
     const grade = String(body.grade || "raw").trim();
+    const sports = body.cat === "sports";
+    const variant = String(body.variant || "").trim().slice(0, 60);
+    const CATEGORY = sports ? CATEGORY_SPORTS : CATEGORY_TCG;
     if (!name) return json({ error: "name" }, 400);
     const graded = /^(PSA|BGS|CGC|SGC|TAG|ACE)\s*\d/i.test(grade);
     const gradeText = graded ? grade.replace(/\s+(pristine|black\s*label)/i, "") : "";
     // Arama metni: ad + numara (+ derece). Ham için dereceli ilanları dışarıda bırak.
     // Arama: ad + tam numara (+ derece). Dijital/sahte/toplu ilanları ve (ham için) dereceli ilanları dışarıda bırak.
     const setWords = set.replace(/[^\p{L}\p{N} ]/gu, " ").split(/\s+/).filter((w) => w.length > 2).slice(0, 3).join(" ");
-    let q = [name, numFull || setWords, gradeText].filter(Boolean).join(" ");
+    // Spor kartı: oyuncu + yıl/set + numara + paralel (ör. "Victor Wembanyama 2023 Panini Prizm 136 Silver")
+    let q = sports ? [name, set, numFull, variant, gradeText].filter(Boolean).join(" ")
+                   : [name, numFull || setWords, gradeText].filter(Boolean).join(" ");
     q += " -pocket -digital -proxy -custom -orica -replica -lot -bundle";
     if (!graded) q += " -PSA -BGS -CGC -SGC -TAG -graded -slab";
-    const key = `v3|${q}|${set}|${CAMPAIGN ? "a" : ""}`.toLowerCase();
+    const key = `v4|${CATEGORY}|${q}|${set}|${CAMPAIGN ? "a" : ""}`.toLowerCase();
 
     // Önbellek
     if (KEY) {
@@ -100,8 +107,8 @@ Deno.serve(async (req) => {
         if (/\b(pocket|digital|proxy|custom|orica|replica)\b/.test(t)) return false;
         // Aynı numarayı kullanan yeni baskılar (ör. Celebrations Classic Collection 4/102) ve baskı türleri
         if (!/celebration|classic collection/i.test(set) && /celebration|classic collection/.test(t)) return false;
-        // Yeniden baskı / hatıra / büyük boy ürünler (kartın kendi seti bunlardan biri değilse)
-        for (const w of ["reprint", "anniversary", "gold", "metal", "jumbo", "oversize", "graded card guard"]) {
+        // Yeniden baskı / hatıra / büyük boy ürünler (kartın kendi seti bunlardan biri değilse; sporda "Gold" bir paralel adıdır)
+        if (!sports) for (const w of ["reprint", "anniversary", "gold", "metal", "jumbo", "oversize", "graded card guard"]) {
           if (t.includes(w) && !(set + " " + name).toLowerCase().includes(w)) return false;
         }
         if (/1st edition/i.test(set + " " + name)) { if (!/\b1st\b|first edition/.test(t)) return false; }

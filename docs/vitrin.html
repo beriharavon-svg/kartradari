@@ -250,7 +250,7 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     if(D.instagram)box.appendChild(el('a',{class:'cbtn ig',href:'https://ig.me/m/'+D.instagram,target:'_blank',rel:'noopener',onclick:function(){hit('ig')}},[el('span',{'aria-hidden':'true',text:'✉'}),el('span',{text:'Instagram’dan yaz'})]));
     return box.childNodes.length?box:null;}
   function cardEl(c,showVal){
-    var kids=[art(c),el('div',null,[el('div',{class:'nm',text:c.name||'—'}),el('div',{class:'sb',text:(c.set||'')+(c.number?' · '+c.number:'')})]),
+    var kids=[art(c),el('div',null,[el('div',{class:'nm',text:c.name||'—'}),el('div',{class:'sb',text:(c.set||'')+(c.number?' · '+c.number:'')+(c.variant?' · '+c.variant:'')})]),
       el('div',{class:'ft'},[el('span',{class:'gchip'+(c.grade==='Ham'?' raw':''),text:c.grade+(c.jp?' · JP':'')}),c.qty>1?el('span',{class:'qty',text:'×'+c.qty}):null,showVal&&!c.sale?el('span',{class:'price',style:'font-size:.9rem',text:usd(c.value)}):null])];
     if(c.sale){var m=usdTo(c.market,c.ccy),box=el('div',{class:'salebx'});
       box.appendChild(el('div',{class:'ask'},[el('span',{class:'label',text:c.sold?'Satıldı':'Satış fiyatı'}),el('span',{class:'av',text:money(c.ask,c.ccy)})]));
