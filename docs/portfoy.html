@@ -950,8 +950,9 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
       list.appendChild(el('div',{class:'showrow'+(v.enabled?' on':'')},[
         el('div',{style:'min-width:0'},[el('div',{style:'display:flex;gap:8px;align-items:center;flex-wrap:wrap'},[el('b',{text:v.title||v.code}),el('span',{class:'chip '+(v.enabled?'ok':''),text:v.enabled?'Yayında':'Kapalı'})]),
           el('div',{class:'note',text:showScope(v)+' · Görüntülenme: '+(v.views||0)+(v.contact_clicks?' · Satıcıya yazma: '+v.contact_clicks:'')}),
+          !v.enabled?el('div',{class:'note',text:'Kapalı vitrinin bağlantısı çalışmaz. Paylaşmak için “Yayına al”a bas.'}):null,
           v.enabled?el('a',{class:'num live-url',style:'font-size:.85rem;font-weight:500',href:url,target:'_blank',rel:'noopener',text:url.replace(/^https?:\/\//,'')}):null]),
-        el('div',{style:'display:flex;gap:8px;flex-wrap:wrap'},[v.enabled?copy:null,v.enabled&&navigator.share?el('button',{class:'btn quiet',type:'button',text:'Paylaş',onclick:function(){navigator.share({title:v.title||'Holotique',text:v.title||'',url:url}).catch(function(){})}}):null,el('button',{class:'btn ghost',type:'button',text:'Düzenle',onclick:function(){openShow(v)}})])]));});
+        el('div',{style:'display:flex;gap:8px;flex-wrap:wrap'},[v.enabled?null:(function(){var b=el('button',{class:'btn',type:'button',text:'Yayına al'});b.onclick=function(){b.disabled=true;sb.from('showcases').update({enabled:true,updated_at:new Date().toISOString()}).eq('id',v.id).select().maybeSingle().then(function(r){b.disabled=false;if(r.error){b.textContent=r.error.message;return;}Object.assign(v,r.data);render();});};return b;})(),v.enabled?copy:null,v.enabled&&navigator.share?el('button',{class:'btn quiet',type:'button',text:'Paylaş',onclick:function(){navigator.share({title:v.title||'Holotique',text:v.title||'',url:url}).catch(function(){})}}):null,el('button',{class:'btn ghost',type:'button',text:'Düzenle',onclick:function(){openShow(v)}})])]));});
     panel.appendChild(list);app.appendChild(panel);}
 
   // Vitrin görseli: en değerli kartların kolajı (Instagram gönderisi / hikâyesi)

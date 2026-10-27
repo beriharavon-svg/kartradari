@@ -144,6 +144,8 @@
         'Prices: TCGplayer (raw) and eBay sales (PSA) via PokemonPriceTracker. The PSA price is the weighted sale price of the last 7 days; confidence depends on the number of sales. FX rates: European Central Bank (Frankfurter). Not investment advice.',
       '· Alış fiyatların ve sertifika numaraların yalnızca sana görünür.': '· Your purchase prices and cert numbers are visible only to you.',
       'Uygulamayı yükle': 'Install app',
+      'Yayına al': 'Publish',
+      'Kapalı vitrinin bağlantısı çalışmaz. Paylaşmak için “Yayına al”a bas.': 'An off showcase’s link doesn’t work. Press “Publish” to share it.',
       'Vitrinlerim': 'My showcases',
       '← Vitrinlerim': '← My showcases',
       '+ Yeni vitrin': '+ New showcase',
