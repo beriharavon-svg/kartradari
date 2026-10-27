@@ -244,7 +244,7 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
   function money(v,c){if(v==null||!isFinite(v))return '—';c=c||'USD';var dd=(c==='TRY'||v>=100)?0:2;return (CSYM[c]||'')+Number(v).toLocaleString(LOC,{minimumFractionDigits:dd,maximumFractionDigits:dd});}
   function usdTo(v,c){if(v==null)return null;if(!c||c==='USD')return Number(v);var r=D&&D.fx&&Number(D.fx[c]);return r?Number(v)*r:null;}
   function contactBtns(c){var box=el('div',{class:'cbtns'}),url=location.href.split('#')[0];
-    function hit(ch){try{sb.rpc('showcase_contact',{s:D.code,ch:ch}).then(function(){},function(){});}catch(e){}}
+    function hit(ch){try{sb.rpc('showcase_contact',{s:D.code,ch:ch,item:String((c.name||'')+(c.grade?' · '+c.grade:'')).slice(0,120)}).then(function(){},function(){});}catch(e){}}
     if(D.whatsapp){var msg=(window.HQ_LANG==='en'?'Hi, I’m writing about this card on your Holotique showcase: ':'Merhaba, Holotique vitrinindeki şu kart için yazıyorum: ')+c.name+' ('+c.grade+(c.ask!=null?', '+money(c.ask,c.ccy):'')+')\n'+url;
       box.appendChild(el('a',{class:'cbtn wa',href:'https://wa.me/'+D.whatsapp+'?text='+encodeURIComponent(msg),target:'_blank',rel:'noopener',onclick:function(){hit('wa')}},[el('span',{'aria-hidden':'true',text:'💬'}),el('span',{text:'WhatsApp’tan sor'})]));}
     if(D.instagram)box.appendChild(el('a',{class:'cbtn ig',href:'https://ig.me/m/'+D.instagram,target:'_blank',rel:'noopener',onclick:function(){hit('ig')}},[el('span',{'aria-hidden':'true',text:'✉'}),el('span',{text:'Instagram’dan yaz'})]));

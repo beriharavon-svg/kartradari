@@ -275,6 +275,37 @@ a.btn{text-decoration:none}
 .fitem img{width:100%;aspect-ratio:3/4;object-fit:contain;background:#fff;border-radius:6px}
 .fitem .t{font-size:.72rem;line-height:1.25;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .fitem .p{font-size:.72rem;color:var(--muted)}
+.prefs{display:flex;flex-direction:column;gap:16px}.prefrow{display:grid;grid-template-columns:minmax(0,1fr) 180px;gap:12px;align-items:center}
+@media (max-width:520px){.prefrow{grid-template-columns:1fr}}
+.alertbox{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px}
+.alrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px;align-items:end}.alrow .btn{padding:8px 12px;font-size:.85rem}
+@media (max-width:420px){.alrow{grid-template-columns:1fr 1fr}.alrow .btn{grid-column:1/-1}}
+.sellhead{display:flex;gap:12px;align-items:center;margin-bottom:12px}.sellhead .thumb{width:56px}
+.sellest{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.88rem;background:var(--surface-2);border-radius:8px;padding:10px 12px}
+.salesp>*:not(.ledger-head),.setsp>.sets{margin-left:18px;margin-right:18px}.salesp,.setsp{padding-bottom:16px}
+.sales-k{grid-template-columns:repeat(4,minmax(0,1fr));margin:12px 0}
+@media (max-width:760px){.sales-k{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.srows{display:flex;flex-direction:column;margin-top:8px}
+.srow{display:grid;grid-template-columns:minmax(0,2.4fr) 1fr 1fr 1fr 1fr;gap:10px;align-items:center;padding:10px 6px;border:0;border-top:1px solid var(--line);background:none;text-align:left;font:inherit;color:inherit;cursor:pointer;width:100%}
+.srow:hover{background:var(--surface-2)}.srow.shead{cursor:default;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;border-top:0}.srow.shead:hover{background:none}
+.srow>span{display:flex;flex-direction:column;min-width:0}.srow .s{font-size:.74rem;color:var(--muted)}
+.scard{flex-direction:row!important;gap:10px;align-items:center}.scard .thumb{width:36px;flex:none}.scard .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.scard .sub{font-size:.78rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:640px){.srow{grid-template-columns:minmax(0,1fr) auto;row-gap:2px}.srow.shead{display:none}.srow>span:nth-child(2),.srow>span:nth-child(4){display:none}.srow>span:nth-child(3){text-align:right;align-items:flex-end}.srow>span:nth-child(5){grid-column:2;text-align:right;align-items:flex-end}}
+.sets{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.setrow{border:1px solid var(--line);border-radius:12px;overflow:hidden}.setrow.open{border-color:var(--accent)}
+.sethead{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1.4fr) auto;gap:14px;align-items:center;width:100%;padding:12px 14px;background:none;border:0;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.sethead>span{display:flex;flex-direction:column;min-width:0}.sethead .nm{font-weight:600}.sethead .sub{font-size:.78rem;color:var(--muted)}
+.setprog{gap:4px;font-size:.8rem}.setprog .bar{height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden;display:block}.setprog .bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+@media (max-width:600px){.sethead{grid-template-columns:1fr}}
+.setcards{padding:0 14px 14px;display:flex;flex-direction:column;gap:10px}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;max-height:560px;overflow:auto}
+.scell{display:flex;flex-direction:column;gap:3px;font-size:.74rem;min-width:0}.scell img,.scell .ph{width:100%;aspect-ratio:5/7;object-fit:contain;border-radius:6px;background:var(--surface-2);display:block}
+.scell .t{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.scell .s{color:var(--muted)}.scell .linkbtn{font-size:.74rem;text-align:left;padding:0}
+.scell:not(.own) img{filter:grayscale(.85);opacity:.6}
+.vstats{display:flex;flex-direction:column;gap:16px}
+.vbars{display:flex;align-items:flex-end;gap:2px;height:110px;border-bottom:1px solid var(--line)}.vbars span{flex:1;background:var(--accent);border-radius:3px 3px 0 0;min-width:2px}
+.vbx{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-top:4px}
+.vitems{display:flex;flex-direction:column}.vitems div{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px solid var(--line);font-size:.86rem}
 .sportf{grid-column:1/-1;border-top:1px dashed var(--line);padding-top:10px}
 .tog{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:.9rem}
 .tog input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--accent);flex:none}
@@ -433,9 +464,13 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     var app=document.getElementById('app');
     // İstek listesi ve vitrin tabloları yoksa (011 çalıştırılmamışsa) sekmeler gizlenir, portföy normal çalışır.
     var wp=sb.rpc('my_wishlist').then(function(r){S.wishOk=!r.error;S.wish=r.error?[]:(r.data||[]);},function(){S.wishOk=false;S.wish=[];});
+    var pf=sb.from('user_prefs').select('*').maybeSingle().then(function(r){S.prefsOk=!r.error;S.prefs=r.data||null;},function(){S.prefsOk=false;S.prefs=null;});
     var sp=sb.from('showcases').select('*').order('updated_at',{ascending:false}).then(function(r){S.shows=r.error?[]:(r.data||[]);if(S.show){S.show=S.shows.find(function(x){return (x.id&&x.id===S.show.id)||x.code===S.show.code})||null;}},function(){S.shows=[];});
-    return Promise.all([sb.from('holdings').select('*, cards(*)').order('created_at'),wp,sp]).then(function(all){var r=all[0];
-      if(r.error)throw r.error;S.holdings=r.data||[];
+    return Promise.all([sb.from('holdings').select('*, cards(*)').order('created_at'),wp,sp,pf]).then(function(all){var r=all[0];
+      if(r.error)throw r.error;var allH=r.data||[];
+      // Satılan kartlar portföy toplamına girmez; "Satışlar" sekmesinde gerçekleşen kârla görünür
+      S.setsData=null;S.sold=S.prefsOk?allH.filter(function(h){return !!h.sold_at}):[];S.holdings=S.prefsOk?allH.filter(function(h){return !h.sold_at}):allH;
+      if(S.sel&&!S.holdings.some(function(h){return h.id===S.sel}))S.sel=null;
       var ids=Array.from(new Set(S.holdings.map(function(h){return h.card_id}).concat(S.wish.map(function(w){return w.card_id})).filter(Boolean)));
       var since=new Date(Date.now()-400*864e5).toISOString().slice(0,10);
       // Supabase tek istekte en fazla 1000 satır döndürür; fiyat geçmişi sayfa sayfa okunur.
@@ -595,7 +630,8 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     adminLink();
     document.getElementById('ccyBox').hidden=false;document.getElementById('who').hidden=false;document.getElementById('whoMail').textContent=S.user.email;renderCcy();
     var app=document.getElementById('app');app.innerHTML='';
-    if(S.wishOk){app.appendChild(tabBar());if(S.tab==='wish'){renderWish(app);return;}if(S.tab==='show'){renderShows(app);return;}}
+    if(S.wishOk){app.appendChild(tabBar());if(S.tab==='wish'){renderWish(app);return;}if(S.tab==='show'){renderShows(app);return;}
+      if(S.prefsOk&&S.tab==='sales'){renderSales(app);return;}if(S.prefsOk&&S.tab==='sets'){renderSets(app);return;}}
     if(!S.holdings.length){app.appendChild(el('section',{class:'panel empty',style:'margin-top:20px'},[el('h2',{text:'Portföyün boş'}),el('p',{class:'muted',style:'margin:0;max-width:60ch',text:'Kartlarını Excel dosyasından toplu olarak yükleyebilir ya da tek tek ekleyebilirsin. Eklediğin kartlar birkaç saat içinde katalogla eşleşir ve fiyatlanır.'}),el('div',{class:'cta'},[el('button',{class:'btn',type:'button',text:'Excel’den içe aktar',onclick:openImport}),el('button',{class:'btn ghost',type:'button',text:'Tek kart ekle',onclick:function(){openAdd()}})])]));return;}
     if(S.foldersOk)app.appendChild(folderBar());
     var V=view(),FD=curFolder();
@@ -623,7 +659,7 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     var main=el('section',{class:'main'}),led=el('div',{class:'panel ledger'});
     var sortSel=el('select',{id:'sortSel','aria-label':'Sırala'});[['value','Değere göre'],['pl','K/Z yüzdesine göre'],['d7','7 günlük değişime göre'],['name','Ada göre'],['status','Duruma göre']].forEach(function(o){var op=el('option',{value:o[0],text:o[1]});if(S.sort===o[0])op.selected=true;sortSel.appendChild(op);});
     sortSel.addEventListener('change',function(){S.sort=sortSel.value;store.set('kr-sort',S.sort);render();});
-    led.appendChild(el('div',{class:'ledger-head'},[el('h2',{text:(FD?FD.name:'Kartlarım')+' · '+V.length}),el('div',{class:'ledger-tools'},[sortSel,el('button',{class:'btn quiet',type:'button',text:'Excel’den yükle',onclick:openImport}),el('button',{class:'btn',type:'button',text:'Kart ekle',onclick:function(){openAdd()}})])]));
+    led.appendChild(el('div',{class:'ledger-head'},[el('h2',{text:(FD?FD.name:'Kartlarım')+' · '+V.length}),el('div',{class:'ledger-tools'},[sortSel,S.prefsOk?el('button',{class:'btn quiet',type:'button',text:'🔔 Bildirimler',onclick:openPrefs}):null,el('button',{class:'btn quiet',type:'button',text:'Excel’den yükle',onclick:openImport}),el('button',{class:'btn',type:'button',text:'Kart ekle',onclick:function(){openAdd()}})])]));
     var hs=V.slice(),val=function(h){return priced(h)?price(h)*h.qty:-1};
     var rank={failed:0,unsupported:1,pending:2,matched:3};
     hs.sort(function(a,b){if(S.sort==='name')return (a.name_input||'').localeCompare(b.name_input||'','tr');if(S.sort==='pl'){var pa=priced(a)&&a.cost_usd?price(a)/a.cost_usd:-1e9,pb=priced(b)&&b.cost_usd?price(b)/b.cost_usd:-1e9;return pb-pa;}if(S.sort==='d7')return (changeOver(b,7)||-1e9)-(changeOver(a,7)||-1e9);if(S.sort==='status')return (rank[a.match_status]||0)-(rank[b.match_status]||0);return val(b)-val(a);});
@@ -710,12 +746,13 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     if(row&&h.grade==='Ham'&&row.raw!=null)d.appendChild(side(desk(h,row)));
     if(h.match_status==='matched'||isManual(h))d.appendChild(side(ebayBox(h)));
     var fc=folderChips(h);if(fc)d.appendChild(side(fc));
+    if(S.prefsOk&&h.card_id&&('alert_above' in h))d.appendChild(side(alertBox(h,p)));
     if('for_sale' in h){
       var sb2=el('div',{class:'salebox'});
       function setSale(patch,btn){btn.disabled=true;sb.from('holdings').update(patch).eq('id',h.id).then(function(r){btn.disabled=false;if(r.error){btn.textContent=r.error.message;return;}load();});}
       if(onSale(h)){var pv=usdTo(p,h.ask_ccy);
         sb2.appendChild(el('div',null,[el('div',{class:'label',text:'Satılık'}),el('div',{class:'num',style:'font-size:1.2rem;font-weight:600',text:money(h.ask_price!=null?Number(h.ask_price):null,h.ask_ccy)}),pv!=null?el('div',{class:'note',text:'Piyasa ≈ '+money(pv,h.ask_ccy)}):null,h.sale_note?el('div',{class:'note',text:h.sale_note}):null]));
-        var bSold=el('button',{class:'btn quiet',type:'button',text:'Satıldı olarak işaretle'});bSold.onclick=function(){setSale({sold_at:new Date().toISOString()},bSold);};
+        var bSold=el('button',{class:'btn quiet',type:'button',text:'Satıldı olarak işaretle'});bSold.onclick=function(){if(S.prefsOk)openSell(h);else setSale({sold_at:new Date().toISOString()},bSold);};
         var bOff=el('button',{class:'linkbtn',type:'button',text:'Satıştan kaldır'});bOff.onclick=function(){setSale({for_sale:false,sold_at:null},bOff);};
         sb2.appendChild(el('div',{class:'cta',style:'display:flex;gap:12px;align-items:center;flex-wrap:wrap'},[bSold,bOff]));}
       else if(h.for_sale&&h.sold_at){sb2.appendChild(el('div',{class:'note',text:'Satıldı olarak işaretlendi. Vitrinde 14 gün “Satıldı” etiketiyle görünür. Kart artık sende değilse portföyden silebilirsin.'}));
@@ -725,7 +762,9 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     }
     var acts=el('div',{class:'actions'}),del=el('button',{class:'btn danger',type:'button',text:'Kartı sil'});
     del.addEventListener('click',function(){if(del.dataset.armed){del.disabled=true;sb.from('holdings').delete().eq('id',h.id).then(function(res){if(res.error){del.disabled=false;del.textContent='Silinemedi';return;}S.sel=null;load();});}else{del.dataset.armed='1';del.textContent='Silmek için tekrar bas';}});
-    acts.appendChild(el('button',{class:'btn quiet',type:'button',text:'Düzenle',onclick:function(){openAdd(h)}}));acts.appendChild(del);d.appendChild(side(acts));
+    acts.appendChild(el('button',{class:'btn quiet',type:'button',text:'Düzenle',onclick:function(){openAdd(h)}}));
+    if(S.prefsOk)acts.appendChild(el('button',{class:'btn quiet',type:'button',text:'Sattım',onclick:function(){openSell(h)}}));
+    acts.appendChild(del);d.appendChild(side(acts));
     // Geniş ekranda iki sütun: solda kart, fiyatlar ve kayıt; sağda eBay, klasörler, satış ve işlemler
     var A=el('div',{class:'dcol'}),B=el('div',{class:'dcol'});
     Array.from(d.children).forEach(function(k){(k.classList.contains('side')?B:A).appendChild(k);});
@@ -868,10 +907,182 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
   }
 
 
+  // ---------- bildirim ayarları ----------
+  function openPrefs(){
+    sheet('Bildirimler',function(p,close){
+      var pr=S.prefs||{weekly_mail:true,move_pct:null};
+      var fW=el('input',{id:'pWeekly',type:'checkbox'});fW.checked=pr.weekly_mail!==false;
+      var fM=el('select',{id:'pMove'});[['','Kapalı'],['10','%10 değişince'],['15','%15 değişince'],['20','%20 değişince'],['30','%30 değişince']].forEach(function(o){var op=el('option',{value:o[0],text:o[1]});if(String(pr.move_pct==null?'':Number(pr.move_pct))===o[0])op.selected=true;fM.appendChild(op);});
+      var msg=el('div',{class:'msg',hidden:true}),save=el('button',{class:'btn',type:'submit',text:'Kaydet'});
+      var form=el('form',{class:'prefs'},[
+        el('label',{class:'tog',for:'pWeekly'},[fW,el('span',null,[el('b',{text:'Haftalık özet maili'}),el('span',{class:'note',style:'display:block',text:'Her pazartesi sabah: portföy değerin, haftalık değişim, en çok yükselen ve düşen kartların, istek listende hedefe yaklaşanlar.'})])]),
+        el('div',{class:'prefrow'},[el('label',{for:'pMove'},[el('b',{text:'Fiyat hareketi alarmı'}),el('span',{class:'note',style:'display:block',text:'Portföyündeki bir kartın fiyatı seçtiğin oranda yükselir ya da düşerse mail gelir. Değişim, son mailden (ya da alarmı açtığın andan) bu yana ölçülür.'})]),fM]),
+        el('p',{class:'note',style:'margin:0',text:'Bir kart için belirli bir fiyat hedefi koymak istersen kartın detayındaki “Fiyat alarmı” bölümünü kullan. İstek listesindeki hedef fiyat mailleri ayrıca çalışır.'}),
+        save,msg]);
+      form.addEventListener('submit',function(e){e.preventDefault();save.disabled=true;
+        var row={user_id:S.user.id,weekly_mail:fW.checked,move_pct:fM.value===''?null:Number(fM.value),updated_at:new Date().toISOString()};
+        sb.from('user_prefs').upsert(row,{onConflict:'user_id'}).select().maybeSingle().then(function(r){save.disabled=false;
+          if(r.error){msg.className='msg err';msg.textContent=r.error.message;msg.hidden=false;return;}S.prefs=r.data||row;close();});});
+      p.appendChild(form);
+    });
+  }
+
+  // ---------- kart fiyat alarmı (kart detayı) ----------
+  function alertBox(h,p){
+    var box=el('section',{class:'alertbox'}),up=el('input',{id:'alUp',type:'number',min:'0',step:'any',inputmode:'decimal',value:h.alert_above!=null?String(Number(h.alert_above)):'',placeholder:p!=null?'ör. '+Math.round(p*1.2):''}),
+        dn=el('input',{id:'alDn',type:'number',min:'0',step:'any',inputmode:'decimal',value:h.alert_below!=null?String(Number(h.alert_below)):'',placeholder:p!=null?'ör. '+Math.round(p*0.8):''}),
+        note=el('p',{class:'note',style:'margin:0'}),save=el('button',{class:'btn quiet sm',type:'button',text:'Alarmı kaydet'});
+    box.appendChild(el('div',{class:'label',text:'Fiyat alarmı'}));
+    box.appendChild(el('div',{class:'alrow'},[el('label',{class:'f',for:'alUp'},['Üstüne çıkınca $',up]),el('label',{class:'f',for:'alDn'},['Altına inince $',dn]),save]));
+    var on=h.alert_above!=null||h.alert_below!=null;
+    note.textContent=on?'Alarm açık. Fiyat hedefe ulaşınca bir kez mail gelir ve hedef silinir.':'Hedef fiyat yaz; ulaşınca mail atalım. Boş bırakırsan alarm kapalı.';
+    box.appendChild(note);
+    save.onclick=function(){var a=up.value===''?null:Number(up.value),b=dn.value===''?null:Number(dn.value);
+      if(p!=null&&a!=null&&a<=p){note.textContent='“Üstüne çıkınca” değeri şu anki fiyattan ('+usd(p)+') yüksek olmalı.';return;}
+      if(p!=null&&b!=null&&b>=p){note.textContent='“Altına inince” değeri şu anki fiyattan ('+usd(p)+') düşük olmalı.';return;}
+      save.disabled=true;sb.from('holdings').update({alert_above:a,alert_below:b}).eq('id',h.id).then(function(r){save.disabled=false;
+        if(r.error){note.textContent=r.error.message;return;}h.alert_above=a;h.alert_below=b;note.textContent=(a!=null||b!=null)?'Kaydedildi. Fiyat hedefe ulaşınca mail gelecek.':'Alarm kapatıldı.';});};
+    return box;
+  }
+
+  // ---------- satış kaydı ----------
+  function openSell(h){
+    var edit=!!h.sold_at,card=h.cards||{};
+    sheet(edit?'Satışı düzenle':'Satışı kaydet',function(p,close){
+      function field(id,lab,node,span){return el('label',{class:'f'+(span?' span2':''),for:id},[lab,node]);}
+      var today=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+      var fQty=el('input',{id:'sQty',type:'number',min:'1',max:String(h.qty),value:String(edit?h.qty:h.qty)}),
+          fPrice=el('input',{id:'sPrice',type:'number',min:'0',step:'any',required:true,inputmode:'decimal',value:edit&&h.sold_price!=null?String(Number(h.sold_price)):(h.ask_price!=null?String(Number(h.ask_price)):'')}),
+          fCcy=el('select',{id:'sCcy'}),fDate=el('input',{id:'sDate',type:'date',max:today,value:edit?String(h.sold_at).slice(0,10):today}),
+          fNote=el('input',{id:'sNote',maxlength:'140',value:edit?(h.sold_note||''):'',placeholder:'ör. Instagram’dan, kargo dahil'});
+      [['TRY','TL ₺'],['USD','USD $'],['EUR','EUR €'],['GBP','GBP £']].forEach(function(o){var op=el('option',{value:o[0],text:o[1]});if(o[0]===(edit?(h.sold_ccy||'USD'):(h.ask_ccy||'TRY')))op.selected=true;fCcy.appendChild(op);});
+      var est=el('div',{class:'sellest num'});
+      function draw(){var n=edit?h.qty:Math.max(1,Math.min(h.qty,parseInt(fQty.value,10)||1)),pr=Number(fPrice.value);
+        var f=S.fx[S.fx.length-1],rt=fCcy.value==='USD'?1:(f&&Number(f.rates[fCcy.value])),pu=fPrice.value!==''&&rt?pr/rt:null,cost=Number(h.cost_usd||0)*n;
+        est.innerHTML='';est.appendChild(el('span',{text:'Alış maliyeti: '+usd(cost)}));
+        if(pu!=null){var pl=pu*n-cost;est.appendChild(el('span',{text:'Satış: '+usd(pu*n)}));est.appendChild(el('b',{class:cls(pl),text:'Kâr/zarar: '+usd(pl,true)+(cost?' ('+pct(pl/cost*100)+')':'')}));}}
+      [fQty,fPrice,fCcy].forEach(function(x){x.addEventListener('input',draw);x.addEventListener('change',draw);});
+      var msg=el('div',{class:'msg',hidden:true}),save=el('button',{class:'btn span2',type:'submit',text:edit?'Kaydet':'Satışı kaydet'});
+      p.appendChild(el('div',{class:'sellhead'},[thumb(h),el('div',{style:'min-width:0'},[el('div',{class:'nm',text:card.name||h.name_input}),el('div',{class:'sub',text:hsub(h)}),el('span',{class:'chip grade',text:h.grade})])]));
+      var form=el('form',{class:'form-grid'},[h.qty>1&&!edit?field('sQty','Satılan adet (en fazla '+h.qty+')',fQty):null,field('sPrice','Satış fiyatı (adet)',fPrice),field('sCcy','Para birimi',fCcy),field('sDate','Satış tarihi',fDate),field('sNote','Not (yalnızca sana görünür)',fNote,true),el('div',{class:'span2'},[est]),save]);
+      form.addEventListener('submit',function(e){e.preventDefault();save.disabled=true;
+        var q=edit?sb.from('holdings').update({sold_price:Number(fPrice.value),sold_ccy:fCcy.value,sold_at:fDate.value+'T12:00:00+03:00',sold_note:fNote.value.trim()||null}).eq('id',h.id)
+                  :sb.rpc('sell_holding',{hid:h.id,n:Math.max(1,Math.min(h.qty,parseInt(fQty.value,10)||1)),price:Number(fPrice.value),ccy:fCcy.value,d:fDate.value||today,note:fNote.value.trim()||null});
+        q.then(function(r){save.disabled=false;if(r.error){msg.className='msg err';msg.textContent=r.error.message;msg.hidden=false;return;}close();S.sel=null;load();});});
+      p.appendChild(form);p.appendChild(msg);
+      if(edit){var back=el('button',{class:'linkbtn',type:'button',text:'Satışı geri al (kart portföye döner)'});
+        back.onclick=function(){if(!back.dataset.armed){back.dataset.armed='1';back.textContent='Emin misin? Tekrar bas';return;}back.disabled=true;
+          sb.from('holdings').update({sold_at:null}).eq('id',h.id).then(function(r){if(r.error){back.textContent=r.error.message;return;}close();load();});};
+        p.appendChild(back);}
+      else p.appendChild(el('p',{class:'note',style:'margin:0',text:'Kart portföy toplamından çıkar ve “Satışlar” sekmesinde gerçekleşen kârıyla görünür. Satılık işaretliyse vitrinde 14 gün “Satıldı” olarak kalır.'}));
+      draw();
+    });
+  }
+
+  // ---------- satışlar sekmesi ----------
+  function saleRow(h){var n=h.qty,cost=Number(h.cost_usd||0)*n,su=h.sold_usd!=null?Number(h.sold_usd)*n:null,pl=su!=null?su-cost:null;
+    var tc=h.cost_try_rate?cost*Number(h.cost_try_rate):null,ts=su!=null&&h.sold_try_rate?su*Number(h.sold_try_rate):null;
+    return {h:h,n:n,cost:cost,sale:su,pl:pl,costTry:tc,saleTry:ts,plTry:tc!=null&&ts!=null?ts-tc:null};}
+  function renderSales(app){
+    var panel=el('section',{class:'panel salesp'});
+    if(!S.sold.length){panel.appendChild(el('h2',{text:'Satışlar'}));panel.appendChild(el('p',{class:'muted',style:'max-width:64ch',text:'Henüz satış kaydın yok. Bir kartı sattığında kart detayındaki “Sattım” düğmesiyle kaydet; gerçekleşen kâr/zararın, alış ve satış günlerinin kuruyla TL karşılığı burada görünür.'}));app.appendChild(panel);return;}
+    var years=Array.from(new Set(S.sold.map(function(h){return String(h.sold_at).slice(0,4)}))).sort().reverse();
+    var Y=S.salesYear&&(S.salesYear==='all'||years.indexOf(S.salesYear)>=0)?S.salesYear:years[0];
+    var ys=el('select',{'aria-label':'Yıl'});years.concat(['all']).forEach(function(y){var o=el('option',{value:y,text:y==='all'?'Tüm yıllar':y});if(y===Y)o.selected=true;ys.appendChild(o);});
+    ys.addEventListener('change',function(){S.salesYear=ys.value;render();});
+    var rows=S.sold.filter(function(h){return Y==='all'||String(h.sold_at).slice(0,4)===Y}).sort(function(a,b){return String(b.sold_at).localeCompare(String(a.sold_at))}).map(saleRow);
+    var priced=rows.filter(function(r){return r.sale!=null}),sum=function(a,k){return a.reduce(function(t,r){return t+(r[k]||0)},0)};
+    var C=sum(priced,'cost'),R=sum(priced,'sale'),PL=R-C,tr=priced.filter(function(r){return r.plTry!=null}),PLT=sum(tr,'plTry'),miss=rows.length-priced.length;
+    panel.appendChild(el('div',{class:'ledger-head'},[el('h2',{text:'Satışlar · '+rows.length}),el('div',{class:'ledger-tools'},[ys,el('button',{class:'btn quiet',type:'button',text:'Excel’e aktar',onclick:function(){exportSales(rows,Y)}})])]));
+    function kpi(lab,v,s,c){return el('div',{class:'kpi'},[el('span',{class:'label',text:lab}),el('span',{class:'v num '+(c||''),text:v}),el('span',{class:'s num',text:s||''})]);}
+    panel.appendChild(el('div',{class:'kpis sales-k'},[kpi('Satış geliri',usd(R),priced.length+' satış'),kpi('Alış maliyeti',usd(C)),kpi('Gerçekleşen kâr/zarar',usd(PL,true),C?pct(PL/C*100):'',cls(PL)),kpi('TL olarak kâr/zarar',tr.length?(PLT<0?'−':'')+'₺'+Math.abs(Math.round(PLT)).toLocaleString(window.HQ_LANG==='en'?'en-US':'tr-TR'):'—','alış ve satış günlerinin kuruyla',cls(PLT))]));
+    if(miss)panel.appendChild(el('div',{class:'msg info',text:miss+' satışta fiyat girilmemiş; bunlar toplama katılmadı. Satırın üstüne basıp fiyatı ekleyebilirsin.'}));
+    var list=el('div',{class:'srows'});
+    list.appendChild(el('div',{class:'srow shead'},[el('span',{text:'Kart'}),el('span',{text:'Satış tarihi'}),el('span',{text:'Satış'}),el('span',{text:'Alış'}),el('span',{text:'Kâr/zarar'})]));
+    rows.forEach(function(r){var h=r.h,card=h.cards||{};
+      list.appendChild(el('button',{type:'button',class:'srow',onclick:function(){openSell(h)}},[
+        el('span',{class:'scard'},[thumb(h),el('span',{style:'min-width:0'},[el('span',{class:'nm',text:card.name||h.name_input}),el('span',{class:'sub',text:h.grade+(r.n>1?' · ×'+r.n:'')+(card.set_name||h.set_input?' · '+(card.set_name||h.set_input):'')})])]),
+        el('span',{class:'num',text:new Date(h.sold_at).toLocaleDateString(window.HQ_LANG==='en'?'en-GB':'tr-TR')}),
+        el('span',{class:'num'},[h.sold_price!=null?money(Number(h.sold_price)*r.n,h.sold_ccy):el('span',{class:'chip warn',text:'Fiyat gir'}),h.sold_ccy&&h.sold_ccy!=='USD'&&r.sale!=null?el('span',{class:'s',text:usd(r.sale)}):null]),
+        el('span',{class:'num',text:usd(r.cost)}),
+        el('span',{class:'num '+cls(r.pl)},[r.pl!=null?usd(r.pl,true):'—',r.pl!=null&&r.cost?el('span',{class:'s',text:pct(r.pl/r.cost*100)}):null])]));});
+    panel.appendChild(list);
+    panel.appendChild(el('p',{class:'note',text:'Kâr/zarar, satış fiyatından kartın alış maliyetinin çıkarılmasıyla hesaplanır; komisyon ve kargo dahil değildir (istersen satış fiyatını net olarak gir). TL karşılığı Avrupa Merkez Bankası kurlarıyla hesaplanır. Vergi danışmanlığı değildir.'}));
+    app.appendChild(panel);
+  }
+  function exportSales(rows,Y){
+    if(!window.XLSX){alert('Excel aracı yüklenemedi. Sayfayı yenileyip tekrar dene.');return;}
+    var en=window.HQ_LANG==='en',r2=function(v){return v==null?null:Math.round(v*100)/100};
+    var data=rows.map(function(r){var h=r.h,c=h.cards||{};var o={};
+      o[en?'Card':'Kart']=c.name||h.name_input;o['Set']=c.set_name||h.set_input||'';o[en?'Number':'Numara']=c.number||h.number_input||'';o[en?'Grade':'Derece']=h.grade;o[en?'Qty':'Adet']=r.n;
+      o[en?'Bought':'Alış tarihi']=h.bought||String(h.created_at||'').slice(0,10);o[en?'Sold':'Satış tarihi']=String(h.sold_at).slice(0,10);
+      o[en?'Sale price (unit)':'Satış fiyatı (adet)']=h.sold_price!=null?Number(h.sold_price):null;o[en?'Currency':'Para birimi']=h.sold_ccy||'';
+      o[en?'Cost $':'Alış $']=r2(r.cost);o[en?'Sale $':'Satış $']=r2(r.sale);o[en?'P/L $':'Kâr/zarar $']=r2(r.pl);
+      o[en?'USD/TRY at purchase':'Alış kuru USD/TRY']=h.cost_try_rate!=null?Number(h.cost_try_rate):null;o[en?'USD/TRY at sale':'Satış kuru USD/TRY']=h.sold_try_rate!=null?Number(h.sold_try_rate):null;
+      o[en?'Cost ₺':'Alış ₺']=r2(r.costTry);o[en?'Sale ₺':'Satış ₺']=r2(r.saleTry);o[en?'P/L ₺':'Kâr/zarar ₺']=r2(r.plTry);o[en?'Note':'Not']=h.sold_note||'';return o;});
+    var ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,en?'Sales':'Satışlar');
+    XLSX.writeFile(wb,'holotique-'+(en?'sales':'satislar')+'-'+(Y==='all'?(en?'all':'tum'):Y)+'.xlsx');
+  }
+
+  // ---------- setler sekmesi ----------
+  function renderSets(app){
+    var panel=el('section',{class:'panel setsp'});
+    panel.appendChild(el('div',{class:'ledger-head'},[el('h2',{text:'Setlerim'}),el('p',{class:'note',style:'margin:0',text:'Kartı olduğun setlerde kaç kart eksik ve eksikleri tamamlamanın yaklaşık maliyeti (ham fiyatlarla).'})]));
+    var body=el('div',{class:'sets'},[el('p',{class:'note',text:'Yükleniyor…'})]);panel.appendChild(body);app.appendChild(panel);
+    var go=S.setsData?Promise.resolve({data:S.setsData}):sb.rpc('my_sets');
+    go.then(function(r){body.innerHTML='';if(r.error){body.appendChild(el('div',{class:'msg err',text:r.error.message}));return;}S.setsData=r.data||[];
+      if(!S.setsData.length){body.appendChild(el('p',{class:'muted',text:'Kartların katalogla eşleştikçe setlerin burada görünür. Spor kartları ve elle eklenen kartlar bir sete bağlanmaz.'}));return;}
+      S.setsData.forEach(function(x){var pc=x.total?Math.round(x.owned/x.total*100):0,open=S.setOpen===x.group_id,det=el('div',{class:'setcards'});
+        var head=el('button',{type:'button',class:'sethead','aria-expanded':String(open),onclick:function(){S.setOpen=open?null:x.group_id;render();}},[
+          el('span',{style:'min-width:0'},[el('span',{class:'nm',text:x.set_name}),el('span',{class:'sub',text:gameLabel(x.game)})]),
+          el('span',{class:'setprog'},[el('span',{class:'bar'},[el('i',{style:'width:'+pc+'%'})]),el('span',{class:'num',text:x.owned+' / '+x.total+' · %'+pc})]),
+          el('span',{class:'num sub',text:x.owned>=x.total?'Tamamlandı':'Eksikler ≈ '+usd(Number(x.missing_value))})]);
+        var row=el('div',{class:'setrow'+(open?' open':'')},[head]);
+        if(open){row.appendChild(det);loadSetCards(x,det);}
+        body.appendChild(row);});
+    });
+  }
+  function loadSetCards(x,det){
+    det.appendChild(el('p',{class:'note',text:'Yükleniyor…'}));
+    sb.rpc('my_set_cards',{gid:x.group_id}).then(function(r){det.innerHTML='';if(r.error){det.appendChild(el('div',{class:'msg err',text:r.error.message}));return;}
+      var all=r.data||[],showAll=!!S.setAll,seg=el('div',{class:'seg',role:'group'});
+      [['miss','Eksikler · '+all.filter(function(c){return !c.owned}).length],['all','Tümü · '+all.length]].forEach(function(o){seg.appendChild(el('button',{type:'button','aria-pressed':String((o[0]==='all')===showAll),text:o[1],onclick:function(){S.setAll=o[0]==='all';render();}}));});
+      det.appendChild(seg);
+      var grid=el('div',{class:'sgrid'});
+      all.filter(function(c){return showAll||!c.owned}).forEach(function(c){
+        grid.appendChild(el('div',{class:'scell'+(c.owned?' own':'')},[c.image?el('img',{src:c.image,alt:'',loading:'lazy',referrerpolicy:'no-referrer'}):el('span',{class:'ph'}),
+          el('span',{class:'t',text:c.name}),el('span',{class:'num s',text:(c.number||'')+(c.market!=null?' · '+usd(Number(c.market)):'')}),
+          c.owned?el('span',{class:'chip ok',text:'Sende var'}):el('button',{type:'button',class:'linkbtn',text:'+ İstek listesi',onclick:function(){openWish({product_id:c.product_id,name:c.name,set_name:c.set_name,number:c.number,image:c.image,game:c.game})}})]));});
+      if(!grid.childNodes.length)grid.appendChild(el('p',{class:'note',text:'Bu setin tüm kartları sende. Tebrikler!'}));
+      det.appendChild(grid);});
+  }
+
+  // ---------- vitrin istatistikleri ----------
+  function openStats(v){
+    sheet('İstatistikler · '+(v.title||v.code),function(p){
+      var body=el('div',{class:'vstats'},[el('p',{class:'note',text:'Yükleniyor…'})]);p.appendChild(body);
+      sb.rpc('my_showcase_stats',{sid:v.id}).then(function(r){body.innerHTML='';var d=r.data;
+        if(r.error||!d){body.appendChild(el('div',{class:'msg err',text:r.error?r.error.message:'İstatistik bulunamadı.'}));return;}
+        var ch=d.channels||{};
+        function kpi(lab,v,s){return el('div',{class:'kpi'},[el('span',{class:'label',text:lab}),el('span',{class:'v num',text:String(v)}),el('span',{class:'s',text:s||''})]);}
+        body.appendChild(el('div',{class:'kpis'},[kpi('Görüntülenme · 30 gün',d.views_30,'Toplam: '+d.views_total),kpi('Satıcıya yazma · 30 gün',d.contacts_30,'WhatsApp '+(ch.wa||0)+' · Instagram '+(ch.ig||0))]));
+        var days=d.days||[],mx=Math.max.apply(null,[1].concat(days.map(function(x){return x.n})));
+        var bars=el('div',{class:'vbars',role:'img','aria-label':'Son 30 günün günlük görüntülenmesi'});
+        days.forEach(function(x){bars.appendChild(el('span',{title:x.d+': '+x.n,style:'height:'+Math.max(2,Math.round(x.n/mx*100))+'%'+(x.n?'':';opacity:.35')}));});
+        body.appendChild(el('div',null,[el('div',{class:'label',style:'margin-bottom:6px',text:'Günlük görüntülenme · son 30 gün'}),bars,el('div',{class:'vbx'},[el('span',{text:days.length?days[0].d.slice(5).split('-').reverse().join('.'):''}),el('span',{text:'Bugün'})])]));
+        var it=d.items||[];
+        body.appendChild(el('div',null,[el('div',{class:'label',style:'margin:6px 0',text:'En çok sorulan kartlar · 90 gün'}),it.length?el('div',{class:'vitems'},it.map(function(x){return el('div',null,[el('span',{text:x.item}),el('b',{class:'num',text:String(x.n)})])})):el('p',{class:'note',style:'margin:0',text:'Henüz kart bazında soru yok.'})]));
+        body.appendChild(el('p',{class:'note',style:'margin:0',text:'Kendi bakışların sayılmaz. Kimin baktığı tutulmaz; yalnızca sayılar. Günlük görüntülenme ve kart bazında sorular bu güncellemeden itibaren kaydediliyor.'}));
+      });
+    });
+  }
+
   // ---------- sekmeler ----------
   function tabBar(){
     var bar=el('div',{class:'stabs',role:'tablist','aria-label':'Bölümler'});
-    [['cards','Portföy',S.holdings.length],['wish','İstek listesi',S.wish.length],['show','Vitrin',(S.shows||[]).length?String((S.shows||[]).length):'']].forEach(function(t){
+    var T=[['cards','Portföy',S.holdings.length]];
+    if(S.prefsOk){T.push(['sales','Satışlar',S.sold.length||'']);T.push(['sets','Setler','']);}
+    T.concat([['wish','İstek listesi',S.wish.length],['show','Vitrin',(S.shows||[]).length?String((S.shows||[]).length):'']]).forEach(function(t){
       bar.appendChild(el('button',{type:'button',role:'tab',class:'stab'+(t[0]==='show'&&(S.shows||[]).some(function(x){return x.enabled})?' live':''),'aria-selected':String(S.tab===t[0]),onclick:function(){S.tab=t[0];store.set('kr-tab',t[0]);render();window.scrollTo(0,0);}},[el('span',{text:t[1]}),t[2]!==''?el('b',{text:String(t[2])}):null]));
     });
     return bar;
@@ -1045,7 +1256,7 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
           el('div',{class:'note',text:showScope(v)+' · Görüntülenme: '+(v.views||0)+(v.contact_clicks?' · Satıcıya yazma: '+v.contact_clicks:'')}),
           !v.enabled?el('div',{class:'note',text:'Kapalı vitrinin bağlantısı çalışmaz. Paylaşmak için “Yayına al”a bas.'}):null,
           v.enabled?el('a',{class:'num live-url',style:'font-size:.85rem;font-weight:500',href:url,target:'_blank',rel:'noopener',text:url.replace(/^https?:\/\//,'')}):null]),
-        el('div',{style:'display:flex;gap:8px;flex-wrap:wrap'},[v.enabled?null:(function(){var b=el('button',{class:'btn',type:'button',text:'Yayına al'});b.onclick=function(){b.disabled=true;sb.from('showcases').update({enabled:true,updated_at:new Date().toISOString()}).eq('id',v.id).select().maybeSingle().then(function(r){b.disabled=false;if(r.error){b.textContent=r.error.message;return;}Object.assign(v,r.data);render();});};return b;})(),v.enabled?copy:null,v.enabled&&navigator.share?el('button',{class:'btn quiet',type:'button',text:'Paylaş',onclick:function(){navigator.share({title:v.title||'Holotique',text:v.title||'',url:url}).catch(function(){})}}):null,el('button',{class:'btn ghost',type:'button',text:'Düzenle',onclick:function(){openShow(v)}})])]));});
+        el('div',{style:'display:flex;gap:8px;flex-wrap:wrap'},[v.enabled?null:(function(){var b=el('button',{class:'btn',type:'button',text:'Yayına al'});b.onclick=function(){b.disabled=true;sb.from('showcases').update({enabled:true,updated_at:new Date().toISOString()}).eq('id',v.id).select().maybeSingle().then(function(r){b.disabled=false;if(r.error){b.textContent=r.error.message;return;}Object.assign(v,r.data);render();});};return b;})(),v.enabled?copy:null,v.enabled&&navigator.share?el('button',{class:'btn quiet',type:'button',text:'Paylaş',onclick:function(){navigator.share({title:v.title||'Holotique',text:v.title||'',url:url}).catch(function(){})}}):null,S.prefsOk?el('button',{class:'btn quiet',type:'button',text:'İstatistikler',onclick:function(){openStats(v)}}):null,el('button',{class:'btn ghost',type:'button',text:'Düzenle',onclick:function(){openShow(v)}})])]));});
     panel.appendChild(list);app.appendChild(panel);}
 
   // Vitrin görseli: en değerli kartların kolajı (Instagram gönderisi / hikâyesi)

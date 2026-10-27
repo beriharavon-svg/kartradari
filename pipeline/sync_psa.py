@@ -599,6 +599,191 @@ def send_alerts():
     return sent
 
 
+# ---------- Ortak mail kalıbı ----------
+
+def _money(v):
+    return "—" if v is None else "$" + f"{float(v):,.2f}"
+
+
+def _mail_shell(title_tr, title_en, inner, cta_tr, cta_en, url, foot_tr, foot_en):
+    return f"""<!doctype html><html><body style="margin:0;background:#EEF1F5;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#121A26">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:24px 12px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border:1px solid #DDE2EA;border-radius:14px;overflow:hidden">
+<tr><td style="height:6px;background-color:#B79CF5;background:linear-gradient(90deg,#7AD3F0,#B79CF5,#F3A6C8,#F6D58A,#9BE3C4)"></td></tr>
+<tr><td style="padding:24px 28px 0"><div style="font-size:20px;font-weight:800">Holotique</div>
+<h1 style="font-size:19px;margin:14px 0 4px">{title_tr}</h1>
+<div style="font-size:14px;color:#5A6577" lang="en">{title_en}</div></td></tr>
+<tr><td style="padding:14px 28px 4px">{inner}</td></tr>
+<tr><td style="padding:12px 28px 4px"><a href="{url}" style="display:inline-block;background:#2B47D6;color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 20px;border-radius:8px">{cta_tr} · {cta_en}</a></td></tr>
+<tr><td style="padding:16px 28px 24px;font-size:12px;color:#8A94A6;line-height:1.5">
+Fiyatlar tahmini piyasa değeridir, yatırım tavsiyesi değildir. {foot_tr}<br>
+<span lang="en">Prices are estimated market values, not investment advice. {foot_en}</span><br><br>
+Holotique · <a href="https://holotique.com" style="color:#8A94A6">holotique.com</a></td></tr>
+</table></td></tr></table></body></html>"""
+
+
+def _card_rows(items, right):
+    """items: kart listesi; right(r) -> (ana satır html, alt satır html)"""
+    import html as _h
+    out = ""
+    for r in items:
+        img = f'<img src="{_h.escape(r["image"])}" width="48" style="border-radius:6px;display:block" alt="">' if r.get("image") else ""
+        sub = " · ".join(x for x in [r.get("set_name") or r.get("set"), r.get("grade")] if x)
+        a, b = right(r)
+        out += f"""<tr><td style="padding:9px 0;border-top:1px solid #DDE2EA;width:56px;vertical-align:top">{img}</td>
+<td style="padding:9px 0 9px 10px;border-top:1px solid #DDE2EA;vertical-align:top">
+<div style="font-weight:600;font-size:14px">{_h.escape(r.get("name") or "")}</div>
+<div style="font-size:12px;color:#5A6577">{_h.escape(sub)}</div>
+<div style="font-size:14px;margin-top:3px">{a}<span style="color:#5A6577">{b}</span></div></td></tr>"""
+    return f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0">{out}</table>'
+
+
+def _send_batch(batch, key):
+    """batch: [(email, subject, text, html, on_ok)]"""
+    import smtplib
+    import ssl
+    from email.message import EmailMessage
+    from email.utils import formataddr, make_msgid
+    sent, fails = 0, []
+    if not batch:
+        return 0, []
+    with smtplib.SMTP_SSL(SMTP_HOST, 465, context=ssl.create_default_context(), timeout=30) as srv:
+        srv.login(SMTP_USER, SMTP_PASSWORD)
+        for email, subj, text, html, on_ok in batch[:300]:
+            m = EmailMessage()
+            m["Subject"] = subj
+            m["From"] = formataddr(("Holotique", SMTP_USER))
+            m["To"] = email
+            m["Message-ID"] = make_msgid(domain="holotique.com")
+            m.set_content(text)
+            m.add_alternative(html, subtype="html")
+            try:
+                srv.send_message(m)
+                on_ok()
+                sent += 1
+            except Exception as e:  # noqa: BLE001
+                fails.append(f"{key}: {str(e)[:120]}")
+    return sent, fails
+
+
+def _rpc_missing(e, name):
+    return name in str(e) or "PGRST202" in str(e)
+
+
+# ---------- Portföy fiyat alarmı (kart hedefi ya da % hareket) ----------
+
+def send_holding_alerts():
+    if not SMTP_PASSWORD:
+        return 0
+    try:
+        rows = sb("POST", "rpc/holding_alerts_due", body={}) or []
+    except RuntimeError as e:
+        if _rpc_missing(e, "holding_alerts_due"):
+            STATUS["holding_alerts"] = {"skipped": "019 henüz çalıştırılmamış"}
+            return 0
+        raise
+    by = {}
+    for r in rows:
+        by.setdefault(r["email"], []).append(r)
+    LBL = {"above": ("hedefinin üstüne çıktı", "rose above your target"),
+           "below": ("hedefinin altına indi", "fell below your target"),
+           "up": ("yükseldi", "is up"), "down": ("düştü", "is down")}
+
+    def right(r):
+        k = r["kind"]
+        col = "#127A47" if k in ("above", "up") else "#B7322A"
+        if k in ("up", "down"):
+            sign = "+" if (r.get("pct") or 0) > 0 else ""
+            return (f'<b style="color:{col}">{_money(r["price"])} ({sign}{r.get("pct")}%)</b>',
+                    f' · önceki / was {_money(r.get("ref"))}')
+        return (f'<b style="color:{col}">{_money(r["price"])}</b>',
+                f' · {"hedef / target"} {_money(r.get("ref"))}')
+
+    batch = []
+    for email, items in list(by.items()):
+        first = items[0]
+        if len(items) == 1:
+            subj = f'{first.get("name") or "Kartın"} {LBL[first["kind"]][0]} · Holotique'
+        else:
+            subj = f"Portföyünde {len(items)} kartta fiyat hareketi · Holotique"
+        text = "Portföyündeki kartlarda fiyat alarmı / Price alerts for your portfolio\n\n" + "\n".join(
+            f'- {r.get("name")} ({r.get("grade")}): {_money(r["price"])} — {LBL[r["kind"]][0]} / {LBL[r["kind"]][1]}' for r in items) \
+            + "\n\nhttps://holotique.com/portfoy.html"
+        html = _mail_shell("Portföyünde fiyat alarmı", "Price alert for your portfolio", _card_rows(items, right),
+                           "Portföyümü aç", "Open my portfolio", "https://holotique.com/portfoy.html",
+                           "Hedefler tek seferliktir; tetiklenince silinir. Alarmları portföyünde kartın detayından ya da “Bildirimler”den değiştirebilirsin.",
+                           "Targets fire once and are then cleared. Change alerts from the card details or “Notifications” in your portfolio.")
+        ids = [r["holding_id"] for r in items]
+        batch.append((email, subj, text, html, lambda ids=ids: sb("POST", "rpc/holding_alerts_mark", body={"ids": ids})))
+    sent, fails = _send_batch(batch, "alarm")
+    STATUS["holding_alerts"] = {"sent": sent, "cards": len(rows), "failed": len(fails), "examples": fails[:2]}
+    log(f"Portföy alarmı maili: {sent}")
+    return sent
+
+
+# ---------- Haftalık özet (pazartesi, İstanbul saatiyle 09:00 sonrası) ----------
+
+def send_weekly():
+    if not SMTP_PASSWORD:
+        return 0
+    now = datetime.now(timezone.utc)
+    if os.environ.get("WEEKLY_FORCE") != "1" and not (now.weekday() == 0 and now.hour >= 6):
+        return 0
+    try:
+        rows = sb("POST", "rpc/weekly_digest", body={}) or []
+    except RuntimeError as e:
+        if _rpc_missing(e, "weekly_digest"):
+            STATUS["weekly"] = {"skipped": "019 henüz çalıştırılmamış"}
+            return 0
+        raise
+    batch = []
+    for r in rows:
+        d = r.get("data") or {}
+        tot, prev, cost = d.get("total"), d.get("prev_total"), d.get("cost")
+        chg = (float(tot) - float(prev)) if tot is not None and prev is not None else None
+        pct = (chg / float(prev) * 100) if chg is not None and prev else None
+        col = "#127A47" if (chg or 0) >= 0 else "#B7322A"
+        sign = "+" if (chg or 0) >= 0 else "−"
+        head = ""
+        if tot is not None:
+            head = f"""<div style="font-size:12px;color:#5A6577;text-transform:uppercase;letter-spacing:.06em">Portföy değeri · Portfolio value</div>
+<div style="font-size:30px;font-weight:800;margin:2px 0">{_money(tot)}</div>"""
+            if chg is not None:
+                head += f'<div style="font-size:14px"><b style="color:{col}">{sign}{_money(abs(chg))[0:]}{f" ({sign}{abs(pct):.1f}%)" if pct is not None else ""}</b> <span style="color:#5A6577">bu hafta · this week</span></div>'
+            if cost:
+                pl = float(tot) - float(cost)
+                head += f'<div style="font-size:13px;color:#5A6577;margin-top:2px">Toplam kâr/zarar · Total P/L: <b style="color:{"#127A47" if pl >= 0 else "#B7322A"}">{"+" if pl >= 0 else "−"}{_money(abs(pl))}</b> · {d.get("cards")} kart / cards</div>'
+
+        def sec(title, items, fn):
+            if not items:
+                return ""
+            return f'<div style="font-size:13px;font-weight:700;margin:18px 0 2px">{title}</div>' + _card_rows(items, fn)
+
+        def mv(r):
+            c = float(r.get("chg") or 0)
+            return (f'<b style="color:{"#127A47" if c >= 0 else "#B7322A"}">{_money(r.get("price"))} ({"+" if c >= 0 else ""}{c:.1f}%)</b>', "")
+
+        def wi(r):
+            return (f'<b>{_money(r.get("price"))}</b>', f' · hedef / target {_money(r.get("target"))}')
+
+        inner = head + sec("En çok yükselenler · Top gainers", d.get("up"), mv) \
+            + sec("En çok düşenler · Top losers", d.get("down"), mv) \
+            + sec("İstek listende hedefe yakın · Near your target", d.get("wish"), wi)
+        subj = "Haftalık portföy özetin" + (f" · {sign}{abs(pct):.1f}%" if pct is not None and abs(pct) >= 0.1 else "") + " · Holotique"
+        text = f"Haftalık portföy özetin / Your weekly portfolio summary\n\nPortföy değeri: {_money(tot)}" \
+            + (f" ({sign}{_money(abs(chg))} bu hafta)" if chg is not None else "") + "\n\nhttps://holotique.com/portfoy.html"
+        html = _mail_shell("Haftalık portföy özetin", "Your weekly portfolio summary", inner,
+                           "Portföyümü aç", "Open my portfolio", "https://holotique.com/portfoy.html",
+                           "Bu maili her pazartesi gönderiyoruz. Almak istemiyorsan portföyünde “Bildirimler”den kapatabilirsin.",
+                           "We send this every Monday. Turn it off from “Notifications” in your portfolio.")
+        uid = r["user_id"]
+        batch.append((r["email"], subj, text, html, lambda uid=uid: sb("POST", "rpc/weekly_mark_sent", body={"ids": [uid]})))
+    sent, fails = _send_batch(batch, "haftalık")
+    STATUS["weekly"] = {"sent": sent, "users": len(rows), "failed": len(fails), "examples": fails[:2]}
+    log(f"Haftalık özet maili: {sent}")
+    return sent
+
+
 # ---------- PSA sertifika verisi ----------
 
 class PsaStop(Exception):
@@ -1004,6 +1189,14 @@ def main():
             send_alerts()
         except Exception as e:  # noqa: BLE001
             note_error("fiyat alarmı", e)
+        try:
+            send_holding_alerts()
+        except Exception as e:  # noqa: BLE001
+            note_error("portföy alarmı", e)
+        try:
+            send_weekly()
+        except Exception as e:  # noqa: BLE001
+            note_error("haftalık özet", e)
         STATUS["history_backfilled"] = backfill_history(budget)
         probe_grade_keys(budget)
     except Exception as e:  # noqa: BLE001
