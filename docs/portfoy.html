@@ -35,7 +35,7 @@
 [hidden]{display:none!important}
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 56px;-webkit-font-smoothing:antialiased}
-.wrap{max-width:1200px;margin:0 auto}
+.wrap{max-width:1440px;margin:0 auto}
 h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance}
 .num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .label{font-size:.7rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
@@ -111,6 +111,7 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:.76rem;color:var(--
 
 /* main */
 .main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,380px);gap:16px;margin-top:16px;align-items:start}
+@media (min-width:1280px){.main{grid-template-columns:minmax(0,1fr) minmax(0,680px)}}
 .ledger{padding:6px 0 4px}
 .ledger-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 18px 8px;flex-wrap:wrap}
 .ledger-head h2{font-size:1.02rem;font-weight:700}
@@ -139,7 +140,8 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:.76rem;color:var(--
 .ledger-foot{padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:.82rem;color:var(--muted)}
 
 /* dossier */
-.dossier{position:sticky;top:calc(env(safe-area-inset-top,0px) + 70px);padding:18px;display:flex;flex-direction:column;gap:16px}
+.dossier{position:sticky;top:calc(env(safe-area-inset-top,0px) + 70px);padding:18px;display:flex;flex-direction:column;gap:16px;max-height:calc(100vh - env(safe-area-inset-top,0px) - 86px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.dcol{display:flex;flex-direction:column;gap:16px;min-width:0}
 .d-top{display:grid;grid-template-columns:120px minmax(0,1fr);gap:14px;align-items:start}
 .d-top .thumb{width:120px;border-radius:8px;padding:3px}
 .d-top .thumb img,.d-top .thumb .ph{border-radius:6px}
@@ -258,11 +260,12 @@ a.btn{text-decoration:none}
 .ebay-item:hover{border-color:var(--accent)}
 .ebay-item img,.ebay-item .ph{width:40px;height:40px;object-fit:cover;border-radius:5px;background:var(--surface-2)}
 .ebay-item .t{font-size:.78rem;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.ebay-item .p{font-size:.8rem;white-space:nowrap;text-align:right}
+.ebay-item .p{font-size:.8rem;text-align:right;max-width:120px}
 .ebay-foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:.82rem}
 .tog{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:.9rem}
 .tog input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--accent);flex:none}
-@media (max-width:980px){.main{grid-template-columns:1fr}.dossier{position:static}}
+@media (min-width:1280px){.dossier{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}}
+@media (max-width:980px){.main{grid-template-columns:1fr}.dossier{position:static;max-height:none;overflow:visible}}
 @media (max-width:760px){.top{position:static}.hero{grid-template-columns:1fr}.row{grid-template-columns:44px minmax(0,1fr) minmax(0,auto)}.row .px.val{display:none}.thumb{width:44px}.value-big{font-size:2.1rem}.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:420px){.d-top{grid-template-columns:96px minmax(0,1fr)}.d-top .thumb{width:96px}.grades{grid-template-columns:repeat(3,minmax(0,1fr))}.form-grid{grid-template-columns:1fr}.span2{grid-column:auto}}
 </style>
@@ -672,9 +675,9 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     else if(h.cert&&h.psa_status==='not_found')d.appendChild(el('div',{class:'msg info',text:'Bu PSA numarası için PSA kaydı bulunamadı. Numarayı kontrol et.'}));
     if(h.cert)d.appendChild(el('div',{class:'note',text:'PSA numarası ve alış bilgileri yalnızca sana görünür. “PSA’da doğrula” kartın PSA kaydını, görsellerini ve popülasyonunu PSA’nın kendi sitesinde açar.'}));
     if(series(h).length)d.appendChild(el('div',null,[el('div',{class:'label',style:'margin-bottom:4px',text:h.grade+' fiyat geçmişi, USD'}),el('div',{class:'mini-chart',id:'miniChart'})]));
-    if(row&&h.grade==='Ham'&&row.raw!=null)d.appendChild(desk(h,row));
-    if(h.match_status==='matched')d.appendChild(ebayBox(h));
-    var fc=folderChips(h);if(fc)d.appendChild(fc);
+    if(row&&h.grade==='Ham'&&row.raw!=null)d.appendChild(side(desk(h,row)));
+    if(h.match_status==='matched')d.appendChild(side(ebayBox(h)));
+    var fc=folderChips(h);if(fc)d.appendChild(side(fc));
     if('for_sale' in h){
       var sb2=el('div',{class:'salebox'});
       function setSale(patch,btn){btn.disabled=true;sb.from('holdings').update(patch).eq('id',h.id).then(function(r){btn.disabled=false;if(r.error){btn.textContent=r.error.message;return;}load();});}
@@ -686,13 +689,18 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
       else if(h.for_sale&&h.sold_at){sb2.appendChild(el('div',{class:'note',text:'Satıldı olarak işaretlendi. Vitrinde 14 gün “Satıldı” etiketiyle görünür. Kart artık sende değilse portföyden silebilirsin.'}));
         var bBack=el('button',{class:'linkbtn',type:'button',text:'Satışa geri al'});bBack.onclick=function(){setSale({sold_at:null},bBack);};sb2.appendChild(bBack);}
       else sb2.appendChild(el('button',{class:'btn quiet',type:'button',text:'Satışa çıkar',onclick:function(){openAdd(h,{sale:true})}}));
-      d.appendChild(sb2);
+      d.appendChild(side(sb2));
     }
     var acts=el('div',{class:'actions'}),del=el('button',{class:'btn danger',type:'button',text:'Kartı sil'});
     del.addEventListener('click',function(){if(del.dataset.armed){del.disabled=true;sb.from('holdings').delete().eq('id',h.id).then(function(res){if(res.error){del.disabled=false;del.textContent='Silinemedi';return;}S.sel=null;load();});}else{del.dataset.armed='1';del.textContent='Silmek için tekrar bas';}});
-    acts.appendChild(el('button',{class:'btn quiet',type:'button',text:'Düzenle',onclick:function(){openAdd(h)}}));acts.appendChild(del);d.appendChild(acts);
+    acts.appendChild(el('button',{class:'btn quiet',type:'button',text:'Düzenle',onclick:function(){openAdd(h)}}));acts.appendChild(del);d.appendChild(side(acts));
+    // Geniş ekranda iki sütun: solda kart, fiyatlar ve kayıt; sağda eBay, klasörler, satış ve işlemler
+    var A=el('div',{class:'dcol'}),B=el('div',{class:'dcol'});
+    Array.from(d.children).forEach(function(k){(k.classList.contains('side')?B:A).appendChild(k);});
+    d.appendChild(A);d.appendChild(B);
     return d;
   }
+  function side(node){if(node&&node.classList)node.classList.add('side');return node;}
 
   function desk(h,row){
     var raw=Number(row.raw),wrap=el('div',{class:'desk'});
