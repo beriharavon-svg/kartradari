@@ -1,0 +1,35 @@
+name: Teşhis (fiyat sıçramaları)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [".github/workflows/diag.yml", "pipeline/diag_spikes.py"]
+
+permissions:
+  contents: write
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Sıçramaları bul
+        env:
+          SUPABASE_URL: https://bsifvfcnktofugaspsls.supabase.co
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          DIAG_FILE: ${{ runner.temp }}/diag.json
+        run: python pipeline/diag_spikes.py
+      - name: Sonucu 'diag' dalına yaz
+        if: always()
+        run: |
+          f="${{ runner.temp }}/diag.json"
+          [ -f "$f" ] || exit 0
+          d=$(mktemp -d); cp "$f" "$d/diag.json"; cd "$d"
+          git init -q -b diag && git add diag.json
+          git -c user.name="kartradari-bot" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Teşhis $(date -u +%FT%TZ)"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" diag
