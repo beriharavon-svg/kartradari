@@ -266,7 +266,8 @@ a.btn{text-decoration:none}
 .showrow{display:flex;justify-content:space-between;align-items:center;gap:12px 20px;flex-wrap:wrap;padding:14px 16px;border:1px solid var(--line);border-radius:12px}
 .showrow.on{background:var(--good-soft);border-color:transparent}
 .photoprev img{max-width:120px;max-height:160px;border-radius:8px;border:1px solid var(--line);display:block}
-.sportf{grid-column:1/-1;border-top:1px dashed var(--line);padding-top:10px}
+.ebay-use{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 2px}.ebay-use .btn{padding:4px 10px;font-size:.82rem}
+  .sportf{grid-column:1/-1;border-top:1px dashed var(--line);padding-top:10px}
 .tog{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:.9rem}
 .tog input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--accent);flex:none}
 @media (min-width:1280px){.dossier{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}}
@@ -642,6 +643,10 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
         list.appendChild(el('a',{class:'ebay-item',href:it.url,target:'_blank',rel:'sponsored noopener'},[it.image?el('img',{src:it.image,alt:'',loading:'lazy',referrerpolicy:'no-referrer'}):el('span',{class:'ph'}),
           el('span',{class:'t',text:it.title}),el('span',{class:'p num',text:usd(it.price)+(it.ship?' + '+usd(it.ship)+' kargo':'')})]));});
       body.appendChild(list);
+      if(isManual(h)&&cur===grades[0][0]){var vrow=el('div',{class:'ebay-use'},[el('span',{class:'note',text:'Tahmini değer olarak kaydet:'})]);
+        [['En ucuz',d.min],['Ortanca',d.median]].forEach(function(o){if(o[1]==null)return;vrow.appendChild(el('button',{type:'button',class:'btn ghost sm',text:o[0]+' · '+usd(o[1]),onclick:function(ev){var b=ev.currentTarget,v=Math.round(Number(o[1])*100)/100;b.disabled=true;
+          sb.from('holdings').update({manual_value:v}).eq('id',h.id).then(function(r){if(r.error){b.disabled=false;b.textContent=r.error.message;return;}h.manual_value=v;render();});}}));});
+        body.appendChild(vrow);}
       body.appendChild(el('div',{class:'ebay-foot'},[el('a',{href:d.search_url,target:'_blank',rel:'sponsored noopener',text:'Tüm ilanları eBay’de gör →'}),el('span',{class:'note',text:'Satıştaki ilanlar; satılmış fiyat değildir.'})]));}
     function load(){var key=[name,number,set,cur].join('|');if(EBAY[key]&&EBAY[key].then){body.innerHTML='';body.appendChild(el('p',{class:'note',text:'eBay ilanları yükleniyor…'}));EBAY[key].then(function(d){if(cur===key.split('|')[3])show(d)});return;}
       if(EBAY[key]){show(EBAY[key]);return;}
