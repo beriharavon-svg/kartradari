@@ -368,7 +368,18 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
   // Pokemon dışı kartlarda (katalog/TCGCSV) yalnızca ham fiyat var; dereceli kartlar ham değerle gösterilir.
   function rawOnly(h){return !!(h.cards&&h.cards.source==='tcgcsv');}
   function pkey(h){return rawOnly(h)?'raw':gradeKey(h.grade);}
-  function series(h){var rows=h.card_id?(S.prices[h.card_id]||[]):[],k=pkey(h);if(!k)return [];return rows.filter(function(r){return gval(r,k)!=null}).map(function(r){return [r.date,gval(r,k)]});}
+  // Tek günlük hatalı fiyatları ayıkla: bir gün hem önceki hem sonraki günlerin ortancasından 2,5 kat saparsa
+  // (ör. yanlış eşleşen tek bir eBay satışı) o günü komşuların ortancasıyla değiştir. Son gün yalnızca öncekilere bakılır.
+  function med(a){var b=a.slice().sort(function(x,y){return x-y}),m=b.length>>1;return b.length%2?b[m]:(b[m-1]+b[m])/2;}
+  function off(v,m){return m>0&&(v>m*2.5||v<m/2.5);}
+  function despike(s){if(s.length<4)return s;var out=[];
+    s.forEach(function(p,i){var pr=out.slice(Math.max(0,i-4),i).map(function(x){return x[1]}),nx=s.slice(i+1,i+5).map(function(x){return x[1]});
+      if(pr.length<3){out.push(p);return;}var mp=med(pr);
+      if(!off(p[1],mp)||(nx.length>=2&&!off(p[1],med(nx)))){out.push(p);return;}
+      out.push([p[0],mp,1]);});return out;}
+  var SERIES_C={};
+  function series(h){var rows=h.card_id?(S.prices[h.card_id]||[]):[],k=pkey(h);if(!k)return [];var ck=h.card_id+'|'+k+'|'+rows.length;if(SERIES_C[ck])return SERIES_C[ck];
+    return SERIES_C[ck]=despike(rows.filter(function(r){return gval(r,k)!=null}).map(function(r){return [r.date,gval(r,k)]}));}
   function latest(h){var rows=h.card_id?(S.prices[h.card_id]||[]):[];return rows.length?rows[rows.length-1]:null;}
   // Son fiyat: o derecenin en son kaydedilmiş değeri (her gün satış olmayabilir)
   function isManual(h){return h.match_status==='manual'||h.game==='Sports';}
@@ -434,7 +445,7 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
       return Promise.all([pp,fp,loadFolders()]);
     }).then(function(res){
       if(res[0].error)throw res[0].error;if(res[1].error)throw res[1].error;
-      S.prices={};(res[0].data||[]).forEach(function(p){(S.prices[p.card_id]=S.prices[p.card_id]||[]).push(p)});
+      S.prices={};SERIES_C={};(res[0].data||[]).forEach(function(p){(S.prices[p.card_id]=S.prices[p.card_id]||[]).push(p)});
       S.fx=res[1].data||[];render();
       try{var qp=new URLSearchParams(location.search),ek=qp.get('ekle'),ist=qp.get('istek');
         if(ek){history.replaceState(null,'',location.pathname);openAdd(null,JSON.parse(ek));}
@@ -868,7 +879,7 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
 
   // ---------- istek listesi ----------
   function wkey(w){return w.source==='tcgcsv'?'raw':gradeKey(w.grade);}
-  function wseries(w){var k=wkey(w),rows=w.card_id?(S.prices[w.card_id]||[]):[];if(!k)return [];return rows.filter(function(r){return gval(r,k)!=null}).map(function(r){return [r.date,gval(r,k)]});}
+  function wseries(w){var k=wkey(w),rows=w.card_id?(S.prices[w.card_id]||[]):[];if(!k)return [];return despike(rows.filter(function(r){return gval(r,k)!=null}).map(function(r){return [r.date,gval(r,k)]}));}
   function wprice(w){var s=wseries(w);if(s.length)return s[s.length-1][1];return wkey(w)==='raw'&&w.market!=null?Number(w.market):null;}
   function wsub(w){return (w.set_name||'—')+(w.number?' · '+w.number:'');}
   function gameLabel(g){return g==='Pokemon JP'?'Pokemon (Japonca)':(g||'');}
