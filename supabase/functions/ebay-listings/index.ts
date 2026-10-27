@@ -54,6 +54,79 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
+    const cacheGet = async (k: string, hours: number) => {
+      if (!KEY) return null;
+      const r = await fetch(`${SUPA}/rest/v1/ebay_cache?q=eq.${encodeURIComponent(k)}&select=data,fetched_at`, { headers: H });
+      const row = r.ok ? (await r.json())?.[0] : null;
+      return row && Date.now() - new Date(row.fetched_at).getTime() < hours * 3600_000 ? row.data : null;
+    };
+    const cachePut = async (k: string, data: unknown) => {
+      if (!KEY) return;
+      await fetch(`${SUPA}/rest/v1/ebay_cache?on_conflict=q`, {
+        method: "POST", headers: { ...H, Prefer: "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify([{ q: k, data, fetched_at: new Date().toISOString() }]),
+      }).catch(() => {});
+    };
+    const bh = (): Record<string, string> => ({ "X-EBAY-C-MARKETPLACE-ID": "EBAY_US" });
+
+    // Kart bulucu (spor): kullanıcı bildiği kadarını yazar ("wembanyama prizm silver"), eBay ilanlarından kartını seçer.
+    if (body.mode === "find") {
+      const text = String(body.q || "").replace(/[^\p{L}\p{N} #\/.'-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 100);
+      if (text.length < 3) return json({ error: "q" }, 400);
+      const q = text + " -lot -bundle -reprint -custom -proxy -digital -break -pack -box";
+      const k = `find1|${q}`.toLowerCase();
+      const hit = await cacheGet(k, 24);
+      if (hit) return json({ cached: true, ...hit });
+      const token = await ebayToken(ID, SECRET);
+      const params = new URLSearchParams({ q, category_ids: CATEGORY_SPORTS, limit: "40" });
+      const r = await fetch(`https://api.ebay.com/buy/browse/v1/item_summary/search?${params}`, { headers: { ...bh(), Authorization: `Bearer ${token}` } });
+      if (!r.ok) return json({ error: `eBay yanıt vermedi (${r.status})` }, 502);
+      const j = await r.json();
+      const seen = new Set<string>();
+      const items = (j.itemSummaries || []).map((it: any) => ({
+        id: it.itemId, title: it.title, price: Number(it.price?.value) || null,
+        image: it.thumbnailImages?.[0]?.imageUrl || it.image?.imageUrl || null,
+      })).filter((it: any) => {
+        if (!it.image) return false;
+        const t = String(it.title).toLowerCase().replace(/\s+/g, " ");
+        if (seen.has(t)) return false; seen.add(t); return true;
+      }).slice(0, 24);
+      const data = { total: items.length, items };
+      await cachePut(k, data);
+      return json({ cached: false, ...data });
+    }
+
+    // Seçilen ilanın kart bilgileri (eBay'deki "Item specifics": oyuncu, sezon, üretici, set, numara, paralel, spor, derece)
+    if (body.mode === "item") {
+      const id = String(body.id || "").trim();
+      if (!/^v1\|\d+\|\d+$/.test(id)) return json({ error: "id" }, 400);
+      const k = `item1|${id}`;
+      const hit = await cacheGet(k, 24 * 7);
+      if (hit) return json({ cached: true, ...hit });
+      const token = await ebayToken(ID, SECRET);
+      const r = await fetch(`https://api.ebay.com/buy/browse/v1/item/${encodeURIComponent(id)}`, { headers: { ...bh(), Authorization: `Bearer ${token}` } });
+      if (!r.ok) return json({ error: `eBay yanıt vermedi (${r.status})` }, 502);
+      const it = await r.json();
+      const A: Record<string, string> = {};
+      for (const a of it.localizedAspects || []) A[String(a.name).toLowerCase()] = String(a.value || "").trim();
+      const pick = (...names: string[]) => { for (const n of names) { const v = A[n.toLowerCase()]; if (v && !/^(n\/?a|none|unknown|-)$/i.test(v)) return v; } return ""; };
+      const data = {
+        title: it.title || "",
+        player: pick("Player/Athlete", "Player", "Athlete", "Character"),
+        season: pick("Season", "Year Manufactured", "Year"),
+        manufacturer: pick("Manufacturer", "Brand"),
+        set: pick("Set", "Product", "Series"),
+        number: pick("Card Number"),
+        parallel: pick("Parallel/Variety", "Parallel", "Variety"),
+        sport: pick("Sport"), league: pick("League"),
+        grader: pick("Professional Grader", "Grader"), grade: pick("Grade"),
+        autographed: pick("Autographed"), features: pick("Features", "Attributes"),
+        print_run: pick("Print Run"),
+      };
+      await cachePut(k, data);
+      return json({ cached: false, ...data });
+    }
+
     const name = String(body.name || "").replace(/\s*\(\d+\)\s*$/, "").replace(/\s+-\s+[\w\/-]+$/, "").trim().slice(0, 80);
     const numFull = String(body.number || "").trim().slice(0, 20);          // "4/102", "OP05-119", "TG03/TG30"
     const number = numFull.split("/")[0];

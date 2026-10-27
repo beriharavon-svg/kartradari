@@ -267,7 +267,15 @@ a.btn{text-decoration:none}
 .showrow.on{background:var(--good-soft);border-color:transparent}
 .photoprev img{max-width:120px;max-height:160px;border-radius:8px;border:1px solid var(--line);display:block}
 .ebay-use{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 2px}.ebay-use .btn{padding:4px 10px;font-size:.82rem}
-  .sportf{grid-column:1/-1;border-top:1px dashed var(--line);padding-top:10px}
+  .finder{grid-column:1/-1;display:flex;flex-direction:column;gap:8px;background:var(--accent-soft);border-radius:12px;padding:12px}
+.finder .frow{display:flex;gap:8px}.finder .frow input{flex:1;min-width:0}
+.fres{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px;max-height:360px;overflow:auto}
+.fitem{display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--surface);text-align:left;cursor:pointer;font:inherit;color:var(--ink)}
+.fitem:hover{border-color:var(--accent)}.fitem[aria-pressed=true]{outline:2px solid var(--accent);border-color:var(--accent)}
+.fitem img{width:100%;aspect-ratio:3/4;object-fit:contain;background:#fff;border-radius:6px}
+.fitem .t{font-size:.72rem;line-height:1.25;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.fitem .p{font-size:.72rem;color:var(--muted)}
+.sportf{grid-column:1/-1;border-top:1px dashed var(--line);padding-top:10px}
 .tog{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:.9rem}
 .tog input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--accent);flex:none}
 @media (min-width:1280px){.dossier{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}}
@@ -776,8 +784,44 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
       var sportBox=el('div',{class:'salef sportf'},[el('label',{class:'f',for:'aSport'},['Spor',fSport]),el('label',{class:'f',for:'aVariant'},['Paralel / varyant',fVariant]),
         el('label',{class:'f',for:'aValue'},['Tahmini değer $ (adet)',fValue]),el('label',{class:'f',for:'aPhoto'},['Kartın fotoğrafı',fPhoto]),photoPrev,
         el('p',{class:'note',style:'grid-column:1/-1;margin:0',text:'Spor kartlarında otomatik fiyat takibi yok; değeri sen belirliyorsun. Kart detayında eBay’deki güncel ilanları referans olarak görebilirsin.'})]);
+      // Kart bulucu: bildiğin kadarını yaz, eBay ilanlarından kartını seç; oyuncu, set, numara, paralel ve spor dolsun
+      var fFind=el('input',{id:'aFind',type:'search',maxlength:'100',placeholder:'ör. Wembanyama Prizm Silver',autocomplete:'off'}),
+          fFindBtn=el('button',{type:'button',class:'btn',text:'Bul'}),fRes=el('div',{class:'fres'}),fMsg=el('p',{class:'note',style:'margin:0'});
+      var finder=el('div',{class:'finder'},[el('label',{for:'aFind',style:'font-weight:600;font-size:.9rem'},['Kartı bul']),
+        el('p',{class:'note',style:'margin:0',text:'Oyuncunun adını ve bildiğin birkaç kelimeyi yaz (set, yıl, renk). Çıkan görsellerden kartına benzeyeni seç; bilgileri biz dolduralım.'}),
+        el('div',{class:'frow'},[fFind,fFindBtn]),fMsg,fRes]);
+      var SPORT_MAP=[[/soccer|futbol/i,'Futbol'],[/basketball/i,'Basketbol'],[/football/i,'Amerikan futbolu'],[/baseball/i,'Beyzbol'],[/hockey/i,'Hokey'],[/formula|\bf1\b/i,'Formula 1'],[/tennis/i,'Tenis'],[/mma|ufc|martial/i,'UFC / MMA']];
+      function fillFrom(d,it){
+        var t=d.title||it.title||'';
+        if(d.player)fName.value=d.player;
+        var season=d.season||((t.match(/\b(19|20)\d{2}(-\d{2})?\b/)||[])[0]||''),man=d.manufacturer,st=d.set,parts=[];
+        if(season&&!(st&&st.indexOf(season.slice(0,4))>=0))parts.push(season);
+        if(man&&!(st&&st.toLowerCase().indexOf(man.toLowerCase())>=0))parts.push(man);
+        if(st)parts.push(st);if(parts.length)fSet.value=parts.join(' ');
+        var num=(d.number||((t.match(/#\s?([A-Z0-9][A-Z0-9-]*)/i)||[])[1])||'').replace(/^#/,'');if(num)fNum.value=num;
+        var v=[];if(d.parallel&&!/^base$/i.test(d.parallel))v.push(d.parallel);
+        if(d.print_run){var pr=d.print_run.replace(/[^0-9]/g,'');if(pr&&!v.join(' ').includes('/'+pr))v.push('/'+pr);}
+        if(/rookie/i.test(d.features||'')||/\bRC\b/.test(t))v.push('Rookie');
+        if(/^yes/i.test(d.autographed||'')||/\bauto(graph)?\b/i.test(t))v.push('Auto');
+        fVariant.value=v.filter(function(x,i,a){return a.indexOf(x)===i}).join(', ');
+        var sp=d.sport||d.league||t;for(var i=0;i<SPORT_MAP.length;i++)if(SPORT_MAP[i][0].test(sp)){fSport.value=SPORT_MAP[i][1];break;}
+        if(!fValue.value&&it.price)fValue.placeholder='ilan: $'+it.price;}
+      function doFind(){var q=fFind.value.trim();if(q.length<3){fMsg.textContent='En az 3 harf yaz.';return;}
+        fFindBtn.disabled=true;fMsg.textContent='Aranıyor…';fRes.innerHTML='';
+        fetch(SB_URL+'/functions/v1/ebay-listings',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({mode:'find',q:q})})
+          .then(function(r){return r.json()}).catch(function(){return {error:'net'}}).then(function(d){fFindBtn.disabled=false;
+            if(!d||d.error){fMsg.textContent='Şu an aranamadı, birazdan tekrar dene.';return;}
+            if(!d.items||!d.items.length){fMsg.textContent='Sonuç çıkmadı. Daha az kelimeyle dene (ör. yalnızca soyadı ve set).';return;}
+            fMsg.textContent='Kartına benzeyeni seç:';
+            d.items.forEach(function(it){var b=el('button',{type:'button',class:'fitem','aria-pressed':'false'},[el('img',{src:it.image,alt:'',loading:'lazy',referrerpolicy:'no-referrer'}),el('span',{class:'t',text:it.title}),it.price?el('span',{class:'p num',text:usd(it.price)}):null]);
+              b.addEventListener('click',function(){Array.from(fRes.children).forEach(function(c){c.setAttribute('aria-pressed',String(c===b))});fMsg.textContent='Bilgiler getiriliyor…';
+                fetch(SB_URL+'/functions/v1/ebay-listings',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({mode:'item',id:it.id})})
+                  .then(function(r){return r.json()}).catch(function(){return {}}).then(function(d){fillFrom(d&&!d.error?d:{},it);
+                    fMsg.textContent='Bilgiler dolduruldu. Kontrol et; derece ve alış fiyatını kendi kartına göre seç.';});});
+              fRes.appendChild(b);});});}
+      fFindBtn.addEventListener('click',doFind);fFind.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();doFind();}});
       var labName=null,labSet=null,labLang=null;
-      function drawGame(){var sp=fGame.value==='Sports'&&sportOk;sportBox.hidden=!sp;if(labLang)labLang.hidden=sp;
+      function drawGame(){var sp=fGame.value==='Sports'&&sportOk;sportBox.hidden=!sp;finder.hidden=!sp;if(labLang)labLang.hidden=sp;
         if(labName)labName.firstChild.textContent=sp?'Oyuncu':'Kart adı';if(labSet)labSet.firstChild.textContent=sp?'Yıl ve set':'Set';
         fName.placeholder=sp?'ör. Victor Wembanyama':'ör. Umbreon ex';fSet.placeholder=sp?'ör. 2023 Panini Prizm':'ör. Terastal Festival';fNum.placeholder=sp?'ör. 136':'ör. 217';}
       fGame.addEventListener('change',drawGame);
@@ -795,7 +839,7 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
       var msg=el('div',{class:'msg',hidden:true});
       labName=field('aName','Kart adı',fName,true);labSet=field('aSet','Set',fSet,true);labLang=field('aLang','Dil',fLang);
       var form=el('form',{class:'form-grid'},[field('aGame','Oyun',fGame),labName,labSet,field('aNum','Kart numarası',fNum),labLang,field('aGrade','Derece',fGrade),field('aCert','Sertifika no',fCert),field('aQty','Adet',fQty),field('aCost','Alış fiyatı $ (adet)',fCost),field('aDate','Alış tarihi',fDate)]);
-      form.appendChild(sportBox);drawGame();
+      form.insertBefore(finder,form.children[1]);form.appendChild(sportBox);drawGame();
       if(saleBox)form.appendChild(saleBox);
       var save=el('button',{class:'btn span2',type:'submit',text:h?'Kaydet':'Ekle'});form.appendChild(save);
       form.addEventListener('submit',function(e){e.preventDefault();save.disabled=true;
