@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: [".github/workflows/diag.yml", "pipeline/diag_spikes.py"]
+    paths: [".github/workflows/diag.yml", "pipeline/diag_ppt.py"]
 
 permissions:
   contents: write
@@ -18,12 +18,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Sıçramaları bul
+      - name: Teşhis betiği
         env:
           SUPABASE_URL: https://bsifvfcnktofugaspsls.supabase.co
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          PPT_KEY: ${{ secrets.POKEMONPRICETRACKER_API_KEY }}
           DIAG_FILE: ${{ runner.temp }}/diag.json
-        run: python pipeline/diag_spikes.py
+        run: python pipeline/diag_ppt.py
       - name: Sonucu 'diag' dalına yaz
         if: always()
         run: |
