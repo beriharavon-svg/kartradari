@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: [".github/workflows/diag.yml", "pipeline/diag_ppt.py"]
+    paths: [".github/workflows/diag.yml", "pipeline/diag_search.py"]
 
 permissions:
   contents: write
@@ -24,7 +24,7 @@ jobs:
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           PPT_KEY: ${{ secrets.POKEMONPRICETRACKER_API_KEY }}
           DIAG_FILE: ${{ runner.temp }}/diag.json
-        run: python pipeline/diag_ppt.py
+        run: python pipeline/diag_search.py
       - name: Sonucu 'diag' dalına yaz
         if: always()
         run: |
