@@ -252,12 +252,15 @@ def wmed(days):
     return None
 
 
-def momentum(g, today=None):
-    """Son 14 günün satışları, önceki 76 güne göre (portföy sayfasıyla aynı kural). Tahmin değil, ölçüm."""
+def momentum(g, start=None, today=None):
+    """Son 14 günün satışları, ondan önceki döneme göre (en fazla 76 gün; portföy sayfasıyla aynı kural). Tahmin değil, ölçüm."""
     if not isinstance(g, dict) or not g.get("d"):
         return None
     t = today or datetime.now(timezone.utc).date()
     r0, b0 = (t - timedelta(days=14)).isoformat(), (t - timedelta(days=90)).isoformat()
+    first = min([d[0] for d in g["d"]] + ([start] if start else []))
+    b0 = max(b0, first)
+    bdays = max(7, (datetime.fromisoformat(r0) - datetime.fromisoformat(b0)).days)
     R = [d for d in g["d"] if d[0] >= r0]
     B = [d for d in g["d"] if b0 <= d[0] < r0]
     nR, nB = sum(d[1] for d in R), sum(d[1] for d in B)
@@ -266,7 +269,7 @@ def momentum(g, today=None):
     pR, pB = wmed(R), wmed(B)
     if not pR or not pB:
         return None
-    return {"pct": (pR / pB - 1) * 100, "volx": (nR / 14) / (nB / 76), "nR": nR, "pR": pR, "pB": pB}
+    return {"pct": (pR / pB - 1) * 100, "volx": (nR / 14) / (nB / bdays), "nR": nR, "pR": pR, "pB": pB, "bdays": bdays}
 
 
 def build_market(chosen):
@@ -279,7 +282,7 @@ def build_market(chosen):
     items = []
     for c in cards:
         for k, g in ((c.get("sales") or {}).get("g") or {}).items():
-            m = momentum(g)
+            m = momentum(g, (c.get("sales") or {}).get("from"))
             if not m:
                 continue
             pid = int(c["ext_id"]) if str(c.get("ext_id") or "").isdigit() else None
@@ -309,7 +312,8 @@ def build_market(chosen):
 
     body = (f'<h1 style="margin-top:22px">Piyasada bu hafta</h1>'
             f'<p class="muted" style="max-width:70ch">Holotique kullanıcılarının takip ettiği kartlarda son 14 günün eBay ve Fanatics Collect satışları, '
-            f'önceki 2,5 ayla karşılaştırılarak gösterilir. Değişim, satış fiyatlarının ortancasına göredir. Güncelleme: {trdate(TODAY)}.</p>'
+            f'ondan önceki dönemle karşılaştırılarak gösterilir. Değişim, satış fiyatlarının ortancasına göredir. Güncelleme: {trdate(TODAY)}.</p>'
+            '<p class="note">Karşılaştırma dönemi şimdilik yaklaşık iki hafta; satış geçmişi biriktikçe 2,5 aya kadar uzayacak.</p>'
             '<p class="note">Geçmiş satışlara dayanır; gelecekteki fiyatın tahmini ya da yatırım tavsiyesi değildir. Az satılan kartlarda tek bir satış sonucu belirgin şekilde etkileyebilir.</p>')
     content = sec("Yükselenler", ups) + sec("Düşenler", downs) + sec("En çok satılanlar", busy, "Son 14 günde en çok satış yapılan kartlar ve dereceler.")
     if not content:

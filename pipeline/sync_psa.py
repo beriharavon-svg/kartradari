@@ -423,6 +423,25 @@ def sales_summary(e):
             "monthly": (e.get("salesVelocity") or {}).get("monthlyTotal"), "g": out}
 
 
+def merge_sales(old, new):
+    """Fiyat kaynağı yalnızca ~30 günlük günlük satış veriyor; önceki günleri koruyarak 90 güne kadar biriktir."""
+    if not new:
+        return old if isinstance(old, dict) else None
+    if not isinstance(old, dict):
+        return new
+    from datetime import timedelta
+    cut = (datetime.now(timezone.utc).date() - timedelta(days=91)).isoformat()
+    for k, g in (new.get("g") or {}).items():
+        og = (old.get("g") or {}).get(k) or {}
+        days = {d[0]: d for d in (og.get("d") or []) if d[0] >= cut}
+        days.update({d[0]: d for d in (g.get("d") or [])})
+        g["d"] = sorted(days.values())
+    starts = [x for x in (old.get("from"), new.get("from")) if x]
+    if starts:
+        new["from"] = max(min(starts), cut)
+    return new
+
+
 SALES_COL = [True]
 
 
@@ -498,7 +517,8 @@ def price_cards(budget, cap=None):
                 "last_priced": TODAY, "image": d.get("imageCdnUrl400") or d.get("imageUrl"), "url": d.get("tcgPlayerUrl")})
             if SALES_COL[0]:
                 try:
-                    sb("PATCH", "cards", {"id": f"eq.{c['id']}"}, {"sales": sales_summary(d.get("ebay"))})
+                    prev = (sb("GET", "cards", {"select": "sales", "id": f"eq.{c['id']}"}) or [{}])[0].get("sales")
+                    sb("PATCH", "cards", {"id": f"eq.{c['id']}"}, {"sales": merge_sales(prev, sales_summary(d.get("ebay")))})
                 except RuntimeError as e:  # 020_card_sales.sql henüz çalıştırılmamış
                     if "sales" in str(e) or "PGRST204" in str(e):
                         SALES_COL[0] = False
