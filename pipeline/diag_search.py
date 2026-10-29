@@ -5,8 +5,10 @@ PUB = "sb_publishable_IFtbpaxlRhYiB7kjJydiIA_ilx0aRI1"
 out = []
 for body in ({"q": "", "g": None, "gid": None, "sort": "relevance", "lim": 5, "off": 0},
              {"q": "charizard", "g": None, "gid": None, "sort": "relevance", "lim": 5, "off": 0},
-             {"q": "charizard", "g": None, "lim": 5}):
-    fn = "search_cards" if "sort" in body else "search_catalog"
+             {"q": "", "g": None, "lim": 2000, "_fn": "search_sets"},
+             {"q": "", "g": "Magic", "lim": 2000, "_fn": "search_sets"},
+             {"q": "", "g": "Magic", "gid": None, "sort": "relevance", "lim": 48, "off": 0}):
+    fn = body.pop("_fn", None) or ("search_cards" if "sort" in body else "search_catalog")
     t = time.time()
     req = urllib.request.Request(f"{SUPA}/rest/v1/rpc/{fn}", data=json.dumps(body).encode(), method="POST",
                                  headers={"apikey": PUB, "Content-Type": "application/json"})
