@@ -315,6 +315,12 @@ a.btn{text-decoration:none}
 .srows.now .srow{grid-template-columns:minmax(0,2.2fr) 1fr 1fr 1fr 1fr 1.2fr}
 .s.pos{color:var(--good)}.s.neg{color:var(--bad)}
 @media (max-width:640px){.soldhead{grid-template-columns:minmax(0,1fr) auto}.soldhead .chev{display:none}.srows.now .srow{grid-template-columns:minmax(0,1fr) auto}.srows.now .srow>span:nth-child(6){grid-column:1/-1;flex-direction:row;gap:8px;justify-content:flex-end;font-size:.8rem}}
+.mktp{margin-top:20px;padding:16px 18px}.mkthead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px}.mkthead h2{margin:0 0 2px;font-size:1.05rem}
+.mktlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px}
+.mkt{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:10px;background:none;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.mkt:hover{border-color:var(--accent)}.mkt img,.mkt .ph{width:40px;height:56px;object-fit:contain;border-radius:4px;background:var(--surface-2)}
+.mkt>span{display:flex;flex-direction:column;min-width:0}.mkt .nm{font-weight:600;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25}.mkt .sub{font-size:.76rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mkt .mv{align-items:flex-end;text-align:right}.mkt .mv .s{font-size:.72rem;color:var(--muted);white-space:nowrap}
 .sportf{grid-column:1/-1;border-top:1px dashed var(--line);padding-top:10px}
 .tog{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:.9rem}
 .tog input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--accent);flex:none}
@@ -349,7 +355,7 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
 <header class="top">
   <div class="wrap">
     <a class="brand" href="./" style="text-decoration:none;color:inherit"><span class="mark" aria-hidden="true"></span><h1>Holotique</h1></a>
-    <nav class="nav" aria-label="Sayfalar"><a href="./">Kart ara</a><a href="setler">Setler</a><a href="portfoy.html" aria-current="page">Portföyüm</a></nav>
+    <nav class="nav" aria-label="Sayfalar"><a href="./">Kart ara</a><a href="piyasa">Piyasa</a><a href="setler">Setler</a><a href="portfoy.html" aria-current="page">Portföyüm</a></nav>
     <div class="ccy" id="ccyBox" role="group" aria-label="İkinci para birimi" hidden>
       <span class="ccy-fixed" title="Ana fiyat her zaman USD">USD</span>
       <div class="seg" id="ccySeg"></div>
@@ -486,7 +492,9 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
       function pageAll(from,acc){return sb.from('card_prices').select('*').in('card_id',ids).gte('date',since).order('date').order('card_id').range(from,from+999).then(function(r){if(r.error)return r;acc=acc.concat(r.data||[]);return (r.data||[]).length<1000||from>=60000?{data:acc}:pageAll(from+1000,acc);});}
       var pp=ids.length?pageAll(0,[]):Promise.resolve({data:[]});
       var fp=sb.from('fx_rates').select('*').gte('date',since).order('date').limit(1000);
-      return Promise.all([pp,fp,loadFolders()]);
+      var wids=S.wish.map(function(w){return w.card_id}).filter(Boolean);S.wsales={};
+      var wsp=wids.length?sb.from('cards').select('id,sales').in('id',wids).then(function(r){(r.data||[]).forEach(function(c){S.wsales[c.id]=c.sales;});},function(){}):null;
+      return Promise.all([pp,fp,loadFolders(),wsp]);
     }).then(function(res){
       if(res[0].error)throw res[0].error;if(res[1].error)throw res[1].error;
       S.prices={};SERIES_C={};(res[0].data||[]).forEach(function(p){(S.prices[p.card_id]=S.prices[p.card_id]||[]).push(p)});
@@ -685,6 +693,7 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     led.appendChild(rows);
     led.appendChild(el('div',{class:'ledger-foot'},[el('span',{text:'Fiyatlar her gün otomatik güncellenir. Yeni kartlar birkaç saat içinde eşleşir.'})]));
     main.appendChild(led);if(hs.length)main.appendChild(renderDossier());else main.style.gridTemplateColumns='1fr';app.appendChild(main);
+    var mkp=marketPanel(holdingMoves(),'Piyasada bu hafta · kartların');if(mkp)app.appendChild(mkp);
     if(S.prefsOk){var spn=soldPanel();if(spn)app.appendChild(spn);}
     app.appendChild(el('footer',null,[el('span',{text:'Fiyatlar: PokemonPriceTracker aracılığıyla TCGplayer (ham) ve eBay satışları (PSA). PSA fiyatı son 7 günün ağırlıklı satış fiyatıdır; güven düzeyi satış adedine göre belirlenir. Kurlar: Avrupa Merkez Bankası (Frankfurter). Yatırım tavsiyesi değildir.'}),el('span',null,[el('a',{href:'gizlilik.html',text:'Gizlilik'}),' · Alış fiyatların ve sertifika numaraların yalnızca sana görünür.'])]));
     requestAnimationFrame(function(){lineChart(cb,clip(ps),{label:'Portföy değeri grafiği'});var mc=document.getElementById('miniChart'),h=S.holdings.find(function(x){return x.id===S.sel});if(mc&&h)lineChart(mc,series(h),{label:'Kart fiyat grafiği'});});
@@ -724,8 +733,8 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
   function salesBox(h){
     var k=pkey(h),S2=h.cards&&h.cards.sales,g=S2&&S2.g&&k&&S2.g[k];if(!k||k==='raw'||!S2)return null;
     var box=el('section',{class:'salesum'});box.appendChild(el('div',{class:'label',text:h.grade+' · eBay satışları'}));
-    if(!g){box.appendChild(el('p',{class:'note',style:'margin:0',text:'Son 60 günde bu derecede kayıtlı satış yok.'}));return box;}
-    var days=g.d||[],n30=days.reduce(function(t,x){return t+x[1]},0),ago=g.last?Math.max(0,Math.round((Date.now()-new Date(g.last+'T12:00:00Z'))/864e5)):null;
+    if(!g){box.appendChild(el('p',{class:'note',style:'margin:0',text:'Son 90 günde bu derecede kayıtlı satış yok.'}));return box;}
+    var c30=new Date(Date.now()-30*864e5).toISOString().slice(0,10),days=(g.d||[]).filter(function(x){return x[0]>=c30}),n30=days.reduce(function(t,x){return t+x[1]},0),ago=g.last?Math.max(0,Math.round((Date.now()-new Date(g.last+'T12:00:00Z'))/864e5)):null;
     var tr=g.trend==='up'?' ↑':(g.trend==='down'?' ↓':'');
     var F=el('div',{class:'facts'});
     [['Son satış',ago==null?'—':(ago===0?'bugün':(ago===1?'dün':ago+' gün önce'))],['Son 30 günde',n30+' satış'],['Ortanca',usd(g.med)+tr],['Aralık',g.min!=null&&g.max!=null?usd(g.min)+' – '+usd(g.max):'—']].forEach(function(x){F.appendChild(el('span',{text:x[0]}));F.appendChild(el('span',{class:'num',text:x[1]}));});
@@ -1044,6 +1053,27 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
   // Satmasaydın bugün ne ederdi: kartın güncel piyasa değeri, satış fiyatına göre fark
   function nowCell(r){var h=r.h,p=priced(h)?price(h):null,v=p!=null?p*r.n:null,df=v!=null&&r.sale!=null?v-r.sale:null;
     return el('span',{class:'num'},[v!=null?usd(v):'—',df!=null?el('span',{class:'s '+cls(-df),text:(df>0?'satıştan '+usd(df)+' fazla':(df<0?'satıştan '+usd(-df)+' az':'aynı'))}):null]);}
+  // ---------- Piyasada bu hafta: son 14 günün satışları, önceki 76 güne göre (tahmin değil, ölçüm) ----------
+  function wmed(arr){var a=arr.filter(function(x){return x[1]>0&&x[2]>0}).sort(function(x,y){return x[2]-y[2]}),n=a.reduce(function(t,x){return t+x[1]},0),h=n/2,c=0;
+    for(var i=0;i<a.length;i++){c+=a[i][1];if(c>=h)return a[i][2];}return null;}
+  function momentum(g){if(!g||!g.d)return null;var now=Date.now(),r0=new Date(now-14*864e5).toISOString().slice(0,10),b0=new Date(now-90*864e5).toISOString().slice(0,10);
+    var R=g.d.filter(function(x){return x[0]>=r0}),B=g.d.filter(function(x){return x[0]>=b0&&x[0]<r0});
+    var nR=R.reduce(function(t,x){return t+x[1]},0),nB=B.reduce(function(t,x){return t+x[1]},0);if(nR<3||nB<5)return null;
+    var pR=wmed(R),pB=wmed(B);if(!pR||!pB)return null;
+    return {pct:(pR/pB-1)*100,volx:(nR/14)/(nB/76),nR:nR,pR:pR,pB:pB};}
+  function moveOf(card,key){var S2=card&&card.sales,g=S2&&S2.g&&key&&S2.g[key];var m=momentum(g);return m&&Math.abs(m.pct)>=10?m:null;}
+  function moveText(m){return (m.pct>0?'+':'−')+Math.abs(m.pct).toFixed(0)+'% · son 14 günde '+m.nR+' satış'+(m.volx>=1.3?' · talep '+m.volx.toFixed(1)+' kat':'');}
+  function marketPanel(items,title){
+    // items: [{name,sub,img,grade,m,onclick}]
+    if(!items.length)return null;items.sort(function(a,b){return Math.abs(b.m.pct)-Math.abs(a.m.pct)});
+    var panel=el('section',{class:'panel mktp'});
+    panel.appendChild(el('div',{class:'mkthead'},[el('div',null,[el('h2',{text:title}),el('span',{class:'note',text:'Son 14 günün eBay satışları, önceki 2,5 aya göre. Geçmiş satışlara dayanır; gelecek tahmini değildir.'})]),el('a',{href:'piyasa',class:'linkbtn',text:'Tüm piyasa →'})]));
+    var list=el('div',{class:'mktlist'});
+    items.slice(0,8).forEach(function(x){list.appendChild(el('button',{type:'button',class:'mkt',onclick:x.onclick},[x.img?el('img',{src:x.img,alt:'',loading:'lazy',referrerpolicy:'no-referrer'}):el('span',{class:'ph'}),
+      el('span',{style:'min-width:0'},[el('span',{class:'nm',text:x.name}),el('span',{class:'sub',text:x.grade+(x.sub?' · '+x.sub:'')})]),
+      el('span',{class:'mv'},[el('b',{class:'num '+cls(x.m.pct),text:(x.m.pct>0?'▲ ':'▼ ')+Math.abs(x.m.pct).toFixed(0)+'%'}),el('span',{class:'s',text:usd(x.m.pB)+' → '+usd(x.m.pR)}),el('span',{class:'s',text:x.m.nR+' satış / 14 gün'+(x.m.volx>=1.3?' · talep ×'+x.m.volx.toFixed(1):'')})])]));});
+    panel.appendChild(list);return panel;}
+  function holdingMoves(){var FD=curFolder();return view().map(function(h){var m=h.card_id&&moveOf(h.cards,pkey(h));var c=h.cards||{};return m?{name:c.name||h.name_input,sub:c.set_name||h.set_input,img:c.image_cached||c.image,grade:h.grade,m:m,onclick:function(){S.sel=h.id;render();var d=document.getElementById('dossier');if(d)d.scrollIntoView({behavior:'smooth',block:'start'});}}:null;}).filter(Boolean);}
   function soldPanel(){
     var FD=curFolder(),list=S.sold.filter(function(h){return !FD||(S.fitems[FD.id]&&S.fitems[FD.id].has(h.id))});
     if(!list.length)return null;
@@ -1166,8 +1196,10 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
         el('div',{class:'px val'},[el('div',{class:'a num',text:p==null?'—':sec(p*r)}),ch==null?el('span',{class:'note',text:'—'}):el('span',{class:'pill num '+cls(-ch),title:'Eklediğinden bu yana',text:pct(ch)})])
       ]));});
     panel.appendChild(rows);
+    var wm=list.map(function(w){var m=w.card_id&&moveOf({sales:S.wsales&&S.wsales[w.card_id]},wkey(w));return m?{name:w.name,sub:w.set_name,img:w.image,grade:w.grade,m:m,onclick:function(){openWishEdit(w)}}:null;}).filter(Boolean);
     panel.appendChild(el('div',{class:'ledger-foot'},[el('span',{text:'Yüzde, kartı listeye eklediğin günden bu yana fiyat değişimini gösterir (düşüş yeşil). Dereceli fiyatlar eklendikten sonraki ilk fiyat güncellemesinde gelir.'})]));
     app.appendChild(panel);
+    var wmp=marketPanel(wm,'Piyasada bu hafta · istek listen');if(wmp)app.appendChild(wmp);
   }
 
   function wishForm(p,close,pre,w){

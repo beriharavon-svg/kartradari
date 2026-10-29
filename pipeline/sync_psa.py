@@ -389,23 +389,22 @@ def grade_price(g):
 
 
 def sales_summary(e):
-    """eBay verisinden derece bazında satış özeti (yalnızca son 60 günde satışı olan dereceler) ve son 30 günün günlük satışları."""
+    """eBay verisinden derece bazında satış özeti (son 90 günde satışı olan dereceler) ve son 90 günün günlük satışları."""
     if not isinstance(e, dict):
         return None
     from datetime import timedelta
-    cut30 = (datetime.now(timezone.utc).date() - timedelta(days=30)).isoformat()
-    cut60 = (datetime.now(timezone.utc).date() - timedelta(days=60)).isoformat()
+    cut90 = (datetime.now(timezone.utc).date() - timedelta(days=91)).isoformat()
     hist = e.get("priceHistory") or {}
     out = {}
     for k, v in (e.get("salesByGrade") or {}).items():
         if not GRADE_KEY.match(str(k)) or not isinstance(v, dict):
             continue
         last = str(v.get("lastSaleDate") or "")[:10]
-        if not last or last < cut60:
+        if not last or last < cut90:
             continue
         days = []
         for dt, x in (hist.get(k) or {}).items():
-            if str(dt) >= cut30 and isinstance(x, dict) and x.get("count"):
+            if str(dt) >= cut90 and isinstance(x, dict) and x.get("count"):
                 days.append([str(dt)[:10], int(x.get("count") or 0), round(float(x.get("average") or 0), 2)])
         days.sort()
 

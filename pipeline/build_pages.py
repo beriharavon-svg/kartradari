@@ -125,7 +125,7 @@ def page(title, desc, canonical, body, extra_head=""):
 <body>
 <header class="top"><div class="wrap">
   <a class="brand" href="/"><span class="mark" aria-hidden="true"></span><span class="bname">Holotique</span></a>
-  <nav class="nav" aria-label="Sayfalar"><a href="/">Kart ara</a><a href="/setler">Setler</a><a href="/portfoy.html">Portföyüm</a></nav>
+  <nav class="nav" aria-label="Sayfalar"><a href="/">Kart ara</a><a href="/piyasa">Piyasa</a><a href="/setler">Setler</a><a href="/portfoy.html">Portföyüm</a></nav>
 </div></header>
 <main class="wrap">
 {body}
@@ -241,6 +241,85 @@ def write(rel, content):
         f.write(content)
 
 
+def wmed(days):
+    a = sorted([d for d in days if d[1] > 0 and d[2] > 0], key=lambda d: d[2])
+    n = sum(d[1] for d in a)
+    c = 0
+    for d in a:
+        c += d[1]
+        if c >= n / 2:
+            return d[2]
+    return None
+
+
+def momentum(g, today=None):
+    """Son 14 günün satışları, önceki 76 güne göre (portföy sayfasıyla aynı kural). Tahmin değil, ölçüm."""
+    if not isinstance(g, dict) or not g.get("d"):
+        return None
+    t = today or datetime.now(timezone.utc).date()
+    r0, b0 = (t - timedelta(days=14)).isoformat(), (t - timedelta(days=90)).isoformat()
+    R = [d for d in g["d"] if d[0] >= r0]
+    B = [d for d in g["d"] if b0 <= d[0] < r0]
+    nR, nB = sum(d[1] for d in R), sum(d[1] for d in B)
+    if nR < 3 or nB < 5:
+        return None
+    pR, pB = wmed(R), wmed(B)
+    if not pR or not pB:
+        return None
+    return {"pct": (pR / pB - 1) * 100, "volx": (nR / 14) / (nB / 76), "nR": nR, "pR": pR, "pB": pB}
+
+
+def build_market(chosen):
+    """Piyasada bu hafta: takip edilen kartlarda son 14 günün eBay satışları."""
+    try:
+        cards = sb_all("cards", {"select": "id,ext_id,game,name,set_name,number,image,image_cached,sales", "sales": "not.is.null"})
+    except Exception as ex:  # noqa: BLE001  (020 çalıştırılmamışsa)
+        log("Piyasa sayfası atlandı:", ex)
+        cards = []
+    items = []
+    for c in cards:
+        for k, g in ((c.get("sales") or {}).get("g") or {}).items():
+            m = momentum(g)
+            if not m:
+                continue
+            pid = int(c["ext_id"]) if str(c.get("ext_id") or "").isdigit() else None
+            href = "/" + card_path(chosen[pid]) if pid in chosen else ""
+            items.append({**m, "name": c.get("name") or "", "set": c.get("set_name") or "", "number": c.get("number") or "",
+                          "img": c.get("image_cached") or c.get("image"), "grade": grade_label(k), "href": href, "game": c.get("game")})
+
+    def row(x):
+        up = x["pct"] > 0
+        img = f'<img src="{e(x["img"])}" alt="" loading="lazy" referrerpolicy="no-referrer">' if x.get("img") else '<span class="ph"></span>'
+        sub = " · ".join(v for v in [x["set"], x["number"]] if v)
+        demand = f' · talep ×{x["volx"]:.1f}' if x["volx"] >= 1.3 else ""
+        inner = (f'{img}<span class="t"><span class="nm">{e(x["name"])}</span><span class="sub">{e(x["grade"])} · {e(sub)}</span></span>'
+                 f'<span class="mv"><b class="num {"pos" if up else "neg"}">{"▲" if up else "▼"} {abs(x["pct"]):.0f}%</b>'
+                 f'<span class="s">{usd(x["pB"])} → {usd(x["pR"])}</span><span class="s">{x["nR"]} satış / 14 gün{demand}</span></span>')
+        return f'<a class="mkt" href="{e(x["href"])}">{inner}</a>' if x["href"] else f'<div class="mkt">{inner}</div>'
+
+    ups = sorted([x for x in items if x["pct"] >= 10], key=lambda x: -x["pct"])[:30]
+    downs = sorted([x for x in items if x["pct"] <= -10], key=lambda x: x["pct"])[:15]
+    busy = sorted(items, key=lambda x: -x["nR"])[:15]
+
+    def sec(title, lst, note=""):
+        if not lst:
+            return ""
+        return (f'<section class="more"><h2>{e(title)}</h2>' + (f'<p class="note">{e(note)}</p>' if note else "") +
+                '<div class="mkts">' + "".join(row(x) for x in lst) + "</div></section>")
+
+    body = (f'<h1 style="margin-top:22px">Piyasada bu hafta</h1>'
+            f'<p class="muted" style="max-width:70ch">Holotique kullanıcılarının takip ettiği kartlarda son 14 günün eBay ve Fanatics Collect satışları, '
+            f'önceki 2,5 ayla karşılaştırılarak gösterilir. Değişim, satış fiyatlarının ortancasına göredir. Güncelleme: {trdate(TODAY)}.</p>'
+            '<p class="note">Geçmiş satışlara dayanır; gelecekteki fiyatın tahmini ya da yatırım tavsiyesi değildir. Az satılan kartlarda tek bir satış sonucu belirgin şekilde etkileyebilir.</p>')
+    content = sec("Yükselenler", ups) + sec("Düşenler", downs) + sec("En çok satılanlar", busy, "Son 14 günde en çok satış yapılan kartlar ve dereceler.")
+    if not content:
+        content = '<p class="muted">Satış verileri toplanıyor; liste birkaç gün içinde dolacak.</p>'
+    write("piyasa", page("Piyasada bu hafta: yükselen ve düşen kartlar | Holotique",
+                         "Pokemon ve One Piece kartlarında son 14 günün eBay satışlarına göre fiyatı yükselen, düşen ve en çok satılan kartlar.",
+                         "piyasa", body + content))
+    log(f"Piyasa: {len(items)} kart/derece · yükselen {len(ups)} · düşen {len(downs)}")
+
+
 def main():
     if not (SUPA and SKEY):
         sys.exit("Eksik ayar: SUPABASE_URL / SUPABASE_SECRET_KEY")
@@ -314,6 +393,13 @@ def main():
         path, html_ = build_card(r, tracked, sibs, set_urls.get(key, ""))
         write(path, html_)
         urls.append(path)
+
+    # 3b) Piyasada bu hafta
+    try:
+        build_market(chosen)
+        urls.append("piyasa")
+    except Exception as ex:  # noqa: BLE001
+        log("Piyasa sayfası üretilemedi:", ex)
 
     # 4) Set dizini
     by_game = {}
