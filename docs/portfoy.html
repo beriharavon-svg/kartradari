@@ -308,6 +308,13 @@ a.btn{text-decoration:none}
 .vitems{display:flex;flex-direction:column}.vitems div{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px solid var(--line);font-size:.86rem}
 .salesum{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px}
 .sbars{display:flex;align-items:flex-end;gap:2px;height:48px;border-bottom:1px solid var(--line)}.sbars span{flex:1;background:var(--chart);border-radius:2px 2px 0 0;min-width:2px}
+.soldp{margin-top:20px;padding:0 0 12px}.soldp .srows{margin:0 18px}
+.soldhead{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:16px;align-items:center;width:100%;padding:16px 18px;background:none;border:0;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.soldhead h2{margin:0;font-size:1.05rem}.soldhead>span{display:flex;flex-direction:column;gap:2px}.soldpl{align-items:flex-end}.soldpl b{font-size:1.05rem}.chev{color:var(--muted)}
+.soldfoot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 18px 0}
+.srows.now .srow{grid-template-columns:minmax(0,2.2fr) 1fr 1fr 1fr 1fr 1.2fr}
+.s.pos{color:var(--good)}.s.neg{color:var(--bad)}
+@media (max-width:640px){.soldhead{grid-template-columns:minmax(0,1fr) auto}.soldhead .chev{display:none}.srows.now .srow{grid-template-columns:minmax(0,1fr) auto}.srows.now .srow>span:nth-child(6){grid-column:1/-1;flex-direction:row;gap:8px;justify-content:flex-end;font-size:.8rem}}
 .sportf{grid-column:1/-1;border-top:1px dashed var(--line);padding-top:10px}
 .tog{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:.9rem}
 .tog input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--accent);flex:none}
@@ -473,7 +480,7 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
       // Satılan kartlar portföy toplamına girmez; "Satışlar" sekmesinde gerçekleşen kârla görünür
       S.setsData=null;S.sold=S.prefsOk?allH.filter(function(h){return !!h.sold_at}):[];S.holdings=S.prefsOk?allH.filter(function(h){return !h.sold_at}):allH;
       if(S.sel&&!S.holdings.some(function(h){return h.id===S.sel}))S.sel=null;
-      var ids=Array.from(new Set(S.holdings.map(function(h){return h.card_id}).concat(S.wish.map(function(w){return w.card_id})).filter(Boolean)));
+      var ids=Array.from(new Set(S.holdings.concat(S.sold||[]).map(function(h){return h.card_id}).concat(S.wish.map(function(w){return w.card_id})).filter(Boolean)));
       var since=new Date(Date.now()-400*864e5).toISOString().slice(0,10);
       // Supabase tek istekte en fazla 1000 satır döndürür; fiyat geçmişi sayfa sayfa okunur.
       function pageAll(from,acc){return sb.from('card_prices').select('*').in('card_id',ids).gte('date',since).order('date').order('card_id').range(from,from+999).then(function(r){if(r.error)return r;acc=acc.concat(r.data||[]);return (r.data||[]).length<1000||from>=60000?{data:acc}:pageAll(from+1000,acc);});}
@@ -678,6 +685,7 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     led.appendChild(rows);
     led.appendChild(el('div',{class:'ledger-foot'},[el('span',{text:'Fiyatlar her gün otomatik güncellenir. Yeni kartlar birkaç saat içinde eşleşir.'})]));
     main.appendChild(led);if(hs.length)main.appendChild(renderDossier());else main.style.gridTemplateColumns='1fr';app.appendChild(main);
+    if(S.prefsOk){var spn=soldPanel();if(spn)app.appendChild(spn);}
     app.appendChild(el('footer',null,[el('span',{text:'Fiyatlar: PokemonPriceTracker aracılığıyla TCGplayer (ham) ve eBay satışları (PSA). PSA fiyatı son 7 günün ağırlıklı satış fiyatıdır; güven düzeyi satış adedine göre belirlenir. Kurlar: Avrupa Merkez Bankası (Frankfurter). Yatırım tavsiyesi değildir.'}),el('span',null,[el('a',{href:'gizlilik.html',text:'Gizlilik'}),' · Alış fiyatların ve sertifika numaraların yalnızca sana görünür.'])]));
     requestAnimationFrame(function(){lineChart(cb,clip(ps),{label:'Portföy değeri grafiği'});var mc=document.getElementById('miniChart'),h=S.holdings.find(function(x){return x.id===S.sel});if(mc&&h)lineChart(mc,series(h),{label:'Kart fiyat grafiği'});});
   }
@@ -1016,19 +1024,41 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     function kpi(lab,v,s,c){return el('div',{class:'kpi'},[el('span',{class:'label',text:lab}),el('span',{class:'v num '+(c||''),text:v}),el('span',{class:'s num',text:s||''})]);}
     panel.appendChild(el('div',{class:'kpis sales-k'},[kpi('Satış geliri',usd(R),priced.length+' satış'),kpi('Alış maliyeti',usd(C)),kpi('Gerçekleşen kâr/zarar',usd(PL,true),C?pct(PL/C*100):'',cls(PL)),kpi('TL olarak kâr/zarar',tr.length?(PLT<0?'−':'')+'₺'+Math.abs(Math.round(PLT)).toLocaleString(window.HQ_LANG==='en'?'en-US':'tr-TR'):'—','alış ve satış günlerinin kuruyla',cls(PLT))]));
     if(miss)panel.appendChild(el('div',{class:'msg info',text:miss+' satışta fiyat girilmemiş; bunlar toplama katılmadı. Satırın üstüne basıp fiyatı ekleyebilirsin.'}));
-    var list=el('div',{class:'srows'});
-    list.appendChild(el('div',{class:'srow shead'},[el('span',{text:'Kart'}),el('span',{text:'Satış tarihi'}),el('span',{text:'Satış'}),el('span',{text:'Alış'}),el('span',{text:'Kâr/zarar'})]));
+    var list=salesList(rows,false);
+    panel.appendChild(list);
+    panel.appendChild(el('p',{class:'note',text:'Kâr/zarar, satış fiyatından kartın alış maliyetinin çıkarılmasıyla hesaplanır; komisyon ve kargo dahil değildir (istersen satış fiyatını net olarak gir). TL karşılığı Avrupa Merkez Bankası kurlarıyla hesaplanır. Vergi danışmanlığı değildir.'}));
+    app.appendChild(panel);
+  }
+  function salesList(rows,withNow){
+    var list=el('div',{class:'srows'+(withNow?' now':'')});
+    list.appendChild(el('div',{class:'srow shead'},[el('span',{text:'Kart'}),el('span',{text:'Satış tarihi'}),el('span',{text:'Satış'}),el('span',{text:'Alış'}),el('span',{text:'Kâr/zarar'}),withNow?el('span',{text:'Bugün olsaydı'}):null]));
     rows.forEach(function(r){var h=r.h,card=h.cards||{};
       list.appendChild(el('button',{type:'button',class:'srow',onclick:function(){openSell(h)}},[
         el('span',{class:'scard'},[thumb(h),el('span',{style:'min-width:0'},[el('span',{class:'nm',text:card.name||h.name_input}),el('span',{class:'sub',text:h.grade+(r.n>1?' · ×'+r.n:'')+(card.set_name||h.set_input?' · '+(card.set_name||h.set_input):'')})])]),
         el('span',{class:'num',text:new Date(h.sold_at).toLocaleDateString(window.HQ_LANG==='en'?'en-GB':'tr-TR')}),
         el('span',{class:'num'},[h.sold_price!=null?money(Number(h.sold_price)*r.n,h.sold_ccy):el('span',{class:'chip warn',text:'Fiyat gir'}),h.sold_ccy&&h.sold_ccy!=='USD'&&r.sale!=null?el('span',{class:'s',text:usd(r.sale)}):null]),
         el('span',{class:'num',text:usd(r.cost)}),
-        el('span',{class:'num '+cls(r.pl)},[r.pl!=null?usd(r.pl,true):'—',r.pl!=null&&r.cost?el('span',{class:'s',text:pct(r.pl/r.cost*100)}):null])]));});
-    panel.appendChild(list);
-    panel.appendChild(el('p',{class:'note',text:'Kâr/zarar, satış fiyatından kartın alış maliyetinin çıkarılmasıyla hesaplanır; komisyon ve kargo dahil değildir (istersen satış fiyatını net olarak gir). TL karşılığı Avrupa Merkez Bankası kurlarıyla hesaplanır. Vergi danışmanlığı değildir.'}));
-    app.appendChild(panel);
-  }
+        el('span',{class:'num '+cls(r.pl)},[r.pl!=null?usd(r.pl,true):'—',r.pl!=null&&r.cost?el('span',{class:'s',text:pct(r.pl/r.cost*100)}):null]),withNow?nowCell(r):null]));});
+    return list;}
+
+  // Satmasaydın bugün ne ederdi: kartın güncel piyasa değeri, satış fiyatına göre fark
+  function nowCell(r){var h=r.h,p=priced(h)?price(h):null,v=p!=null?p*r.n:null,df=v!=null&&r.sale!=null?v-r.sale:null;
+    return el('span',{class:'num'},[v!=null?usd(v):'—',df!=null?el('span',{class:'s '+cls(-df),text:(df>0?'satıştan '+usd(df)+' fazla':(df<0?'satıştan '+usd(-df)+' az':'aynı'))}):null]);}
+  function soldPanel(){
+    var FD=curFolder(),list=S.sold.filter(function(h){return !FD||(S.fitems[FD.id]&&S.fitems[FD.id].has(h.id))});
+    if(!list.length)return null;
+    var rows=list.slice().sort(function(a,b){return String(b.sold_at).localeCompare(String(a.sold_at))}).map(saleRow);
+    var pr=rows.filter(function(r){return r.sale!=null}),C=pr.reduce(function(t,r){return t+r.cost},0),R=pr.reduce(function(t,r){return t+r.sale},0),PL=R-C;
+    var open=store.get('kr-soldopen')!=='0',panel=el('section',{class:'panel soldp'});
+    var head=el('button',{type:'button',class:'soldhead','aria-expanded':String(open),onclick:function(){store.set('kr-soldopen',open?'0':'1');render();}},[
+      el('span',{style:'min-width:0'},[el('h2',{text:'Satılan kartlar · '+rows.length}),el('span',{class:'note',text:'Satış geliri '+usd(R)+' · alış '+usd(C)})]),
+      el('span',{class:'soldpl'},[el('span',{class:'label',text:'Gerçekleşen kâr/zarar'}),el('b',{class:'num '+cls(PL),text:usd(PL,true)+(C?' ('+pct(PL/C*100)+')':'')})]),
+      el('span',{class:'chev','aria-hidden':'true',text:open?'▴':'▾'})]);
+    panel.appendChild(head);
+    if(open){panel.appendChild(salesList(rows.slice(0,15),true));
+      panel.appendChild(el('div',{class:'soldfoot'},[el('span',{class:'note',text:'“Bugün olsaydı”: kartı satmasaydın bugünkü piyasa değeri. Satırın üstüne basarak satışı düzenleyebilirsin.'}),
+        el('button',{type:'button',class:'linkbtn',text:rows.length>15?'Tüm satışlar ('+rows.length+') →':'Satışlar sekmesinde aç →',onclick:function(){S.tab='sales';store.set('kr-tab','sales');render();window.scrollTo(0,0);}})]));}
+    return panel;}
   function exportSales(rows,Y){
     if(!window.XLSX){alert('Excel aracı yüklenemedi. Sayfayı yenileyip tekrar dene.');return;}
     var en=window.HQ_LANG==='en',r2=function(v){return v==null?null:Math.round(v*100)/100};
