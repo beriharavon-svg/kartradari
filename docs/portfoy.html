@@ -306,6 +306,8 @@ a.btn{text-decoration:none}
 .vbars{display:flex;align-items:flex-end;gap:2px;height:110px;border-bottom:1px solid var(--line)}.vbars span{flex:1;background:var(--accent);border-radius:3px 3px 0 0;min-width:2px}
 .vbx{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-top:4px}
 .vitems{display:flex;flex-direction:column}.vitems div{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px solid var(--line);font-size:.86rem}
+.salesum{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px}
+.sbars{display:flex;align-items:flex-end;gap:2px;height:48px;border-bottom:1px solid var(--line)}.sbars span{flex:1;background:var(--chart);border-radius:2px 2px 0 0;min-width:2px}
 .sportf{grid-column:1/-1;border-top:1px dashed var(--line);padding-top:10px}
 .tog{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:.9rem}
 .tog input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--accent);flex:none}
@@ -682,6 +684,7 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
 
   // eBay'de şu an satıştaki ilanlar (Edge Function: ebay-listings). Aynı sorgu oturumda bir kez çekilir.
   var EBAY={};
+  function soldUrl(u){return String(u||'')+(String(u).indexOf('?')>=0?'&':'?')+'LH_Sold=1&LH_Complete=1';}
   function ebayBox(h){
     var card=h.cards||{},name=card.name||h.name_input,number=card.number||h.number_input||'',set=card.set_name||h.set_input||'';
     var spo=h.game==='Sports',pk=(/pokemon/i.test(h.game||'')&&!rawOnly(h))||spo,g=String(h.grade||'Ham'),gm=g.match(/^(PSA|BGS|CGC|SGC|TAG|ACE)\s*\d+(?:\.5)?/i);
@@ -692,7 +695,7 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     function drawChips(){chips.innerHTML='';if(grades.length<2)return;grades.forEach(function(x){chips.appendChild(el('button',{type:'button',class:'echip','aria-pressed':String(cur===x[0]),text:x[1],onclick:function(){cur=x[0];(S.ebayGrade=S.ebayGrade||{})[h.id]=cur;drawChips();load();}}));});}
     function show(d){body.innerHTML='';
       if(!d||d.error){body.appendChild(el('p',{class:'note',text:'eBay ilanları şu an alınamadı.'}));return;}
-      if(!d.total){body.appendChild(el('p',{class:'note',text:'eBay’de bu karta uyan satıştaki ilan bulunamadı.'}));if(d.search_url)body.appendChild(el('a',{href:d.search_url,target:'_blank',rel:'sponsored noopener',style:'font-size:.85rem',text:'eBay’de ara →'}));return;}
+      if(!d.total){body.appendChild(el('p',{class:'note',text:'eBay’de bu karta uyan satıştaki ilan bulunamadı.'}));if(d.search_url)body.appendChild(el('div',{class:'ebay-foot'},[el('a',{href:d.search_url,target:'_blank',rel:'sponsored noopener',text:'eBay’de ara →'}),el('a',{href:soldUrl(d.search_url),target:'_blank',rel:'sponsored noopener',text:'Satılmış ilanlar →'})]));return;}
       body.appendChild(el('div',{class:'ebay-sum'},[el('b',{class:'num',text:usd(d.min)+(d.max!=null&&d.max!==d.min?' – '+usd(d.max):'')}),el('span',{class:'note',text:d.total+' ilan · ortanca '+usd(d.median)})]));
       var list=el('div',{class:'ebay-list'});(d.items||[]).slice(0,3).forEach(function(it){
         list.appendChild(el('a',{class:'ebay-item',href:it.url,target:'_blank',rel:'sponsored noopener'},[it.image?el('img',{src:it.image,alt:'',loading:'lazy',referrerpolicy:'no-referrer'}):el('span',{class:'ph'}),
@@ -702,13 +705,28 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
         [['En ucuz',d.min],['Ortanca',d.median]].forEach(function(o){if(o[1]==null)return;vrow.appendChild(el('button',{type:'button',class:'btn ghost sm',text:o[0]+' · '+usd(o[1]),onclick:function(ev){var b=ev.currentTarget,v=Math.round(Number(o[1])*100)/100;b.disabled=true;
           sb.from('holdings').update({manual_value:v}).eq('id',h.id).then(function(r){if(r.error){b.disabled=false;b.textContent=r.error.message;return;}h.manual_value=v;render();});}}));});
         body.appendChild(vrow);}
-      body.appendChild(el('div',{class:'ebay-foot'},[el('a',{href:d.search_url,target:'_blank',rel:'sponsored noopener',text:'Tüm ilanları eBay’de gör →'}),el('span',{class:'note',text:'Satıştaki ilanlar; satılmış fiyat değildir.'})]));}
+      body.appendChild(el('div',{class:'ebay-foot'},[el('a',{href:d.search_url,target:'_blank',rel:'sponsored noopener',text:'Tüm ilanları eBay’de gör →'}),el('a',{href:soldUrl(d.search_url),target:'_blank',rel:'sponsored noopener',text:'Satılmış ilanlar →'}),el('span',{class:'note',text:'Satıştaki ilanlar; satılmış fiyat değildir.'})]));}
     function load(){var key=[name,number,set,cur].join('|');if(EBAY[key]&&EBAY[key].then){body.innerHTML='';body.appendChild(el('p',{class:'note',text:'eBay ilanları yükleniyor…'}));EBAY[key].then(function(d){if(cur===key.split('|')[3])show(d)});return;}
       if(EBAY[key]){show(EBAY[key]);return;}
       body.innerHTML='';body.appendChild(el('p',{class:'note',text:'eBay ilanları yükleniyor…'}));
       EBAY[key]=fetch(SB_URL+'/functions/v1/ebay-listings',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({name:name,number:number,set:set,grade:cur,cat:spo?'sports':'tcg',variant:h.variant||''})})
         .then(function(x){return x.json()}).catch(function(){return {error:'net'}}).then(function(d){if(d&&d.error)delete EBAY[key];else EBAY[key]=d;if(body.isConnected&&cur===key.split('|')[3])show(d);return d;});}
     drawChips();box.appendChild(head);box.appendChild(body);load();return box;}
+  // eBay satış özeti (fiyat kaynağımızın derece bazında satış verisi): son satış, adet, ortanca, aralık, günlük satışlar
+  function salesBox(h){
+    var k=pkey(h),S2=h.cards&&h.cards.sales,g=S2&&S2.g&&k&&S2.g[k];if(!k||k==='raw'||!S2)return null;
+    var box=el('section',{class:'salesum'});box.appendChild(el('div',{class:'label',text:h.grade+' · eBay satışları'}));
+    if(!g){box.appendChild(el('p',{class:'note',style:'margin:0',text:'Son 60 günde bu derecede kayıtlı satış yok.'}));return box;}
+    var days=g.d||[],n30=days.reduce(function(t,x){return t+x[1]},0),ago=g.last?Math.max(0,Math.round((Date.now()-new Date(g.last+'T12:00:00Z'))/864e5)):null;
+    var tr=g.trend==='up'?' ↑':(g.trend==='down'?' ↓':'');
+    var F=el('div',{class:'facts'});
+    [['Son satış',ago==null?'—':(ago===0?'bugün':(ago===1?'dün':ago+' gün önce'))],['Son 30 günde',n30+' satış'],['Ortanca',usd(g.med)+tr],['Aralık',g.min!=null&&g.max!=null?usd(g.min)+' – '+usd(g.max):'—']].forEach(function(x){F.appendChild(el('span',{text:x[0]}));F.appendChild(el('span',{class:'num',text:x[1]}));});
+    box.appendChild(F);
+    if(days.length){var mx=Math.max.apply(null,days.map(function(x){return x[1]})),bars=el('div',{class:'sbars',role:'img','aria-label':'Son 30 günün günlük satışları'}),map={};days.forEach(function(x){map[x[0]]=x});
+      for(var i=29;i>=0;i--){var dt=new Date(Date.now()-i*864e5).toISOString().slice(0,10),x=map[dt];bars.appendChild(el('span',{title:x?(dt.split('-').reverse().join('.')+': '+x[1]+' satış · ort. '+usd(x[2])):dt.split('-').reverse().join('.')+': —',style:'height:'+(x?Math.max(8,Math.round(x[1]/mx*100)):3)+'%'+(x?'':';opacity:.3')}));}
+      box.appendChild(el('div',null,[bars,el('div',{class:'vbx'},[el('span',{text:'30 gün önce'}),el('span',{text:'Bugün'})])]));}
+    box.appendChild(el('p',{class:'note',style:'margin:0',text:'eBay ve Fanatics Collect’te gerçekleşen satışlardan derlenir'+(g.n&&S2.from?' ('+S2.from.split('-').reverse().join('.')+' – '+(S2.to||'').split('-').reverse().join('.')+' arası '+g.n+' satış)':'')+'. Tek tek ilanlar için eBay bölümündeki “Satılmış ilanlar” bağlantısını kullan.'}));
+    return box;}
   function renderDossier(){
     var h=S.holdings.find(function(x){return x.id===S.sel}),d=el('aside',{class:'panel dossier',id:'dossier'});if(!h)return d;
     var card=h.cards||{},p=price(h),r=rateNow(),row=latest(h);
@@ -728,6 +746,7 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
         g.appendChild(el('div',{class:h.grade===x[0]?'mine':null},[el('div',{class:'label',lang:'en',text:x[0]}),el('div',{class:'v num',text:v==null?'—':(Number(v)>=1000?'$'+Math.round(Number(v)).toLocaleString('en-US'):usd(Number(v)))}),el('div',{class:'c',text:k==='raw'?'TCGplayer':(v==null?'satış yok':(c?CONF[c]+' güven':'eBay')+(n?' · '+n+' satış':''))})]));});
       d.appendChild(g);
       if(premiumGrade(h.grade))d.appendChild(el('div',{class:'msg info',text:h.grade+' satışları fiyat kaynağımızda ayrı tutulmuyor; '+h.grade.split(' ').slice(0,2).join(' ')+' satışlarının ortalaması gösteriliyor. '+h.grade+' kartlar genellikle bunun belirgin üstünde işlem görür, bu yüzden değer temkinli tarafta kalır.'}));}
+    var sx=salesBox(h);if(sx)d.appendChild(sx);
     var f=el('div',{class:'facts'});
     [['Adet',String(h.qty)],['Alış (adet)',usd(Number(h.cost_usd))],['Alış tarihi',dfmt(h.bought)]].forEach(function(x){f.appendChild(el('span',{text:x[0]}));f.appendChild(el('span',{class:'num',text:x[1]}));});
     var co=String(h.grade||'').split(' ')[0].toUpperCase();

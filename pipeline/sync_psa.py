@@ -388,6 +388,45 @@ def grade_price(g):
     return (round(float(price), 2) if price else None), sm.get("confidence"), g.get("count")
 
 
+def sales_summary(e):
+    """eBay verisinden derece bazında satış özeti (yalnızca son 60 günde satışı olan dereceler) ve son 30 günün günlük satışları."""
+    if not isinstance(e, dict):
+        return None
+    from datetime import timedelta
+    cut30 = (datetime.now(timezone.utc).date() - timedelta(days=30)).isoformat()
+    cut60 = (datetime.now(timezone.utc).date() - timedelta(days=60)).isoformat()
+    hist = e.get("priceHistory") or {}
+    out = {}
+    for k, v in (e.get("salesByGrade") or {}).items():
+        if not GRADE_KEY.match(str(k)) or not isinstance(v, dict):
+            continue
+        last = str(v.get("lastSaleDate") or "")[:10]
+        if not last or last < cut60:
+            continue
+        days = []
+        for dt, x in (hist.get(k) or {}).items():
+            if str(dt) >= cut30 and isinstance(x, dict) and x.get("count"):
+                days.append([str(dt)[:10], int(x.get("count") or 0), round(float(x.get("average") or 0), 2)])
+        days.sort()
+
+        def num(x):
+            try:
+                return round(float(x), 2) if x is not None else None
+            except (TypeError, ValueError):
+                return None
+        out[k] = {"n": v.get("count"), "med": num(v.get("medianPrice")), "avg": num(v.get("averagePrice")),
+                  "min": num(v.get("minPrice")), "max": num(v.get("maxPrice")), "last": last,
+                  "trend": v.get("marketTrend"), "vol": num(v.get("dailyVolume7Day")),
+                  "src": v.get("salesBySource"), "d": days}
+    if not out:
+        return None
+    return {"at": TODAY, "from": str(e.get("dateRangeStart") or "")[:10], "to": str(e.get("dateRangeEnd") or "")[:10],
+            "monthly": (e.get("salesVelocity") or {}).get("monthlyTotal"), "g": out}
+
+
+SALES_COL = [True]
+
+
 def tracked_card_ids():
     """Portföylerdeki eşleşmiş kartlar + istek listelerindeki kartlar."""
     matched = sb("GET", "holdings", {"select": "card_id", "match_status": "eq.matched", "card_id": "not.is.null"}) or []
@@ -458,6 +497,14 @@ def price_cards(budget, cap=None):
                 "psa9": p9, "psa9_conf": c9, "psa9_n": n9, "grades": all_grades(grades)}])
             sb("PATCH", "cards", {"id": f"eq.{c['id']}"}, {
                 "last_priced": TODAY, "image": d.get("imageCdnUrl400") or d.get("imageUrl"), "url": d.get("tcgPlayerUrl")})
+            if SALES_COL[0]:
+                try:
+                    sb("PATCH", "cards", {"id": f"eq.{c['id']}"}, {"sales": sales_summary(d.get("ebay"))})
+                except RuntimeError as e:  # 020_card_sales.sql henüz çalıştırılmamış
+                    if "sales" in str(e) or "PGRST204" in str(e):
+                        SALES_COL[0] = False
+                    else:
+                        note_error("satış özeti", e)
             done += 1
         except Exception as e:  # noqa: BLE001
             note_error(f"fiyat kaydı (kart {c['id']})", e)
