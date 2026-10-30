@@ -28,6 +28,7 @@ jobs:
           SUPABASE_URL: https://bsifvfcnktofugaspsls.supabase.co
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           PPT_KEY: ${{ secrets.POKEMONPRICETRACKER_API_KEY }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           PPT_DAILY_BUDGET: "20000"
           MARKET_TOP_EN: "2000"
           MARKET_TOP_JP: "500"

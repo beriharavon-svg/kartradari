@@ -57,6 +57,35 @@ def tracked_ids():
         return set()
 
 
+WARN_MB = float(os.environ.get("DB_WARN_MB", "300"))
+
+
+def check_size():
+    """Ücretsiz planda veritabanı sınırı 500 MB: 300 MB'ı geçince info@holotique.com'a günde bir uyarı."""
+    try:
+        size = s.sb("POST", "rpc/db_size", body={}) or {}
+    except Exception as e:  # noqa: BLE001
+        STATUS["db_size"] = "024_db_size.sql henüz çalıştırılmamış" if "db_size" in str(e) else str(e)[:120]
+        return
+    STATUS["db_size"] = size
+    mb = float(size.get("total_mb") or 0)
+    if mb < WARN_MB or not s.SMTP_PASSWORD:
+        return
+    import smtplib, ssl
+    from email.message import EmailMessage
+    m = EmailMessage()
+    m["Subject"] = f"Holotique veritabanı {mb:.0f} MB (sınır 500 MB)"
+    m["From"] = s.SMTP_USER
+    m["To"] = s.SMTP_USER
+    m.set_content(f"Veritabanı boyutu {mb:.0f} MB'a ulaştı. Ücretsiz plandaki sınır 500 MB.\n\nEn büyük tablolar (MB):\n"
+                  + "\n".join(f"- {k}: {v}" for k, v in sorted((size.get("tables") or {}).items(), key=lambda x: -x[1]))
+                  + "\n\nSeçenekler: piyasa takibindeki kart sayısını ya da saklama süresini azaltmak, veya Supabase Pro plana geçmek.")
+    with smtplib.SMTP_SSL(s.SMTP_HOST, 465, context=ssl.create_default_context(), timeout=30) as srv:
+        srv.login(s.SMTP_USER, s.SMTP_PASSWORD)
+        srv.send_message(m)
+    STATUS["db_warning_sent"] = True
+
+
 def main():
     budget = MarketBudget()
     want = [(p["product_id"], "english") for p in top_products("Pokemon", TOP_EN)] + \
@@ -133,6 +162,7 @@ def main():
         except Exception as e:  # noqa: BLE001
             STATUS["errors"].append(f"saklama: {str(e)[:120]}")
             break
+    check_size()
     STATUS.update({"priced": done, "skipped": skipped, "no_data": missing, "credits": budget.used,
                    "minutes": round((time.time() - t0) / 60, 1), "errors": STATUS["errors"][:10]})
     with open(os.environ.get("STATUS_FILE", "market-status.json"), "w", encoding="utf-8") as f:
