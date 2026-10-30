@@ -338,6 +338,7 @@ a.btn{text-decoration:none}
 .sch{position:relative;border:1px solid var(--line);border-radius:12px;padding:12px 12px 8px;min-width:0}.sch .label{margin-bottom:6px}
 .sch .gl{stroke:var(--line);stroke-width:1}.sch .axis0{stroke:var(--muted);stroke-width:1}.sch .tick{fill:var(--muted);font:11px var(--f-mono)}
 .sch .bpos{fill:var(--good)}.sch .bneg{fill:var(--bad)}.sch .hot{opacity:.75}.sch .dpos{fill:var(--good);stroke:var(--surface);stroke-width:2}.sch .dneg{fill:var(--bad);stroke:var(--surface);stroke-width:2}
+.sch .cline{stroke-width:2;stroke-linejoin:round}.sch .lpos{stroke:var(--good)}.sch .lneg{stroke:var(--bad)}.sch .apos{fill:var(--good-soft);opacity:.7}.sch .aneg{fill:var(--bad-soft);opacity:.7}
 .ctip{position:absolute;z-index:5;pointer-events:none;background:var(--ink);color:var(--bg);border-radius:8px;padding:7px 10px;font-size:.78rem;line-height:1.45;white-space:nowrap;box-shadow:var(--shadow)}
 .sportf{grid-column:1/-1;border-top:1px dashed var(--line);padding-top:10px}
 .tog{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:.9rem}
@@ -1180,6 +1181,28 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
       hit.addEventListener('mousemove',function(ev){c.setAttribute('r',8);var h=p.r.h,cd=h.cards||{};tip.show(ev,[(cd.name||h.name_input)+' · '+h.grade,p.x+' gün elde tutuldu','Getiri: '+pct(p.y)+' ('+usd(p.r.pl,true)+')']);});
       hit.addEventListener('mouseleave',function(){c.setAttribute('r',6);tip.hide();});hit.addEventListener('click',function(){openSell(p.r.h)});svg.appendChild(hit);});
     box.appendChild(svg);return true;}
+  // Kümülatif gerçekleşen kâr/zarar: her satışla bir basamak (zaman ekseni gerçek tarihlere göre)
+  function cumLine(box,rows){
+    var pts=rows.slice().sort(function(a,b){return String(a.h.sold_at).localeCompare(String(b.h.sold_at))}),c=0;
+    var D=pts.map(function(r){c+=r.pl;return {t:new Date(String(r.h.sold_at).slice(0,10)+'T12:00:00Z').getTime(),v:c,r:r};});if(!D.length)return;
+    var t0=D[0].t-864e5*3,t1=Math.max(D[D.length-1].t,Date.now())+864e5;
+    var W=Math.max(320,box.clientWidth||900),H=220,P={l:56,r:14,t:14,b:26},iw=W-P.l-P.r,ih=H-P.t-P.b;
+    var vs=D.map(function(d){return d.v}).concat([0]),mx=Math.max.apply(null,vs),mn=Math.min.apply(null,vs),pad=(mx-mn||1)*0.08;mx+=pad;mn=mn<0?mn-pad:0;
+    var X=function(t){return P.l+(t-t0)/(t1-t0)*iw},Y=function(v){return P.t+(mx-v)/(mx-mn)*ih};
+    var svg=sv('svg',{viewBox:'0 0 '+W+' '+H,width:'100%',height:H,role:'img','aria-label':'Kümülatif gerçekleşen kâr/zarar'});
+    [mx-pad,0].concat(mn<0?[mn]:[]).filter(function(v,i,a){return a.indexOf(v)===i}).forEach(function(v){svg.appendChild(sv('line',{x1:P.l,x2:W-P.r,y1:Y(v),y2:Y(v),class:v===0?'axis0':'gl'}));var t=sv('text',{x:P.l-6,y:Y(v)+4,'text-anchor':'end',class:'tick'});t.textContent=kusd(v);svg.appendChild(t);});
+    // basamaklı çizgi: satışa kadar düz, satış gününde sıçrar; bugüne kadar uzar
+    var d='M'+X(t0)+','+Y(0),prev=0;D.forEach(function(p){d+=' H'+X(p.t)+' V'+Y(p.v);prev=p.v;});d+=' H'+X(t1);
+    var area=d+' V'+Y(0)+' Z';
+    svg.appendChild(sv('path',{d:area,class:prev>=0?'apos':'aneg'}));
+    svg.appendChild(sv('path',{d:d,class:'cline '+(prev>=0?'lpos':'lneg'),fill:'none'}));
+    var tip=tipLayer(box),loc=window.HQ_LANG==='en'?'en-GB':'tr-TR';
+    D.forEach(function(p){var dot=sv('circle',{cx:X(p.t),cy:Y(p.v),r:4.5,class:p.r.pl>=0?'dpos':'dneg'});svg.appendChild(dot);
+      var hit=sv('circle',{cx:X(p.t),cy:Y(p.v),r:13,fill:'transparent',style:'cursor:pointer'}),h=p.r.h,cd=h.cards||{};
+      hit.addEventListener('mousemove',function(ev){dot.setAttribute('r',7);tip.show(ev,[new Date(p.t).toLocaleDateString(loc),(cd.name||h.name_input)+' · '+h.grade,'Bu satış: '+usd(p.r.pl,true),'Toplam: '+usd(p.v,true)]);});
+      hit.addEventListener('mouseleave',function(){dot.setAttribute('r',4.5);tip.hide();});hit.addEventListener('click',function(){openSell(h)});svg.appendChild(hit);});
+    [t0+864e5*3,t1-864e5].forEach(function(t,i){var tx=sv('text',{x:X(t),y:H-8,'text-anchor':i?'end':'start',class:'tick'});tx.textContent=i?(window.HQ_LANG==='en'?'Today':'Bugün'):new Date(t).toLocaleDateString(loc,{month:'short',year:'numeric'});svg.appendChild(tx);});
+    box.appendChild(svg);}
   function salesAnalytics(rows){
     var pr=rows.filter(function(r){return r.sale!=null});if(!pr.length)return null;
     var wrap=el('div',{class:'sana'});
@@ -1200,9 +1223,10 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
       el('span',{class:'mv'},[el('b',{class:'num '+cls(r.pl),text:usd(r.pl,true)}),r.cost?el('span',{class:'s',text:pct(r.pl/r.cost*100)}):null])]);}
     if(pr.length>1)wrap.appendChild(el('div',{class:'sbests'},[mini('En iyi satış',best),mini('En kötü satış',worst)]));
     // 3) Grafikler
+    var c0=el('div',{class:'sch'},[el('div',{class:'label',text:'Kümülatif gerçekleşen kâr/zarar'})]);wrap.appendChild(c0);
     var cg=el('div',{class:'scharts'}),c1=el('div',{class:'sch'},[el('div',{class:'label',text:'Aylık gerçekleşen kâr/zarar'})]),c2=el('div',{class:'sch'},[el('div',{class:'label',text:'Elde tutma süresi ve getiri'})]);
     cg.appendChild(c1);cg.appendChild(c2);wrap.appendChild(cg);
-    requestAnimationFrame(function(){monthBars(c1,pr);if(!holdScatter(c2,pr))c2.remove();else c2.appendChild(el('p',{class:'note',style:'margin:4px 0 0',text:'Her nokta bir satış. Sağa gittikçe kartı daha uzun tutmuşsun; yukarıdakiler kârlı.'}));});
+    requestAnimationFrame(function(){cumLine(c0,pr);monthBars(c1,pr);if(!holdScatter(c2,pr))c2.remove();else c2.appendChild(el('p',{class:'note',style:'margin:4px 0 0',text:'Her nokta bir satış. Sağa gittikçe kartı daha uzun tutmuşsun; yukarıdakiler kârlı.'}));});
     return wrap;}
   function exportSales(rows,Y){
     if(!window.XLSX){alert('Excel aracı yüklenemedi. Sayfayı yenileyip tekrar dene.');return;}
