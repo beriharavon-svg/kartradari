@@ -272,6 +272,10 @@ def momentum(g, start=None, today=None):
     return {"pct": (pR / pB - 1) * 100, "volx": (nR / 14) / (nB / bdays), "nR": nR, "pR": pR, "pB": pB, "bdays": bdays}
 
 
+def ggroup(k):
+    return "psa10" if k == "psa10" else "psa9" if k == "psa9" else k[:3] if k[:3] in ("bgs", "cgc") else "diger"
+
+
 def weekly(g, today=None):
     """Son 4 haftanın (eskiden yeniye) satış adedi ve ağırlıklı ortalama fiyatı."""
     t = today or datetime.now(timezone.utc).date()
@@ -300,6 +304,21 @@ def steadying(g):
     return {"w": W, "a": a, "b": b, "nsum": sum(n)}
 
 
+MARKET_JS = """<script>
+(function(){
+  var KEY='hq-mkt-grade',f='psa10';try{f=new URLSearchParams(location.search).get('derece')||localStorage.getItem(KEY)||'psa10';}catch(e){}
+  function apply(){
+    document.querySelectorAll('.gfilter button').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.f===f));});
+    document.querySelectorAll('.mksec').forEach(function(sec){var box=sec.querySelector('.mkts'),max=+box.dataset.max||15,n=0;
+      box.querySelectorAll('.mkt').forEach(function(m){var ok=(f==='all'||m.dataset.g===f)&&n<max;m.hidden=!ok;if(ok)n++;});
+      sec.querySelector('.mkempty').hidden=n>0;});
+  }
+  document.querySelectorAll('.gfilter button').forEach(function(b){b.addEventListener('click',function(){f=b.dataset.f;try{localStorage.setItem(KEY,f);}catch(e){}apply();});});
+  apply();
+})();
+</script>"""
+
+
 def build_market(chosen):
     """Piyasada bu hafta: takip edilen kartlarda son 14 günün eBay satışları."""
     try:
@@ -315,14 +334,14 @@ def build_market(chosen):
             st = steadying(g)
             if st:
                 steady.append({**st, "name": c.get("name") or "", "set": c.get("set_name") or "", "number": c.get("number") or "",
-                               "img": c.get("image_cached") or c.get("image"), "grade": grade_label(k),
+                               "img": c.get("image_cached") or c.get("image"), "grade": grade_label(k), "gk": ggroup(k),
                                "href": "/" + card_path(chosen[pid]) if pid in chosen else ""})
             m = momentum(g, (c.get("sales") or {}).get("from"))
             if not m:
                 continue
             href = "/" + card_path(chosen[pid]) if pid in chosen else ""
             items.append({**m, "name": c.get("name") or "", "set": c.get("set_name") or "", "number": c.get("number") or "",
-                          "img": c.get("image_cached") or c.get("image"), "grade": grade_label(k), "href": href, "game": c.get("game")})
+                          "img": c.get("image_cached") or c.get("image"), "grade": grade_label(k), "gk": ggroup(k), "href": href, "game": c.get("game")})
 
     def row(x):
         up = x["pct"] > 0
@@ -332,17 +351,26 @@ def build_market(chosen):
         inner = (f'{img}<span class="t"><span class="nm">{e(x["name"])}</span><span class="sub">{e(x["grade"])} · {e(sub)}</span></span>'
                  f'<span class="mv"><b class="num {"pos" if up else "neg"}">{"▲" if up else "▼"} {abs(x["pct"]):.0f}%</b>'
                  f'<span class="s">{usd(x["pB"])} → {usd(x["pR"])}</span><span class="s">{x["nR"]} satış / 14 gün{demand}</span></span>')
-        return f'<a class="mkt" href="{e(x["href"])}">{inner}</a>' if x["href"] else f'<div class="mkt">{inner}</div>'
+        return f'<a class="mkt" data-g="{x["gk"]}" href="{e(x["href"])}">{inner}</a>' if x["href"] else f'<div class="mkt" data-g="{x["gk"]}">{inner}</div>'
 
-    ups = sorted([x for x in items if x["pct"] >= 10], key=lambda x: -x["pct"])[:30]
-    downs = sorted([x for x in items if x["pct"] <= -10], key=lambda x: x["pct"])[:15]
-    busy = sorted(items, key=lambda x: -x["nR"])[:15]
+    # Her derece grubundan yeterince kart üretilir; sayfadaki derece filtresi ilk N tanesini gösterir.
+    def per_group(lst, n):
+        out, cnt = [], {}
+        for x in lst:
+            if cnt.get(x["gk"], 0) < n:
+                cnt[x["gk"]] = cnt.get(x["gk"], 0) + 1
+                out.append(x)
+        return out
 
-    def sec(title, lst, note=""):
+    ups = per_group(sorted([x for x in items if x["pct"] >= 10], key=lambda x: -x["pct"]), 30)
+    downs = per_group(sorted([x for x in items if x["pct"] <= -10], key=lambda x: x["pct"]), 15)
+    busy = per_group(sorted(items, key=lambda x: -x["nR"]), 15)
+
+    def sec(title, lst, note="", show=15):
         if not lst:
             return ""
-        return (f'<section class="more"><h2>{e(title)}</h2>' + (f'<p class="note">{e(note)}</p>' if note else "") +
-                '<div class="mkts">' + "".join(row(x) for x in lst) + "</div></section>")
+        return (f'<section class="more mksec"><h2>{e(title)}</h2>' + (f'<p class="note">{e(note)}</p>' if note else "") +
+                f'<div class="mkts" data-max="{show}">' + "".join(row(x) for x in lst) + '</div><p class="note mkempty" hidden>Bu derecede kart yok.</p></section>')
 
     body = (f'<h1 style="margin-top:22px">Piyasada bu hafta</h1>'
             f'<p class="muted" style="max-width:70ch">En değerli Pokemon kartlarında ve Holotique kullanıcılarının takip ettiği kartlarda son 14 günün eBay ve Fanatics Collect satışları, '
@@ -354,22 +382,27 @@ def build_market(chosen):
         img = f'<img src="{e(x["img"])}" alt="" loading="lazy" referrerpolicy="no-referrer">' if x.get("img") else '<span class="ph"></span>'
         sub = " · ".join(v for v in [x["set"], x["number"]] if v)
         why = "dengeleniyor" if x["a"] else "satıcılar çekiliyor"
-        path = " → ".join(usd(p) for _, p in W if p is not None)
+        path = "$" + " → ".join(f"{p:,.0f}" if p >= 10 else f"{p:,.2f}" for _, p in W if p is not None)
         inner = (f'{img}<span class="t"><span class="nm">{e(x["name"])}</span><span class="sub">{e(x["grade"])} · {e(sub)}</span>'
-                 f'<span class="sub">{e(path)}</span></span>'
+                 f'<span class="sub path">{e(path)}</span></span>'
                  f'<span class="mv"><b class="num">{usd(W[3][1])}</b><span class="s">{e(why)}</span>'
                  f'<span class="s">{" · ".join(str(n) for n, _ in W)} satış/hafta</span></span>')
-        return f'<a class="mkt" href="{e(x["href"])}">{inner}</a>' if x["href"] else f'<div class="mkt">{inner}</div>'
+        return f'<a class="mkt" data-g="{x["gk"]}" href="{e(x["href"])}">{inner}</a>' if x["href"] else f'<div class="mkt" data-g="{x["gk"]}">{inner}</div>'
 
     steady.sort(key=lambda x: -x["nsum"])
     steady_html = ""
     if steady:
-        steady_html = ('<section class="more"><h2>Dengelenen kartlar</h2><p class="note">Düşüşten sonra son iki haftadır haftalık ortalaması '
+        steady_html = ('<section class="more mksec"><h2>Dengelenen kartlar</h2><p class="note">Düşüşten sonra son iki haftadır haftalık ortalaması '
                        'düşmeyen ya da satış adedi azalırken fiyatı sabit kalan kartlar. Fiyatlar son 4 haftanın haftalık ortalamasıdır. '
-                       'Bir dönüş işareti olabilir; garantisi değildir.</p><div class="mkts">' + "".join(srow(x) for x in steady[:24]) + "</div></section>")
-    content = sec("Yükselenler", ups) + sec("Düşenler", downs) + steady_html + sec("En çok satılanlar", busy, "Son 14 günde en çok satış yapılan kartlar ve dereceler.")
+                       'Bir dönüş işareti olabilir; garantisi değildir.</p><div class="mkts" data-max="24">' + "".join(srow(x) for x in per_group(steady, 24)) + '</div><p class="note mkempty" hidden>Bu derecede kart yok.</p></section>')
+    content = sec("Yükselenler", ups, show=30) + sec("Düşenler", downs) + steady_html + sec("En çok satılanlar", busy, "Son 14 günde en çok satış yapılan kartlar ve dereceler.")
     if not content:
         content = '<p class="muted">Satış verileri toplanıyor; liste birkaç gün içinde dolacak.</p>'
+    else:
+        content = ('<div class="gfilter" role="group" aria-label="Derece"><span class="label">Derece</span>'
+                   + "".join(f'<button type="button" data-f="{v}" aria-pressed="{"true" if v == "psa10" else "false"}">{e(t)}</button>'
+                             for v, t in (("psa10", "PSA 10"), ("psa9", "PSA 9"), ("bgs", "BGS"), ("cgc", "CGC"), ("diger", "Diğer"), ("all", "Tümü")))
+                   + "</div>" + content + MARKET_JS)
     write("piyasa", page("Piyasada bu hafta: yükselen ve düşen kartlar | Holotique",
                          "Pokemon ve One Piece kartlarında son 14 günün eBay satışlarına göre fiyatı yükselen, düşen ve en çok satılan kartlar.",
                          "piyasa", body + content))

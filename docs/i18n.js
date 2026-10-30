@@ -144,6 +144,7 @@
         'Prices: TCGplayer (raw) and eBay sales (PSA) via PokemonPriceTracker. The PSA price is the weighted sale price of the last 7 days; confidence depends on the number of sales. FX rates: European Central Bank (Frankfurter). Not investment advice.',
       '· Alış fiyatların ve sertifika numaraların yalnızca sana görünür.': '· Your purchase prices and cert numbers are visible only to you.',
       'Uygulamayı yükle': 'Install app',
+      'Bu derecede kart yok.': 'No cards in this grade.', 'Diğer': 'Other', 'Derece': 'Grade',
       'Dengelenen kartlar': 'Steadying cards', 'dengeleniyor': 'steadying', 'satıcılar çekiliyor': 'sellers pulling back',
       'Düşüşten sonra son iki haftadır haftalık ortalaması düşmeyen ya da satış adedi azalırken fiyatı sabit kalan kartlar. Fiyatlar son 4 haftanın haftalık ortalamasıdır. Bir dönüş işareti olabilir; garantisi değildir.': 'Cards whose weekly average has not fallen for two weeks after a decline, or whose price holds while sales volume drops. Prices are weekly averages for the last 4 weeks. This may signal a turn; it is not a guarantee.',
       'Kümülatif gerçekleşen kâr/zarar': 'Cumulative realised P/L',
