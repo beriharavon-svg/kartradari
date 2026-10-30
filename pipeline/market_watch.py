@@ -15,7 +15,7 @@ import sync_psa as s  # noqa: E402
 TOP_EN = int(os.environ.get("MARKET_TOP_EN", "2000"))
 TOP_JP = int(os.environ.get("MARKET_TOP_JP", "500"))
 CAP = int(os.environ.get("MARKET_BUDGET", "5200"))
-KEEP_DAYS = 150          # yalnızca piyasa takibindeki kartların günlük fiyat kayıtları bu kadar gün tutulur
+KEEP_DAYS = 90           # yalnızca piyasa takibindeki kartların günlük fiyat kayıtları bu kadar gün tutulur
 KEEP_GRADES = {"psa10", "psa9", "psa8", "bgs10", "bgs9_5", "cgc10", "cgc9_5", "tag10", "sgc10"}
 STATUS = {"run_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "errors": []}
 
@@ -55,6 +55,13 @@ def tracked_ids():
         return s.tracked_card_ids()
     except Exception:  # noqa: BLE001
         return set()
+
+
+def trim_sales(sm):
+    """Piyasa takibindeki kartlarda satış özetinin yalnızca ana dereceleri saklanır (yer tasarrufu)."""
+    if isinstance(sm, dict) and isinstance(sm.get("g"), dict):
+        sm["g"] = {k: v for k, v in sm["g"].items() if k in KEEP_GRADES}
+    return sm
 
 
 WARN_MB = float(os.environ.get("DB_WARN_MB", "300"))
@@ -144,7 +151,7 @@ def main():
             prev = (s.sb("GET", "cards", {"select": "sales", "id": f"eq.{cid}"}) or [{}])[0].get("sales") if c else None
             s.sb("PATCH", "cards", {"id": f"eq.{cid}"}, {
                 "last_priced": s.TODAY, "image": d.get("imageCdnUrl400") or d.get("imageUrl"), "url": d.get("tcgPlayerUrl"),
-                "sales": s.merge_sales(prev, s.sales_summary(d.get("ebay")))})
+                "sales": trim_sales(s.merge_sales(prev, s.sales_summary(d.get("ebay"))))})
             done += 1
             if done % 100 == 0:
                 budget.save()
