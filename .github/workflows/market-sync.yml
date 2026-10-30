@@ -33,6 +33,7 @@ jobs:
           MARKET_TOP_EN: "2000"
           MARKET_TOP_JP: "500"
           MARKET_BUDGET: "5200"
+          DB_WARN_MB: "420"
           STATUS_FILE: ${{ runner.temp }}/market-status.json
         run: python pipeline/market_watch.py
 
