@@ -321,6 +321,13 @@ a.btn{text-decoration:none}
 .mkt:hover{border-color:var(--accent)}.mkt img,.mkt .ph{width:40px;height:56px;object-fit:contain;border-radius:4px;background:var(--surface-2)}
 .mkt>span{display:flex;flex-direction:column;min-width:0}.mkt .nm{font-weight:600;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25}.mkt .sub{font-size:.76rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mkt .mv{align-items:flex-end;text-align:right}.mkt .mv .s{font-size:.72rem;color:var(--muted);white-space:nowrap}
+.sugwrap{position:relative}
+.sugg{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);max-height:360px;overflow:auto;padding:4px}
+.sopt{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;padding:6px 8px;border:0;background:none;border-radius:8px;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.sopt:hover,.sopt:focus{background:var(--accent-soft)}.sopt img,.sopt .ph{width:34px;height:47px;object-fit:contain;border-radius:3px;background:var(--surface-2)}
+.sopt>span{display:flex;flex-direction:column;min-width:0}.sopt .nm{font-weight:600;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sopt .sub{font-size:.76rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sopt .p{font-size:.8rem;color:var(--muted)}
+.snote{font-size:.74rem;color:var(--muted);padding:6px 8px 4px;border-top:1px solid var(--line);margin-top:4px}
+.picked{grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.84rem;background:var(--good-soft);color:var(--good);border-radius:8px;padding:8px 10px}.picked .ok{font-weight:700}.picked .linkbtn{margin-left:auto}
 .sportf{grid-column:1/-1;border-top:1px dashed var(--line);padding-top:10px}
 .tog{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:.9rem}
 .tog input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--accent);flex:none}
@@ -906,6 +913,33 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
                     fMsg.textContent='Bilgiler dolduruldu. Kontrol et; derece ve alış fiyatını kendi kartına göre seç.';});});
               fRes.appendChild(b);});});}
       fFindBtn.addEventListener('click',doFind);fFind.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();doFind();}});
+      // Kart önerisi: adı yazarken katalogdan öneri; seçince set, numara, dil dolar ve kart birebir eşleşir
+      var pickPid=x.product_id||null,sug=el('div',{class:'sugg',hidden:true,role:'listbox'}),picked=el('div',{class:'picked',hidden:true}),sugT=null,sugSeq=0,filling=false;
+      function catGame(){var g=fGame.value;if(g==='Pokemon')return fLang.value==='japanese'?'Pokemon JP':'Pokemon';return ['One Piece','Magic','Riftbound','Lorcana'].indexOf(g)>=0?g:null;}
+      function drawPicked(c){picked.innerHTML='';if(!pickPid){picked.hidden=true;return;}picked.hidden=false;
+        picked.appendChild(el('span',{class:'ok',text:'✓'}));picked.appendChild(el('span',{text:c?('Listeden seçildi: '+c.name+' · '+(c.set_name||'')+(c.number?' · '+c.number:'')):'Listeden seçildi; kart birebir eşleşecek.'}));
+        picked.appendChild(el('button',{type:'button',class:'linkbtn',text:'Kaldır',onclick:function(){pickPid=null;drawPicked();}}));}
+      function cleanName(n){return String(n||'').replace(/\s*-\s*[\w\/-]+$/,'').replace(/\s*\(\d+\)\s*$/,'');}
+      function choose(c){filling=true;pickPid=c.product_id;
+        if(c.game==='Pokemon JP'){fGame.value='Pokemon';fLang.value='japanese';}else{fGame.value=c.game;if(c.game!=='Pokemon')fLang.value='english';}
+        fName.value=cleanName(c.name);fSet.value=c.set_name||'';fNum.value=c.number?String(c.number).split('/')[0]:'';
+        drawGame();filling=false;sug.hidden=true;drawPicked(c);}
+      function suggest(){var g=catGame(),v=fName.value.trim();if(!g||v.length<2||fGame.value==='Sports'){sug.hidden=true;return;}
+        var q=[v,fNum.value.trim()].filter(Boolean).join(' '),my=++sugSeq;
+        var pk=fGame.value==='Pokemon';sb.rpc('search_cards',{q:q,g:pk?null:g,gid:null,sort:'relevance',lim:pk?16:8,off:0}).then(function(r){if(my!==sugSeq)return;sug.innerHTML='';
+          var rows=((r&&r.data)||[]).filter(function(c){return !pk||c.game==='Pokemon'||c.game==='Pokemon JP'}).slice(0,8);if(!rows.length){sug.hidden=true;return;}
+          rows.forEach(function(c){sug.appendChild(el('button',{type:'button',class:'sopt',role:'option',onmousedown:function(e){e.preventDefault();},onclick:function(){choose(c)}},[
+            c.image?el('img',{src:c.image,alt:'',loading:'lazy',referrerpolicy:'no-referrer'}):el('span',{class:'ph'}),
+            el('span',{style:'min-width:0'},[el('span',{class:'nm',text:c.name}),el('span',{class:'sub',text:(c.set_name||'')+(c.number?' · '+c.number:'')+(c.game==='Pokemon JP'?' · JP':'')})]),
+            el('span',{class:'num p',text:c.market!=null?usd(Number(c.market)):''})]));});
+          sug.appendChild(el('div',{class:'snote',text:'Listede yoksa yazmaya devam et; kart birkaç saat içinde eşleştirilir.'}));
+          sug.hidden=false;},function(){});}
+      fName.setAttribute('autocomplete','off');
+      fName.addEventListener('input',function(){if(filling)return;if(pickPid){pickPid=null;drawPicked();}clearTimeout(sugT);sugT=setTimeout(suggest,280);});
+      fName.addEventListener('focus',function(){if(fName.value.trim().length>=2&&!pickPid){clearTimeout(sugT);sugT=setTimeout(suggest,150);}});
+      fName.addEventListener('blur',function(){setTimeout(function(){sug.hidden=true;},150);});
+      fName.addEventListener('keydown',function(e){if(e.key==='Escape')sug.hidden=true;});
+      [fSet,fNum].forEach(function(f){f.addEventListener('input',function(){if(!filling&&pickPid){pickPid=null;drawPicked();}});});
       var labName=null,labSet=null,labLang=null;
       function drawGame(){var sp=fGame.value==='Sports'&&sportOk;sportBox.hidden=!sp;finder.hidden=!sp;if(labLang)labLang.hidden=sp;
         if(labName)labName.firstChild.textContent=sp?'Oyuncu':'Kart adı';if(labSet)labSet.firstChild.textContent=sp?'Yıl ve set':'Set';
@@ -923,9 +957,9 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
       function drawSale(){saleFields.hidden=!fSale.checked;if(fSale.checked)drawMkt();}fSale.addEventListener('change',drawSale);drawSale();
       var saleBox=saleOk?el('div',{class:'salebox'},[el('label',{class:'tog',for:'aSale'},[fSale,el('span',null,[el('b',{text:'Satılık'}),el('span',{class:'note',style:'display:block',text:'Vitrininde satış fiyatıyla görünür; alıcılar sana WhatsApp ya da Instagram’dan yazar.'})])]),saleFields]):null;
       var msg=el('div',{class:'msg',hidden:true});
-      labName=field('aName','Kart adı',fName,true);labSet=field('aSet','Set',fSet,true);labLang=field('aLang','Dil',fLang);
+      labName=field('aName','Kart adı',el('div',{class:'sugwrap'},[fName,sug]),true);labSet=field('aSet','Set',fSet,true);labLang=field('aLang','Dil',fLang);
       var form=el('form',{class:'form-grid'},[field('aGame','Oyun',fGame),labName,labSet,field('aNum','Kart numarası',fNum),labLang,field('aGrade','Derece',fGrade),field('aCert','Sertifika no',fCert),field('aQty','Adet',fQty),field('aCost','Alış fiyatı $ (adet)',fCost),field('aDate','Alış tarihi',fDate)]);
-      form.insertBefore(finder,form.children[1]);form.appendChild(sportBox);drawGame();
+      form.insertBefore(finder,form.children[1]);form.insertBefore(picked,labSet);form.appendChild(sportBox);drawGame();drawPicked();
       if(saleBox)form.appendChild(saleBox);
       var save=el('button',{class:'btn span2',type:'submit',text:h?'Kaydet':'Ekle'});form.appendChild(save);
       form.addEventListener('submit',function(e){e.preventDefault();save.disabled=true;
@@ -935,8 +969,10 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
         if(sp){row.language='english';row.sport=fSport.value;row.variant=fVariant.value.trim()||null;row.manual_value=fValue.value===''?null:Number(fValue.value);}
         var up=sp&&fPhoto.files&&fPhoto.files[0]?uploadPhoto(fPhoto.files[0]):Promise.resolve(photoUrl);
         up.then(function(url){if(sp)row.photo_url=url||null;
+        if(!sp&&(pickPid||(h&&h.product_id)))row.product_id=pickPid||null;
         var q=h?sb.from('holdings').update(row).eq('id',h.id):sb.from('holdings').insert(row);
-        return q;},function(err){return {error:{message:'Fotoğraf yüklenemedi: '+(err&&err.message||err)}};}).then(function(r){save.disabled=false;if(r.error){msg.className='msg err';msg.textContent=r.error.message;msg.hidden=false;return;}close();Promise.resolve(after&&after()).then(load,load);});});
+        // 023 çalıştırılmamışsa product_id sütunu yok: onsuz tekrar dene
+        return q.then(function(r){if(r.error&&'product_id' in row&&/product_id/.test(r.error.message||'')){delete row.product_id;return h?sb.from('holdings').update(row).eq('id',h.id):sb.from('holdings').insert(row);}return r;});},function(err){return {error:{message:'Fotoğraf yüklenemedi: '+(err&&err.message||err)}};}).then(function(r){save.disabled=false;if(r.error){msg.className='msg err';msg.textContent=r.error.message;msg.hidden=false;return;}close();Promise.resolve(after&&after()).then(load,load);});});
       p.appendChild(form);p.appendChild(msg);
       p.appendChild(el('p',{class:'note',style:'margin:0',text:'Kartın sol ya da sağ alt köşesindeki numarayı yazmak eşleşmeyi hızlandırır. Kart birkaç saat içinde fiyatlanır.'}));
     });

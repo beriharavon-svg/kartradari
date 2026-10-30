@@ -184,6 +184,34 @@ def _pg_like(v):
     return re.sub(r"[*,()]", " ", str(v or "")).strip()
 
 
+def match_exact(h, budget):
+    """Kullanıcı kart eklerken öneriden seçtiyse (product_id) tahmin yok: doğrudan o kart."""
+    pid = h.get("product_id")
+    rows = _cat_get({"product_id": f"eq.{pid}"})
+    c = rows[0] if rows else None
+    game = (h.get("game") or "Pokemon").strip()
+    cgame = catalog_game(game)
+    if cgame or (c and c.get("game") not in ("Pokemon", "Pokemon JP")):
+        if not c:
+            return None, "Seçilen kart katalogda bulunamadı."
+        row = {"source": "tcgcsv", "ext_id": str(pid), "game": c.get("game") or cgame, "language": "english",
+               "name": c.get("name") or "", "set_name": c.get("set_name"), "number": c.get("number"),
+               "rarity": c.get("rarity"), "image": c.get("image"), "url": c.get("url")}
+        res = sb("POST", "cards", {"on_conflict": "source,ext_id"}, [row], prefer="resolution=merge-duplicates,return=representation")
+        return res[0]["id"], f"{c.get('set_name')} · {c.get('number')} · yalnızca ham fiyat (TCGplayer)"
+    # Pokemon: PSA fiyatları için PokemonPriceTracker kaydı (TCGplayer numarasıyla birebir)
+    lang = "japanese" if (c and c.get("game") == "Pokemon JP") else lang_of(h.get("language"))
+    prev = sb("GET", "cards", {"select": "id,set_name,number", "source": "eq.ppt", "ext_id": f"eq.{pid}", "limit": "1"}) or []
+    if prev:
+        return prev[0]["id"], f"{prev[0].get('set_name')} · {prev[0].get('number')} · listeden seçildi"
+    body = ppt({"tcgPlayerId": str(pid), "language": lang, "limit": 1}, budget, 1)
+    d = body.get("data")
+    d = d[0] if isinstance(d, list) and d else (d if isinstance(d, dict) else None)
+    if not d:
+        return None, None   # bulunamadı: normal eşleştirmeye düş
+    return upsert_card(d, "Pokemon", lang), f"{d.get('setName')} · {d.get('cardNumber')} · listeden seçildi"
+
+
 def match_from_catalog(h, cgame):
     """Kartı gece yüklenen katalogda (TCGCSV) bulur. Kredi harcamaz."""
     name, number, set_in = h.get("name_input") or "", (h.get("number_input") or "").strip(), h.get("set_input") or ""
@@ -253,8 +281,15 @@ def match_pending(budget):
            {"match_status": "pending", "match_note": None})
     params = {"match_status": "eq.pending", "order": "created_at.asc", "limit": "200"}
     try:
-        pending = sb("GET", "holdings", {**params, "select": "id,game,set_input,name_input,number_input,language,psa"}) or []
+        pending = sb("GET", "holdings", {**params, "select": "id,game,set_input,name_input,number_input,language,psa,product_id"}) or []
     except RuntimeError:
+        pending = None
+    if pending is None:
+        try:
+            pending = sb("GET", "holdings", {**params, "select": "id,game,set_input,name_input,number_input,language,psa"}) or []
+        except RuntimeError:
+            pending = None
+    if pending is None:
         pending = sb("GET", "holdings", {**params, "select": "id,game,set_input,name_input,number_input,language"}) or []
     if not pending:
         return 0
@@ -264,6 +299,19 @@ def match_pending(budget):
     memo = {}
     for h in pending:
         game = (h.get("game") or "Pokemon").strip()
+        if h.get("product_id"):
+            try:
+                card_id, note = match_exact(h, budget)
+            except BudgetExhausted:
+                break
+            except Exception as e:  # noqa: BLE001
+                note_error("seçilen kartı eşleştirme", e)
+                card_id, note = None, None
+            if card_id:
+                sb("PATCH", "holdings", {"id": f"eq.{h['id']}"}, {"card_id": card_id, "match_status": "matched", "match_note": note})
+                done += 1
+                log("EŞLEŞTİ (seçilen) " + str(h.get("name_input")), "→", note)
+                continue
         cgame = catalog_game(game)
         if cgame:
             try:
