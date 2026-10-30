@@ -37,7 +37,7 @@ jobs:
           STATUS_FILE: ${{ runner.temp }}/status.json
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           # PokemonPriceTracker API planı (günde 20.000 kredi). Ücretsiz plana dönülürse: 95 / 3 / 0
-          PPT_DAILY_BUDGET: "15000"
+          PPT_DAILY_BUDGET: "13000"
           PPT_SEARCH_LIMIT: "10"
           PPT_HISTORY_DAYS: "180"
         run: python pipeline/sync_psa.py

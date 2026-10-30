@@ -1,0 +1,52 @@
+name: Piyasa takibi (en değerli Pokemon kartları)
+
+on:
+  schedule:
+    # Her gün 03:17 UTC (06:17 Türkiye); GitHub birkaç saat geciktirebilir, günlük iş için sorun değil
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: market-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: En değerli kartların fiyatı ve satış özeti
+        env:
+          SUPABASE_URL: https://bsifvfcnktofugaspsls.supabase.co
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          PPT_KEY: ${{ secrets.POKEMONPRICETRACKER_API_KEY }}
+          PPT_DAILY_BUDGET: "20000"
+          MARKET_TOP_EN: "2000"
+          MARKET_TOP_JP: "500"
+          MARKET_BUDGET: "5200"
+          STATUS_FILE: ${{ runner.temp }}/market-status.json
+        run: python pipeline/market_watch.py
+
+      - name: Çalışma özetini 'market-status' dalına yaz (yalnızca sayılar)
+        if: always()
+        run: |
+          f="${{ runner.temp }}/market-status.json"
+          [ -f "$f" ] || exit 0
+          d=$(mktemp -d); cp "$f" "$d/status.json"; cd "$d"
+          git init -q -b market-status && git add status.json
+          git -c user.name="kartradari-bot" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Piyasa özeti $(date -u +%FT%TZ)"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" market-status
+
+      - name: Piyasa sayfasını yeniden oluştur
+        if: success()
+        run: |
+          curl -sS -X POST -H "Authorization: Bearer ${{ github.token }}" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/pages.yml/dispatches" -d '{"ref":"main"}'

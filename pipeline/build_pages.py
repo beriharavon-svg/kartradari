@@ -272,6 +272,34 @@ def momentum(g, start=None, today=None):
     return {"pct": (pR / pB - 1) * 100, "volx": (nR / 14) / (nB / bdays), "nR": nR, "pR": pR, "pB": pB, "bdays": bdays}
 
 
+def weekly(g, today=None):
+    """Son 4 haftanın (eskiden yeniye) satış adedi ve ağırlıklı ortalama fiyatı."""
+    t = today or datetime.now(timezone.utc).date()
+    out = []
+    for i in range(3, -1, -1):
+        a, z = (t - timedelta(days=7 * (i + 1))).isoformat(), (t - timedelta(days=7 * i)).isoformat()
+        x = [d for d in (g.get("d") or []) if a <= d[0] < z]
+        n = sum(d[1] for d in x)
+        out.append((n, sum(d[1] * d[2] for d in x) / n if n else None))
+    return out
+
+
+def steadying(g):
+    """Dönüş işaretleri (ölçüm, tahmin değil):
+    A) Daha önce belirgin düşmüş, son iki haftadır haftalık ortalaması düşmüyor.
+    B) Satış adedi azalırken fiyat sabit kalıyor (satıcılar çekiliyor)."""
+    W = weekly(g)
+    if any(n < 3 for n, _ in W[1:]) or W[0][1] is None:
+        return None
+    p = [w[1] for w in W]
+    n = [w[0] for w in W]
+    a = p[2] >= p[1] * 0.98 and p[3] >= p[2] * 0.98 and max(p[0], p[1]) >= p[3] * 1.08
+    b = n[3] <= (n[1] + n[2]) / 2 * 0.8 and abs(p[3] / p[2] - 1) <= 0.03 and p[3] >= p[2] * 0.98 and max(p[0], p[1]) >= p[3] * 1.05
+    if not (a or b):
+        return None
+    return {"w": W, "a": a, "b": b, "nsum": sum(n)}
+
+
 def build_market(chosen):
     """Piyasada bu hafta: takip edilen kartlarda son 14 günün eBay satışları."""
     try:
@@ -280,12 +308,18 @@ def build_market(chosen):
         log("Piyasa sayfası atlandı:", ex)
         cards = []
     items = []
+    steady = []
     for c in cards:
         for k, g in ((c.get("sales") or {}).get("g") or {}).items():
+            pid = int(c["ext_id"]) if str(c.get("ext_id") or "").isdigit() else None
+            st = steadying(g)
+            if st:
+                steady.append({**st, "name": c.get("name") or "", "set": c.get("set_name") or "", "number": c.get("number") or "",
+                               "img": c.get("image_cached") or c.get("image"), "grade": grade_label(k),
+                               "href": "/" + card_path(chosen[pid]) if pid in chosen else ""})
             m = momentum(g, (c.get("sales") or {}).get("from"))
             if not m:
                 continue
-            pid = int(c["ext_id"]) if str(c.get("ext_id") or "").isdigit() else None
             href = "/" + card_path(chosen[pid]) if pid in chosen else ""
             items.append({**m, "name": c.get("name") or "", "set": c.get("set_name") or "", "number": c.get("number") or "",
                           "img": c.get("image_cached") or c.get("image"), "grade": grade_label(k), "href": href, "game": c.get("game")})
@@ -311,17 +345,35 @@ def build_market(chosen):
                 '<div class="mkts">' + "".join(row(x) for x in lst) + "</div></section>")
 
     body = (f'<h1 style="margin-top:22px">Piyasada bu hafta</h1>'
-            f'<p class="muted" style="max-width:70ch">Holotique kullanıcılarının takip ettiği kartlarda son 14 günün eBay ve Fanatics Collect satışları, '
+            f'<p class="muted" style="max-width:70ch">En değerli Pokemon kartlarında ve Holotique kullanıcılarının takip ettiği kartlarda son 14 günün eBay ve Fanatics Collect satışları, '
             f'ondan önceki dönemle karşılaştırılarak gösterilir. Değişim, satış fiyatlarının ortancasına göredir. Güncelleme: {trdate(TODAY)}.</p>'
             '<p class="note">Karşılaştırma dönemi şimdilik yaklaşık iki hafta; satış geçmişi biriktikçe 2,5 aya kadar uzayacak.</p>'
             '<p class="note">Geçmiş satışlara dayanır; gelecekteki fiyatın tahmini ya da yatırım tavsiyesi değildir. Az satılan kartlarda tek bir satış sonucu belirgin şekilde etkileyebilir.</p>')
-    content = sec("Yükselenler", ups) + sec("Düşenler", downs) + sec("En çok satılanlar", busy, "Son 14 günde en çok satış yapılan kartlar ve dereceler.")
+    def srow(x):
+        W = x["w"]
+        img = f'<img src="{e(x["img"])}" alt="" loading="lazy" referrerpolicy="no-referrer">' if x.get("img") else '<span class="ph"></span>'
+        sub = " · ".join(v for v in [x["set"], x["number"]] if v)
+        why = "dengeleniyor" if x["a"] else "satıcılar çekiliyor"
+        path = " → ".join(usd(p) for _, p in W if p is not None)
+        inner = (f'{img}<span class="t"><span class="nm">{e(x["name"])}</span><span class="sub">{e(x["grade"])} · {e(sub)}</span>'
+                 f'<span class="sub">{e(path)}</span></span>'
+                 f'<span class="mv"><b class="num">{usd(W[3][1])}</b><span class="s">{e(why)}</span>'
+                 f'<span class="s">{" · ".join(str(n) for n, _ in W)} satış/hafta</span></span>')
+        return f'<a class="mkt" href="{e(x["href"])}">{inner}</a>' if x["href"] else f'<div class="mkt">{inner}</div>'
+
+    steady.sort(key=lambda x: -x["nsum"])
+    steady_html = ""
+    if steady:
+        steady_html = ('<section class="more"><h2>Dengelenen kartlar</h2><p class="note">Düşüşten sonra son iki haftadır haftalık ortalaması '
+                       'düşmeyen ya da satış adedi azalırken fiyatı sabit kalan kartlar. Fiyatlar son 4 haftanın haftalık ortalamasıdır. '
+                       'Bir dönüş işareti olabilir; garantisi değildir.</p><div class="mkts">' + "".join(srow(x) for x in steady[:24]) + "</div></section>")
+    content = sec("Yükselenler", ups) + sec("Düşenler", downs) + steady_html + sec("En çok satılanlar", busy, "Son 14 günde en çok satış yapılan kartlar ve dereceler.")
     if not content:
         content = '<p class="muted">Satış verileri toplanıyor; liste birkaç gün içinde dolacak.</p>'
     write("piyasa", page("Piyasada bu hafta: yükselen ve düşen kartlar | Holotique",
                          "Pokemon ve One Piece kartlarında son 14 günün eBay satışlarına göre fiyatı yükselen, düşen ve en çok satılan kartlar.",
                          "piyasa", body + content))
-    log(f"Piyasa: {len(items)} kart/derece · yükselen {len(ups)} · düşen {len(downs)}")
+    log(f"Piyasa: {len(items)} kart/derece · yükselen {len(ups)} · düşen {len(downs)} · dengelenen {len(steady)}")
 
 
 def main():
