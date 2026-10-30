@@ -1193,7 +1193,7 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
       tile('Kazançlı satış',wins+' / '+pr.length,'%'+Math.round(wins/pr.length*100)+' kârla satıldı',wins*2>=pr.length?'pos':'neg'),
       tile('Ortanca getiri',medRet==null?'—':pct(medRet),'satış başına',cls(medRet)),
       tile('Ortanca elde tutma',medHold==null?'—':medHold+' gün','alıştan satışa'),
-      tile('Zamanlama',tm.length?usd(diff,true):'—',tm.length?(diff>=0?'satmasaydın bugün '+usd(nowV)+' ederdi':'satmasaydın bugün '+usd(nowV)+' ederdi; erken satmışsın'):'güncel fiyatı olan satış yok',cls(diff))]));
+      tile('Satmak mı tutmak mı?',tm.length?usd(diff,true):'—',tm.length?('Satış tutarın '+usd(saleV)+'; bu kartlar bugün '+usd(nowV)+' ederdi. '+(diff>=0?'Satarak daha kârlı çıktın.':'Tutsaydın daha kârlı olurdun.')):'güncel fiyatı olan satış yok',cls(diff))]));
     // 2) En iyi / en kötü satış
     var sorted=pr.slice().sort(function(a,b){return b.pl-a.pl}),best=sorted[0],worst=sorted[sorted.length-1];
     function mini(lab,r){var h=r.h,cd=h.cards||{};return el('button',{type:'button',class:'sbest',onclick:function(){openSell(h)}},[thumb(h),el('span',{style:'min-width:0'},[el('span',{class:'label',text:lab}),el('span',{class:'nm',text:cd.name||h.name_input}),el('span',{class:'sub',text:h.grade+' · '+new Date(h.sold_at).toLocaleDateString(window.HQ_LANG==='en'?'en-GB':'tr-TR')})]),
