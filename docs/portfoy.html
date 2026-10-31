@@ -1422,10 +1422,18 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     var fContact=el('input',{id:'vContact',type:'text',maxlength:'80',value:v.contact||'',placeholder:'ör. Instagram @kullaniciadi'});
     var fFolder=el('select',{id:'vFolder'});fFolder.appendChild(el('option',{value:'',text:'Tüm kartlar'}));var oSale=el('option',{value:'__sale',text:'Yalnızca satılık kartlar'});if(v.only_for_sale)oSale.selected=true;fFolder.appendChild(oSale);S.folders.forEach(function(f){var o=el('option',{value:f.id,text:'Klasör: '+f.name});if(v.folder_id===f.id)o.selected=true;fFolder.appendChild(o);});
     function tog(id,lab,on,hint){var i=el('input',{id:id,type:'checkbox'});i.checked=!!on;return [i,el('label',{class:'tog',for:id},[i,el('span',null,[el('b',{text:lab}),hint?el('span',{class:'note',style:'display:block',text:hint}):null])])];}
-    var tVal=tog('vVal','Değerleri göster',v.show_values,'Her kartın ve vitrinin toplam güncel piyasa değeri. Kapalıyken yalnızca kartlar görünür.');
+    // Vitrinde hangi fiyat görünsün: piyasa fiyatı / satış fiyatım / fiyat yok
+    var pm=v.price_mode||(v.only_for_sale?'ask':(v.show_values===false?'none':'market'));
+    var PM=[['market','Piyasa fiyatı','Her kartta güncel piyasa değeri ve vitrinin toplam değeri. Satılık kartlarda da piyasa değeri görünür; satış fiyatın gizli kalır, alıcı sana yazarak sorar.'],
+            ['ask','Satış fiyatım','Satılık kartlarda senin yazdığın satış fiyatı. Satılık olmayan kartlarda fiyat görünmez.'],
+            ['none','Fiyat gösterme','Yalnızca kartlar görünür.']];
+    var pmSeg=el('div',{class:'seg pmseg',role:'radiogroup','aria-label':'Vitrinde gösterilecek fiyat'}),pmNote=el('span',{class:'note'});
+    function drawPm(){Array.from(pmSeg.children).forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.v===pm))});var x=PM.filter(function(o){return o[0]===pm})[0];pmNote.textContent=x?x[2]:'';if(tMkt)tMkt[1].hidden=pm!=='ask';}
+    PM.forEach(function(o){var b=el('button',{type:'button','data-v':o[0],text:o[1],onclick:function(){pm=o[0];drawPm();}});pmSeg.appendChild(b);});
+    var tVal=[{checked:true},el('div',{class:'f',style:'display:flex;flex-direction:column;gap:6px;align-items:flex-start'},[el('span',{text:'Vitrinde hangi fiyat görünsün?'}),pmSeg,pmNote])];
     var tWish=tog('vWish','“Aradığım kartlar” bölümünü göster',v.show_wishlist,'İstek listendeki kartlar (hedef fiyatların görünmez).');
     var tOn=tog('vOn','Vitrin yayında',v.enabled,'Kapatırsan bağlantı hemen çalışmaz olur.');
-    var tMkt=tog('vMkt','Satılık kartlarda piyasa referansını göster',v.show_market!==false,'Alıcı, senin fiyatının yanında piyasa değerini görür. Referans, fiyatı yazdığın para birimine çevrilir.');
+    var tMkt=tog('vMkt','Satış fiyatının yanında piyasa referansını göster',v.show_market!==false,'Alıcı, senin fiyatının yanında piyasa değerini görür. Referans, fiyatı yazdığın para birimine çevrilir.');drawPm();
     var fWa=el('input',{id:'vWa',type:'tel',inputmode:'tel',maxlength:'20',value:v.whatsapp?'+'+v.whatsapp:'',placeholder:'ör. +90 555 123 45 67'});
     var fIg=el('input',{id:'vIg',type:'text',maxlength:'40',value:v.instagram?'@'+v.instagram:'',placeholder:'ör. @kullaniciadi'});
     var save=el('button',{class:'btn',type:'submit',text:S.show?'Kaydet':'Vitrini oluştur'});
@@ -1445,14 +1453,15 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     form.addEventListener('submit',function(e){e.preventDefault();
       if(!fTitle.value.trim()){say('err','Vitrine bir ad ver.');fTitle.focus();return;}
       save.disabled=true;
-      var row={slug:null,title:fTitle.value.trim()||null,bio:fBio.value.trim()||null,contact:fContact.value.trim()||null,folder_id:fFolder.value&&fFolder.value!=='__sale'?fFolder.value:null,show_values:tVal[0].checked,show_wishlist:tWish[0].checked,enabled:tOn[0].checked,updated_at:new Date().toISOString()};
+      var row={slug:null,title:fTitle.value.trim()||null,bio:fBio.value.trim()||null,contact:fContact.value.trim()||null,folder_id:fFolder.value&&fFolder.value!=='__sale'?fFolder.value:null,show_values:pm==='market',show_wishlist:tWish[0].checked,enabled:tOn[0].checked,updated_at:new Date().toISOString()};
       var wa=fWa.value.replace(/\D/g,'');if(/^0\d{10}$/.test(wa))wa='9'+wa;else if(/^5\d{9}$/.test(wa))wa='90'+wa;
       var ig=fIg.value.trim().replace(/^https?:\/\/(www\.)?instagram\.com\//i,'').replace(/^@/,'').replace(/\/.*$/,'');
       if(wa&&!/^\d{8,15}$/.test(wa)){save.disabled=false;say('err','WhatsApp numarasını ülke koduyla yaz (ör. +90 555 123 45 67).');return;}
       if(ig&&!/^[A-Za-z0-9._]{1,30}$/.test(ig)){save.disabled=false;say('err','Instagram kullanıcı adı geçersiz.');return;}
-      Object.assign(row,{only_for_sale:fFolder.value==='__sale',show_market:tMkt[0].checked,whatsapp:wa||null,instagram:ig||null});
-      var q=S.show&&S.show.id?sb.from('showcases').update(row).eq('id',S.show.id):sb.from('showcases').insert(Object.assign({user_id:S.user.id},row));
-      q.select().maybeSingle().then(function(r){save.disabled=false;
+      Object.assign(row,{only_for_sale:fFolder.value==='__sale',show_market:tMkt[0].checked,whatsapp:wa||null,instagram:ig||null,price_mode:pm});
+      function send(rw){return S.show&&S.show.id?sb.from('showcases').update(rw).eq('id',S.show.id).select().maybeSingle():sb.from('showcases').insert(Object.assign({user_id:S.user.id},rw)).select().maybeSingle();}
+      // 026 çalıştırılmamışsa price_mode sütunu yok: onsuz kaydet
+      send(row).then(function(r){if(r.error&&/price_mode/.test(r.error.message||'')){delete row.price_mode;return send(row);}return r;}).then(function(r){save.disabled=false;
         if(r.error){say('err',/null value.*slug|slug/i.test(r.error.message)?'Veritabanı güncellemesi eksik (013_showcase_code.sql).':r.error.message);return;}
         S.show=r.data;S.showPrefill=null;var i=(S.shows||[]).findIndex(function(x){return x.id===r.data.id});if(i>=0)S.shows[i]=r.data;else S.shows.unshift(r.data);render();});});
     panel.appendChild(form);
@@ -1487,7 +1496,7 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     var cards=L.map(function(h){var p=priced(h)?price(h):null,val=p!=null?p*h.qty:null;if(val!=null)total+=val;return {name:hname(h),image:h.photo_url||(h.cards&&(h.cards.image_cached||h.cards.image)),grade:h.grade,qty:h.qty,value:val};});
     cards.sort(function(a,b){return (b.value||-1)-(a.value||-1)});
     var ti=document.getElementById('vTitle'),title=ti&&ti.value.trim()?ti.value.trim():(v.title||v.slug);
-    return {title:title,slug:showPath(v,title),host:location.host,count:count,total:v.show_values?total:null,cards:cards};
+    return {title:title,slug:showPath(v,title),host:location.host,count:count,total:(v.price_mode?v.price_mode==='market':v.show_values)?total:null,cards:cards};
   }
   function saleCards(){var base=showcaseCards(),L=S.holdings.filter(onSale);
     var cards=L.map(function(h){return {name:hname(h),image:h.photo_url||(h.cards&&(h.cards.image_cached||h.cards.image)),grade:h.grade,qty:h.qty,value:priced(h)?price(h)*h.qty:null,priceText:h.ask_price!=null?money(Number(h.ask_price),h.ask_ccy):''};});

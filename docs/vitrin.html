@@ -251,8 +251,14 @@ addEventListener('appinstalled',function(){var b=document.querySelector('.instal
     return box.childNodes.length?box:null;}
   function cardEl(c,showVal){
     var kids=[art(c),el('div',null,[el('div',{class:'nm',text:c.name||'—'}),el('div',{class:'sb',text:(c.set||'')+(c.number?' · '+c.number:'')+(c.variant?' · '+c.variant:'')})]),
-      el('div',{class:'ft'},[el('span',{class:'gchip'+(c.grade==='Ham'?' raw':''),text:c.grade+(c.jp?' · JP':'')}),c.qty>1?el('span',{class:'qty',text:'×'+c.qty}):null,showVal&&!c.sale?el('span',{class:'price',style:'font-size:.9rem',text:usd(c.value)}):null])];
-    if(c.sale){var m=usdTo(c.market,c.ccy),box=el('div',{class:'salebx'});
+      el('div',{class:'ft'},[el('span',{class:'gchip'+(c.grade==='Ham'?' raw':''),text:c.grade+(c.jp?' · JP':'')}),c.qty>1?el('span',{class:'qty',text:'×'+c.qty}):null,showVal&&c.value!=null?el('span',{class:'price',style:'font-size:.9rem',text:usd(c.value)}):null])];
+    var askMode=!D||!D.price_mode||D.price_mode==='ask';
+    if(c.sale&&!askMode){var bx=el('div',{class:'salebx'});
+      bx.appendChild(el('div',{class:'ask'},[el('span',{class:'label',text:c.sold?'Satıldı':'Satılık'}),c.sold?null:el('span',{class:'note',text:'Fiyat için satıcıya yaz'})]));
+      if(c.note)bx.appendChild(el('div',{class:'snote',text:c.note}));
+      if(!c.sold){var cb2=contactBtns(c);if(cb2)bx.appendChild(cb2);}
+      kids.push(bx);}
+    else if(c.sale){var m=usdTo(c.market,c.ccy),box=el('div',{class:'salebx'});
       box.appendChild(el('div',{class:'ask'},[el('span',{class:'label',text:c.sold?'Satıldı':'Satış fiyatı'}),el('span',{class:'av',text:money(c.ask,c.ccy)})]));
       if(m!=null&&!c.sold){var diff=c.ask!=null&&m?(c.ask/m-1)*100:null;box.appendChild(el('div',{class:'mref',text:'Piyasa ≈ '+money(m,c.ccy)+(diff==null?'':' · '+(Math.abs(diff)<1?'piyasa fiyatında':(diff<0?'%'+Math.abs(diff).toFixed(0)+' altında':'%'+diff.toFixed(0)+' üstünde')))}));}
       if(c.note)box.appendChild(el('div',{class:'snote',text:c.note}));
