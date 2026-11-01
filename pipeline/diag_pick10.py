@@ -22,11 +22,12 @@ for c in cards:
     n = sum(x[1] for x in d30)
     med = b.wmed(d30) if d30 else None
     ref = med or g.get("med")
-    if not ref or not (300 <= ref <= 1200):
+    if not ref or not (200 <= ref <= 2000):
         continue
     a = [x for x in d30 if x[0] < c15]; z = [x for x in d30 if x[0] >= c15]
     out.append({"name": c["name"], "set": c["set_name"], "num": c["number"], "lang": c["language"], "rel": r["released"], "rarity": r.get("rarity"),
                 "n30": n, "med30": med, "med_all": g.get("med"), "n_all": g.get("n"), "first15": b.wmed(a) if a else None, "last15": b.wmed(z) if z else None,
-                "min": g.get("min"), "max": g.get("max"), "last": g.get("last"), "trend": g.get("trend"), "raw": r.get("market")})
+                "min": g.get("min"), "max": g.get("max"), "last": g.get("last"), "trend": g.get("trend"), "raw": r.get("market"),
+                "d60": [x for x in (g.get("d") or []) if x[0] >= (T - timedelta(days=60)).isoformat()]})
 out.sort(key=lambda x: x["rel"])
 json.dump(out, open(os.environ["DIAG_FILE"], "w"), ensure_ascii=False); print(len(out))
