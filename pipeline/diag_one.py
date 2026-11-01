@@ -1,15 +1,15 @@
-"""Teşhis: Reshiram GX kartları (katalog + takip edilen kartların PSA satışları)."""
+"""Teşhis: Japonca Reshiram GX 060/053 (SM6a, HR) için fiyat kaynağından PSA satış özeti (2 kredi)."""
 import json, os, sys
 sys.path.insert(0, os.path.dirname(__file__))
 import build_pages as b  # noqa: E402
-cat = b.sb("catalog", {"select": "product_id,game,name,set_name,number,rarity,market,released", "name": "ilike.Reshiram*GX*", "order": "market.desc.nullslast", "limit": "40"})
-ids = [str(c["product_id"]) for c in cat]
-cards = b.sb("cards", {"select": "id,ext_id,name,set_name,number,language,sales", "ext_id": f"in.({','.join(ids)})"}) if ids else []
-by = {c["ext_id"]: c for c in cards}
-out = []
+import sync_psa as s  # noqa: E402
+cat = b.sb("catalog", {"select": "product_id,name,set_name,number,market", "game": "eq.Pokemon JP", "name": "ilike.Reshiram GX*", "set_name": "ilike.*Dragon Storm*"})
+out = {"catalog": cat, "ppt": []}
 for c in cat:
-    k = by.get(str(c["product_id"]))
-    g = ((k or {}).get("sales") or {}).get("g") or {}
-    out.append({**c, "tracked": bool(k), "psa10": {x: (g.get("psa10") or {}).get(x) for x in ("n", "med", "min", "max", "last", "trend")},
-                "psa10_d": (g.get("psa10") or {}).get("d"), "psa9": {x: (g.get("psa9") or {}).get(x) for x in ("n", "med", "last")}})
-json.dump(out, open(os.environ["DIAG_FILE"], "w"), ensure_ascii=False, indent=1); print(len(out))
+    body = s.http("GET", f"{s.PPT}/cards?tcgPlayerId={c['product_id']}&language=japanese&includeEbay=true&limit=1", {"Authorization": f"Bearer {s.PKEY}"}) or {}
+    d = body.get("data"); d = d[0] if isinstance(d, list) and d else (d if isinstance(d, dict) else {})
+    sm = s.sales_summary((d or {}).get("ebay")) or {}
+    out["ppt"].append({"pid": c["product_id"], "name": (d or {}).get("name"), "set": (d or {}).get("setName"),
+                       "raw": ((d or {}).get("prices") or {}).get("market"),
+                       "grades": {k: {x: v.get(x) for x in ("n", "med", "min", "max", "last", "trend")} | {"d": v.get("d")} for k, v in (sm.get("g") or {}).items() if k in ("psa10", "psa9", "bgs9_5", "cgc10")}})
+json.dump(out, open(os.environ["DIAG_FILE"], "w"), ensure_ascii=False, indent=1); print("ok")
