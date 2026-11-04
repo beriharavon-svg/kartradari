@@ -42,4 +42,4 @@ jobs:
           d=$(mktemp -d); cp "$f" "$d/status.json"; cd "$d"
           git init -q -b status-catalog && git add status.json
           git -c user.name="kartradari-bot" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Katalog özeti $(date -u +%FT%TZ)"
-          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" status-catalog
+          for i in 1 2 3; do git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" status-catalog && break; echo "Gönderilemedi, tekrar deneniyor ($i)"; sleep 10; done || true

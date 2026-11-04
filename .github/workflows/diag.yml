@@ -33,4 +33,4 @@ jobs:
           d=$(mktemp -d); cp "$f" "$d/diag.json"; cd "$d"
           git init -q -b diag && git add diag.json
           git -c user.name="kartradari-bot" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Teşhis $(date -u +%FT%TZ)"
-          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" diag
+          for i in 1 2 3; do git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" diag && break; echo "Gönderilemedi, tekrar deneniyor ($i)"; sleep 10; done || true
