@@ -1,0 +1,23 @@
+{
+ "run_at": "2026-11-07T10:00:41+00:00",
+ "errors": [],
+ "selected": 2500,
+ "db_size": {
+  "tables": {
+   "cards": 4.6,
+   "events": 0.1,
+   "catalog": 204.6,
+   "holdings": 0.1,
+   "showcases": 0.1,
+   "ebay_cache": 0.3,
+   "card_prices": 13.1,
+   "folder_items": 0.1
+  },
+  "total_mb": 235.8
+ },
+ "priced": 2480,
+ "skipped": 20,
+ "no_data": 0,
+ "credits": 4960,
+ "minutes": 79.7
+}
