@@ -37,12 +37,23 @@ class MarketBudget(s.Budget):
              prefer="resolution=merge-duplicates,return=minimal")
 
 
+def _retry(fn, tries=3):
+    """Veritabanı geçici olarak yavaşsa (zaman aşımı) birkaç kez dene."""
+    for i in range(tries):
+        try:
+            return fn()
+        except RuntimeError as e:
+            if i == tries - 1 or ("57014" not in str(e) and " 5" not in str(e)[:40]):
+                raise
+            time.sleep(15 * (i + 1))
+
+
 def top_products(game, n):
     out, off = [], 0
     while len(out) < n:
-        rows = s.sb("GET", "catalog", {"select": "product_id,name,market", "game": f"eq.{game}", "number": "not.is.null",
-                                       "market": "not.is.null", "order": "market.desc,product_id", "limit": "1000",
-                                       "offset": str(off)}) or []
+        rows = _retry(lambda: s.sb("GET", "catalog", {"select": "product_id,name,market", "game": f"eq.{game}", "number": "not.is.null",
+                                       "market": "not.is.null", "order": "market.desc.nullslast,product_id", "limit": "1000",
+                                       "offset": str(off)})) or []
         out += rows
         if len(rows) < 1000:
             break
